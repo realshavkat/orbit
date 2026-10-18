@@ -94,7 +94,7 @@ var OrbitSettings = {
         { kind: "toggle", pref: "privacy.fingerprintingProtection", label: "fingerprint", def: false },
         { kind: "choice", pref: "network.trr.mode", label: "doh", options: [[0, "doh.off"], [2, "doh.on"], [3, "doh.max"]] },
         { kind: "vpn" },
-        { kind: "toggle", pref: "xpinstall.signatures.required", label: "unsigned", invert: true, def: true },
+        { kind: "chrome-allow" },
         { kind: "link", label: "installExt", icon: "puzzle", action: () => OrbitChromeExt.installFromDisk() },
         { kind: "link", label: "privacyAdvanced", icon: "external-link", action: () => openPreferences("privacy") },
       ],
@@ -116,7 +116,7 @@ var OrbitSettings = {
     fr: {
       title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
-      unsigned: "Extensions Chrome et non signées", "unsigned.d": "Permet d'installer les extensions du Chrome Web Store. Elles ne sont pas vérifiées par Mozilla",
+      unsigned: "Extensions Chrome", "unsigned.d": "Installe celles du Chrome Web Store. Elles ne sont pas vérifiées par Mozilla. Les autres extensions restent signées",
       installExt: "Installer une extension depuis un fichier (.crx, .xpi, .zip)",
       themes: "Thèmes Firefox", "themes.d": "Installe un thème depuis addons.mozilla.org : Orbit prend ses couleurs",
       turbo: "Orbit Turbo", "turbo.d": "Les gros téléchargements utilisent plusieurs connexions : fini les sites bridés par connexion",
@@ -172,7 +172,7 @@ var OrbitSettings = {
     en: {
       title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
-      unsigned: "Chrome and unsigned extensions", "unsigned.d": "Lets you install extensions from the Chrome Web Store. Mozilla does not check them",
+      unsigned: "Chrome extensions", "unsigned.d": "Installs them from the Chrome Web Store. Mozilla does not check them. Other extensions stay signed",
       installExt: "Install an extension from a file (.crx, .xpi, .zip)",
       themes: "Firefox themes", "themes.d": "Install a theme from addons.mozilla.org: Orbit takes its colors",
       turbo: "Orbit Turbo", "turbo.d": "Big downloads use several connections: no more sites throttling each connection",
@@ -404,6 +404,12 @@ var OrbitSettings = {
       case "strict":
         return this.row(this.switch(Orbit.pref("browser.contentblocking.category", "standard") == "strict",
           on => p.setStringPref("browser.contentblocking.category", on ? "strict" : "standard")), "strict");
+      case "chrome-allow":
+        return this.row(this.switch(Orbit.pref("orbit.chrome.exts.allowed", false), on => {
+          Services.prefs.setBoolPref("orbit.chrome.exts.allowed", on);
+          if (on) OrbitChromeExt.loadSaved().catch(e => console.error("Orbit: Chrome extension", e));
+          else OrbitChromeExt.unloadAll().catch(e => console.error("Orbit: Chrome extension", e));
+        }), "unsigned");
       case "vpn":
         return this.renderVPN();
       case "shortcuts":

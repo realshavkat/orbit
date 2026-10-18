@@ -18,6 +18,7 @@
     "reset-ff": "surfer reset",
     "branding": "node tools/branding.mjs",
     "dev": "node tools/dev.mjs",
+    "check": "node tools/check-orbit.mjs",
     "release": "node tools/release.mjs",
     "surfer": "surfer"
   },

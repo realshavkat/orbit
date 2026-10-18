@@ -73,6 +73,7 @@ export class OrbitHomeParent extends JSWindowActorParent {
       name: pref("orbit.user.name", ""),
       lang: Services.locale.appLocaleAsBCP47.split("-")[0],
       search,
+      assistants: ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs").ASSISTANTS.map(a => [a.name, a.url]),
       tiles: await this.tiles(),
       blocked: await this.blockedToday(),
       slept: this.sleepingTabs(win),

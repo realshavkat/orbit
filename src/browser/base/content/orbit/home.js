@@ -36,13 +36,9 @@ let fr = lang == "fr";
 const $ = id => document.getElementById(id);
 const T = () => STRINGS[lang] ?? STRINGS.en;
 
-const AI = [
-  ["Claude", "https://claude.ai/new?q="],
-  ["ChatGPT", "https://chatgpt.com/?q="],
-  ["Perplexity", "https://www.perplexity.ai/search?q="],
-  ["Mistral", "https://chat.mistral.ai/chat?q="],
-];
 let searchTpl = "https://www.google.com/search?q={q}";
+let assistants = [];
+const ask = (url, q) => q ? url.replace("{searchTerms}", encodeURIComponent(q)) : new URL(url.replace("?q={searchTerms}", "").replace("{searchTerms}", "")).origin;
 
 const q = $("q");
 const looksLikeUrl = s => /^[a-z]+:\/\//i.test(s) || /^[^\s]+\.[a-z]{2,}(\/\S*)?$/i.test(s);
@@ -57,7 +53,9 @@ $("search").addEventListener("submit", e => {
 q.addEventListener("keydown", e => {
   if (e.key == "Tab" && !e.shiftKey && q.value.trim()) {
     e.preventDefault();
-    go(AI[0][1] + encodeURIComponent(q.value.trim()));
+    const first = assistants[0];
+    if (!first) return;
+    go(ask(first[1], q.value.trim()));
   }
 });
 
@@ -69,6 +67,7 @@ function render(data = {}) {
   const t = T();
   document.documentElement.lang = STRINGS[lang] ? lang : "en";
   if (/^https:\/\//.test(data.search || "")) searchTpl = data.search;
+  if (Array.isArray(data.assistants)) assistants = data.assistants;
   const hour = new Date().getHours();
   $("hello").textContent = hour < 5 ? t.night : hour < 18 ? t.morning : t.evening;
   $("name").textContent = data.name || "";
@@ -77,14 +76,14 @@ function render(data = {}) {
 
   const ai = $("ai");
   ai.replaceChildren();
-  for (const [label, url] of AI) {
+  for (const [label, url] of assistants) {
     const b = document.createElement("button");
     b.type = "button";
     b.textContent = `✦ ${label}`;
     b.title = `${t.ask} ${label}`;
     b.addEventListener("click", () => {
       const v = q.value.trim();
-      go(v ? url + encodeURIComponent(v) : new URL(url).origin);
+      go(ask(url, v));
     });
     ai.append(b);
   }

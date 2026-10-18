@@ -7,11 +7,28 @@
 // (60 s) plus the platform's "memory-pressure" notification.
 var OrbitMemory = {
   init() {
-    this.observe = this.observe.bind(this);
-    Services.obs.addObserver(this.observe, "memory-pressure");
-    window.addEventListener("unload", () => Services.obs.removeObserver(this.observe, "memory-pressure"), { once: true });
+    if (!this._watching) {
+      this._watching = true;
+      this.observe = this.observe.bind(this);
+      Services.obs.addObserver(this.observe, "memory-pressure");
+      window.addEventListener("unload", () => Services.obs.removeObserver(this.observe, "memory-pressure"), { once: true });
+    }
+    // One timer for the whole app. Each window would otherwise sleep the same tabs.
+    if (this._timer) return;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (win != window && win.OrbitMemory?._timer) return;
+    }
     this._timer = setInterval(() => this.enforceBudget(), 60_000);
-    window.addEventListener("unload", () => clearInterval(this._timer), { once: true });
+    window.addEventListener("unload", () => {
+      clearInterval(this._timer);
+      this._timer = null;
+      for (const win of Services.wm.getEnumerator("navigator:browser")) {
+        if (win != window && !win.closed) {
+          win.OrbitMemory?.init();
+          break;
+        }
+      }
+    }, { once: true });
   },
 
   // Windows reports low memory: sleep everything idle for 2+ minutes.
@@ -69,38 +86,78 @@ var OrbitMemory = {
     return { total, ui: info.memory, tabs };
   },
 
-  // Runs every minute: idle sleep (unless set to "never"), then the memory budget.
+  // Runs every minute from one window: idle sleep, then the memory budget.
+  // The budget is measured again after each tab, because a shared process
+  // does not shrink by that tab's share of its memory.
   async enforceBudget() {
-    const minutes = this.idleMinutes();
-    if (minutes > 0) this.sleepIdle(minutes * 60_000);
+    let slept = 0;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      const mem = win.OrbitMemory;
+      if (!mem) continue;
+      const minutes = mem.idleMinutes();
+      if (minutes > 0) slept += mem.sleepIdle(minutes * 60_000);
+    }
     const budgetMb = Orbit.pref("orbit.memory.budget-mb", 0);
-    if (budgetMb <= 0) return;
-    let { total, tabs } = await this.measure();
-    const limit = budgetMb * 1024 * 1024;
-    if (total <= limit) return;
-    let n = 0;
-    for (const t of tabs.filter(t => !t.asleep && this.canSleep(t.tab)).sort((a, b) => a.tab.lastAccessed - b.tab.lastAccessed)) {
-      if (total <= limit) break;
-      if (gBrowser.discardBrowser(t.tab)) {
-        total -= t.bytes;
-        n++;
+    let discarded = 0;
+    if (budgetMb > 0) {
+      const limit = budgetMb * 1024 * 1024;
+      for (let i = 0; i < 30; i++) {
+        const { total, next } = await this.oldestAwake();
+        if (total <= limit || !next) break;
+        if (!next.win.gBrowser.discardBrowser(next.tab)) break;
+        discarded++;
       }
     }
+    const n = slept + discarded;
     if (n >= 3) OrbitNotify.tabsSlept(n);
+  },
+
+  // Total memory, and the oldest tab that can sleep, across every window.
+  async oldestAwake() {
+    const info = await ChromeUtils.requestProcInfo();
+    const total = info.memory + info.children.reduce((a, c) => a + c.memory, 0);
+    let next = null;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      const mem = win.OrbitMemory;
+      if (!mem) continue;
+      for (const tab of win.gBrowser.tabs) {
+        if (!mem.canSleep(tab)) continue;
+        if (!next || tab.lastAccessed < next.tab.lastAccessed) next = { tab, win };
+      }
+    }
+    return { total, next };
   },
 
   // Eco mode: fewer content processes (after restart), still background,
   // smaller image cache.
+  ECO_KEYS: ["dom.ipc.processCount", "image.mem.surfacecache.max_size_kb", "orbit.effects.nebula"],
+  ECO_SAVED: "orbit.memory.eco-saved",
+
   setEco(on) {
     const p = Services.prefs;
     p.setBoolPref("orbit.memory.eco", on);
     if (on) {
+      if (!p.prefHasUserValue(this.ECO_SAVED)) {
+        const saved = {};
+        for (const k of this.ECO_KEYS) saved[k] = p.prefHasUserValue(k) ? Orbit.pref(k) : null;
+        p.setStringPref(this.ECO_SAVED, JSON.stringify(saved));
+      }
       p.setIntPref("dom.ipc.processCount", 2);
       p.setIntPref("image.mem.surfacecache.max_size_kb", 131072);
       p.setBoolPref("orbit.effects.nebula", false);
     } else {
-      for (const k of ["dom.ipc.processCount", "image.mem.surfacecache.max_size_kb"]) p.clearUserPref(k);
-      p.setBoolPref("orbit.effects.nebula", true);
+      let saved = {};
+      try {
+        saved = JSON.parse(Orbit.pref(this.ECO_SAVED, "{}"));
+      } catch {}
+      for (const k of this.ECO_KEYS) {
+        const v = saved[k];
+        if (v == null) {
+          if (p.prefHasUserValue(k)) p.clearUserPref(k);
+        } else if (typeof v == "boolean") p.setBoolPref(k, v);
+        else p.setIntPref(k, v);
+      }
+      if (p.prefHasUserValue(this.ECO_SAVED)) p.clearUserPref(this.ECO_SAVED);
     }
   },
 
@@ -110,17 +167,17 @@ var OrbitMemory = {
     mercure: {
       "dom.ipc.processCount": 8, "dom.ipc.processPrelaunch.enabled": true, "orbit.tabs.unload-after-minutes": 60,
       "orbit.memory.budget-mb": 0, "orbit.memory.eco": false, "orbit.effects.nebula": true, "orbit.effects.animations": true,
-      "image.mem.surfacecache.max_size_kb": 524288,
+      "orbit.effects.grain": true, "image.mem.surfacecache.max_size_kb": 524288,
     },
     venus: {
       "dom.ipc.processCount": 4, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
       "orbit.memory.budget-mb": 0, "orbit.memory.eco": false, "orbit.effects.nebula": true, "orbit.effects.animations": true,
-      "image.mem.surfacecache.max_size_kb": 262144,
+      "orbit.effects.grain": true, "image.mem.surfacecache.max_size_kb": 262144,
     },
     saturne: {
       "dom.ipc.processCount": 2, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
       "orbit.memory.budget-mb": 2048, "orbit.memory.eco": true, "orbit.effects.nebula": false, "orbit.effects.animations": true,
-      "image.mem.surfacecache.max_size_kb": 131072,
+      "orbit.effects.grain": true, "image.mem.surfacecache.max_size_kb": 131072,
     },
     neptune: {
       "dom.ipc.processCount": 1, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": 5,
@@ -136,6 +193,7 @@ var OrbitMemory = {
       else p.setIntPref(name, value);
     }
     p.setStringPref("orbit.performance.preset", id);
+    if (p.prefHasUserValue(this.ECO_SAVED)) p.clearUserPref(this.ECO_SAVED);
   },
 
   fmt(bytes) {

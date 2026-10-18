@@ -11,7 +11,8 @@ var OrbitVPN = {
   // Prefs set while the custom tunnel is on, restored when it goes off.
   TUNNEL_PREFS: ["network.proxy.type", "network.proxy.socks", "network.proxy.socks_port", "network.proxy.socks_version",
     "network.proxy.socks_remote_dns", "network.proxy.http", "network.proxy.http_port", "network.proxy.ssl",
-    "network.proxy.ssl_port", "network.proxy.no_proxies_on", "media.peerconnection.ice.proxy_only_if_behind_proxy",
+    "network.proxy.ssl_port", "network.proxy.no_proxies_on", "network.proxy.failover_direct",
+    "media.peerconnection.ice.proxy_only_if_behind_proxy",
     "media.peerconnection.ice.default_address_only"],
 
   t(k) {
@@ -75,7 +76,9 @@ var OrbitVPN = {
     const fr = Orbit.lang() == "fr";
     return {
       on: Orbit.tr("Protected", "Protégé"), off: Orbit.tr("Not protected", "Non protégé"),
+      wait: Orbit.tr("Checking the tunnel…", "Vérification du tunnel…"),
       onD: Orbit.tr("Your IP address is hidden", "Ton adresse IP est masquée"),
+      down: Orbit.tr("The server is not responding. Direct connections stay blocked.", "Le serveur ne répond pas. Les connexions directes restent bloquées."),
       offD: Orbit.tr("Sites can see your IP address", "Les sites voient ton adresse IP"),
       via: Orbit.tr("Via", "Via"), noServer: Orbit.tr("No server", "Aucun serveur"),
       check: Orbit.tr("Check my IP", "Vérifier mon IP"), checking: Orbit.tr("Checking…", "Vérification…"),
@@ -112,8 +115,8 @@ var OrbitVPN = {
         h("div", { class: "orbit-vpn-hero", on },
           h("div", { class: "orbit-vpn-shield" }, Orbit.icon(on ? "shield-check" : "shield")),
           h("div", { class: "orbit-vpn-state" },
-            h("b", {}, on ? this.P("on") : this.P("off")),
-            h("span", {}, on ? this.P("onD") : this.P("offD"))),
+            h("b", {}, on ? this.P("wait") : this.P("off")),
+            h("span", { class: "orbit-vpn-claim" }, on ? this.P("wait") : this.P("offD"))),
           S.switch(on, v => { this.apply(v); setTimeout(render, 50); })),
         h("div", { class: "orbit-vpn-row" },
           h("span", {}, `${this.P("via")} `, h("b", {}, server ? this.label(Orbit.pref("orbit.vpn.server", "")) : this.P("noServer"))),
@@ -176,6 +179,15 @@ var OrbitVPN = {
         h("button", { class: "orbit-toast-link", onclick: () => { p.setBoolPref("orbit.vpn.advanced", !adv); render(); } },
           adv ? this.P("simple") : this.P("advanced"))));
       panel.replaceChildren(...children);
+      if (on) {
+        this.checkIP(ipLine).then(ok => {
+          const claim = panel.querySelector(".orbit-vpn-claim");
+          const title = panel.querySelector(".orbit-vpn-state b");
+          if (!claim) return;
+          claim.textContent = ok ? this.P("onD") : this.P("down");
+          if (title) title.textContent = ok ? this.P("on") : this.P("off");
+        });
+      }
     };
     render();
     document.body.append(panel);
@@ -208,22 +220,24 @@ var OrbitVPN = {
   },
 
   // Asks a public "what is my IP" service, through the tunnel when it is on.
+  // Returns true only when a public address came back.
   async checkIP(line) {
     line.textContent = this.P("checking");
     try {
       const res = await fetch("https://api.ipify.org?format=json", { cache: "no-store", credentials: "omit" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const { ip } = await res.json();
+      if (!ip) throw new Error("no ip");
       line.textContent = this.P("ip") + String(ip).slice(0, 45);
+      return true;
     } catch {
       line.textContent = this.P("ipFail");
+      return false;
     }
   },
 
-  // "socks5://host:port" | "http(s)://host:port" -> { kind, host, port } or null.
   parse(text) {
-    const m = /^(socks5?|socks4|https?):\/\/\[?([\w.-]+|[0-9a-f:]+)\]?:(\d{1,5})\/?$/i.exec((text ?? "").trim());
-    if (!m || +m[3] < 1 || +m[3] > 65535) return null;
-    return { kind: m[1].toLowerCase().startsWith("socks") ? (m[1] == "socks4" ? "socks4" : "socks5") : "http", host: m[2], port: +m[3] };
+    return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs").parseProxy(text);
   },
 
   toggle() {
@@ -246,6 +260,8 @@ var OrbitVPN = {
         p.setStringPref("orbit.vpn.saved", JSON.stringify(saved));
       }
       p.setIntPref("network.proxy.type", 1);
+      // A dead proxy must not fall back to a direct connection.
+      p.setBoolPref("network.proxy.failover_direct", false);
       // Only the sites listed in "bypass" skip the tunnel (local addresses by default).
       p.setStringPref("network.proxy.no_proxies_on", Orbit.pref("orbit.vpn.bypass", "localhost, 127.0.0.1"));
       if (server.kind == "http") {

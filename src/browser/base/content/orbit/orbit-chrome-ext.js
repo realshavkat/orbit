@@ -10,18 +10,163 @@
 var OrbitChromeExt = {
   STORE: /^https:\/\/(?:chromewebstore\.google\.com\/detail\/(?:[^/]+\/)?|chrome\.google\.com\/webstore\/detail\/(?:[^/]+\/)?)([a-p]{32})/,
   CRX_URL: id => `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${id}%26installsource%3Dondemand%26uc`,
+  ALLOW: "orbit.chrome.exts.allowed",
+  LIST: "orbit.chrome.exts",
+  SUFFIX: "@chrome-web-store",
 
-  init() {
-    const check = () => this.offer(gBrowser.currentURI?.spec ?? "");
-    gBrowser.addProgressListener({
-      onLocationChange: (webProgress, _req, _loc, flags) => webProgress.isTopLevel && check(),
-      QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener", "nsISupportsWeakReference"]),
-    });
-    gBrowser.tabContainer.addEventListener("TabSelect", check);
+  pure() {
+    return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs");
   },
 
-  get unsignedAllowed() {
-    return !Orbit.pref("xpinstall.signatures.required", true);
+  init() {
+    this.migrateSignatures();
+    if (!this._window) {
+      this._window = true;
+      const check = () => this.offer(gBrowser.currentURI?.spec ?? "");
+      gBrowser.addProgressListener({
+        onLocationChange: (webProgress, _req, _loc, flags) => webProgress.isTopLevel && check(),
+        QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener", "nsISupportsWeakReference"]),
+      });
+      gBrowser.tabContainer.addEventListener("TabSelect", check);
+    }
+    if (this._app) return;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (win != window && win.OrbitChromeExt?._app) return;
+    }
+    this._app = true;
+    AddonManager.addAddonListener(this._listener = {
+      onUninstalled: addon => this.onUninstalled(addon),
+    });
+    window.addEventListener("unload", () => {
+      AddonManager.removeAddonListener(this._listener);
+      this._app = false;
+      for (const win of Services.wm.getEnumerator("navigator:browser")) {
+        if (win != window && !win.closed) {
+          win.OrbitChromeExt?.init();
+          break;
+        }
+      }
+    }, { once: true });
+    if (!Orbit.pref(this.ALLOW, false)) return;
+    this.loadSaved().catch(e => console.error("Orbit: Chrome extension", e));
+    setTimeout(() => this.checkUpdates().catch(e => console.error("Orbit: Chrome extension update", e)), 15000);
+  },
+
+  // Older builds turned signature checks off for the whole browser. Put that back.
+  migrateSignatures() {
+    if (Orbit.pref("orbit.chrome.migrated", false)) return;
+    const p = Services.prefs;
+    if (p.prefHasUserValue("xpinstall.signatures.required") && !p.getBoolPref("xpinstall.signatures.required")) {
+      p.setBoolPref(this.ALLOW, true);
+      p.clearUserPref("xpinstall.signatures.required");
+    }
+    p.setBoolPref("orbit.chrome.migrated", true);
+  },
+
+  saved() {
+    try {
+      const data = JSON.parse(Orbit.pref(this.LIST, "{}"));
+      return data && typeof data == "object" ? data : {};
+    } catch {
+      return {};
+    }
+  },
+
+  writeSaved(data) {
+    Services.prefs.setStringPref(this.LIST, JSON.stringify(data));
+  },
+
+  dir() {
+    return PathUtils.join(PathUtils.profileDir, "orbit-chrome-ext");
+  },
+
+  idOf(addonId) {
+    return addonId?.endsWith(this.SUFFIX) ? addonId.slice(0, -this.SUFFIX.length) : null;
+  },
+
+  async onUninstalled(addon) {
+    if (this._keeping) return;
+    const id = this.idOf(addon?.id);
+    if (!id) return;
+    const data = this.saved();
+    delete data[id];
+    this.writeSaved(data);
+    await IOUtils.remove(PathUtils.join(this.dir(), `${id}.xpi`), { ignoreAbsent: true });
+  },
+
+  async loadSaved() {
+    const data = this.saved();
+    for (const id of Object.keys(data)) {
+      const path = PathUtils.join(this.dir(), `${id}.xpi`);
+      if (!(await IOUtils.exists(path))) continue;
+      await this.mount(id, path);
+    }
+  },
+
+  // The uninstall listener lives on one window. The flag has to be visible there
+  // even when Settings or a store page in another window starts the install.
+  setKeeping(on) {
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (win.OrbitChromeExt) win.OrbitChromeExt._keeping = on;
+    }
+  },
+
+  async unloadAll() {
+    this.setKeeping(true);
+    try {
+      const addons = await AddonManager.getAddonsByTypes(["extension"]);
+      for (const addon of addons) {
+        if (this.idOf(addon.id)) await addon.uninstall();
+      }
+    } finally {
+      this.setKeeping(false);
+    }
+  },
+
+  async mount(id, path) {
+    this.setKeeping(true);
+    try {
+      const existing = await AddonManager.getAddonByID(`${id}${this.SUFFIX}`);
+      if (existing) await existing.uninstall();
+      await AddonManager.installTemporaryAddon(new FileUtils.File(path));
+    } finally {
+      this.setKeeping(false);
+    }
+  },
+
+  async sha256(bytes) {
+    const buf = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+  },
+
+  async keep(id, xpiPath, hash) {
+    const dir = this.dir();
+    await IOUtils.makeDirectory(dir, { ignoreExisting: true });
+    const dest = PathUtils.join(dir, `${id}.xpi`);
+    if (xpiPath != dest) await IOUtils.copy(xpiPath, dest);
+    const data = this.saved();
+    data[id] = hash;
+    this.writeSaved(data);
+    await this.mount(id, dest);
+  },
+
+  async checkUpdates() {
+    const now = Math.floor(Date.now() / 1000);
+    if (now - Orbit.pref("orbit.chrome.checked", 0) < 24 * 3600) return;
+    Services.prefs.setIntPref("orbit.chrome.checked", now);
+    for (const [id, hash] of Object.entries(this.saved())) {
+      try {
+        const res = await fetch(this.CRX_URL(id), { credentials: "omit" });
+        if (!res.ok) continue;
+        const bytes = new Uint8Array(await res.arrayBuffer());
+        const next = await this.sha256(bytes);
+        if (next == hash) continue;
+        const xpi = await this.toXpi(bytes, id);
+        await this.keep(id, xpi, next);
+      } catch (e) {
+        console.error("Orbit: Chrome extension update", id, e);
+      }
+    }
   },
 
   // A toast with "Add to Orbit" while a store page is shown.
@@ -45,18 +190,19 @@ var OrbitChromeExt = {
       h("div", { class: "orbit-toast-actions" }, btn)));
   },
 
-  // Unsigned extensions are a security trade-off: ask once, clearly.
-  allowUnsigned() {
-    if (this.unsignedAllowed) return true;
+  // Chrome packages are not signed by Mozilla. Consent is per browser, not a
+  // global switch that lets every site install unsigned add-ons.
+  allow() {
+    if (Orbit.pref(this.ALLOW, false)) return true;
     const ok = Services.prompt.confirm(window, "Orbit", Orbit.tr(
-      "Chrome extensions are not checked by Mozilla. Allow extensions that are not signed? Only install ones you trust. You can turn this off in Settings › Privacy.",
-      "Les extensions Chrome ne sont pas vérifiées par Mozilla. Autoriser les extensions non signées ? N'installe que celles en qui tu as confiance. Tu peux revenir en arrière dans Paramètres › Vie privée."));
-    if (ok) Services.prefs.setBoolPref("xpinstall.signatures.required", false);
+      "Chrome extensions are not checked by Mozilla. Install this one anyway? Only install extensions you trust. You can turn this off in Settings › Privacy. Other extensions stay signature-checked.",
+      "Les extensions Chrome ne sont pas vérifiées par Mozilla. Installer celle-ci quand même ? N'installe que celles en qui tu as confiance. Tu peux revenir en arrière dans Paramètres › Vie privée. Les autres extensions restent vérifiées."));
+    if (ok) Services.prefs.setBoolPref(this.ALLOW, true);
     return ok;
   },
 
   async install(id, btn) {
-    if (!this.allowUnsigned()) return;
+    if (!this.allow()) return;
     const label = btn?.textContent;
     if (btn) {
       btn.disabled = true;
@@ -65,8 +211,10 @@ var OrbitChromeExt = {
     try {
       const res = await fetch(this.CRX_URL(id), { credentials: "omit" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const xpi = await this.toXpi(new Uint8Array(await res.arrayBuffer()), id);
-      await this.installFile(xpi);
+      const bytes = new Uint8Array(await res.arrayBuffer());
+      const hash = await this.sha256(bytes);
+      const xpi = await this.toXpi(bytes, id);
+      await this.keep(id, xpi, hash);
       document.getElementById("orbit-chrome-offer")?.remove();
     } catch (e) {
       console.error("Orbit: Chrome extension", e);
@@ -77,18 +225,6 @@ var OrbitChromeExt = {
       OrbitNotify.show({ kind: "chrome-ext", icon: "puzzle", tone: "warm", title: Orbit.tr("Chrome extension", "Extension Chrome"),
         text: Orbit.tr("This extension could not be installed.", "Cette extension n'a pas pu être installée."), timeout: 5000 });
     }
-  },
-
-  // Offset of the zip archive inside a .crx (v2 or v3).
-  zipOffset(bytes) {
-    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    const magic = String.fromCharCode(...bytes.subarray(0, 4));
-    if (magic == "PK\x03\x04") return 0; // already a zip
-    if (magic != "Cr24") throw new Error("not a crx");
-    const version = view.getUint32(4, true);
-    if (version == 3) return 12 + view.getUint32(8, true);
-    if (version == 2) return 16 + view.getUint32(8, true) + view.getUint32(12, true);
-    throw new Error(`crx v${version}`);
   },
 
   // Chrome manifest -> Gecko manifest.
@@ -113,7 +249,7 @@ var OrbitChromeExt = {
     await IOUtils.makeDirectory(dir, { ignoreExisting: true });
     const zipPath = PathUtils.join(dir, `${id}.zip`);
     const xpiPath = PathUtils.join(dir, `${id}.xpi`);
-    await IOUtils.write(zipPath, crx.subarray(this.zipOffset(crx)));
+    await IOUtils.write(zipPath, crx.subarray(this.pure().zipOffset(crx)));
     const reader = Cc["@mozilla.org/libjar/zip-reader;1"].createInstance(Ci.nsIZipReader);
     const writer = Cc["@mozilla.org/zipwriter;1"].createInstance(Ci.nsIZipWriter);
     reader.open(new FileUtils.File(zipPath));
@@ -163,11 +299,16 @@ var OrbitChromeExt = {
     const result = await new Promise(r => fp.open(r));
     if (result != Ci.nsIFilePicker.returnOK) return;
     const bytes = await IOUtils.read(fp.file.path);
-    const signedXpi = fp.file.leafName.endsWith(".xpi");
-    if (!signedXpi && !this.allowUnsigned()) return;
+    const signedXpi = fp.file.leafName.toLowerCase().endsWith(".xpi");
+    if (!signedXpi && !this.allow()) return;
     try {
-      const path = signedXpi ? fp.file.path : await this.toXpi(bytes, fp.file.leafName.replace(/\W+/g, "").slice(0, 32) || "local");
-      await this.installFile(path);
+      if (signedXpi) {
+        await this.installFile(fp.file.path);
+      } else {
+        const id = fp.file.leafName.replace(/\W+/g, "").slice(0, 32) || "local";
+        const xpi = await this.toXpi(bytes, id);
+        await this.keep(id, xpi, await this.sha256(bytes));
+      }
     } catch (e) {
       console.error("Orbit: extension file", e);
       OrbitNotify.show({ kind: "chrome-ext", icon: "puzzle", tone: "warm", title: Orbit.tr("Extensions", "Extensions"),

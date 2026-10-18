@@ -28,36 +28,74 @@ var OrbitDownloads = {
   },
 
   async init() {
-    // One watcher for the whole app (the downloads list is global).
-    if ([...Services.wm.getEnumerator("navigator:browser")].length > 1) return;
+    if (this._view) return;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (win != window && win.OrbitDownloads?._view) return;
+    }
     const { Downloads } = ChromeUtils.importESModule("resource://gre/modules/Downloads.sys.mjs");
     this.Downloads = Downloads;
     this.list = await Downloads.getList(Downloads.ALL);
-    this.list.addView({ onDownloadAdded: d => this.consider(d) });
+    if (window.closed) return;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (win != window && win.OrbitDownloads?._view) return;
+    }
+    this._view = { onDownloadAdded: d => this.consider(d) };
+    this.list.addView(this._view);
+    window.addEventListener("unload", () => {
+      if (this._view) this.list.removeView(this._view);
+      this._view = null;
+      for (const win of Services.wm.getEnumerator("navigator:browser")) {
+        if (win != window && !win.closed) {
+          win.OrbitDownloads?.init();
+          break;
+        }
+      }
+    }, { once: true });
   },
 
   // Takes over a fresh, public, plain GET download when the server allows ranges.
+  // The original download keeps running until Turbo has the whole file.
   async consider(download) {
     if (!this.enabled || download.succeeded || download.source.isPrivate || this._ours?.has(download)) return;
     const url = download.source.url;
     if (!/^https?:/.test(url) || download.source.adjustChannel) return;
-    // Wait until Gecko knows the size.
     for (let i = 0; i < 20 && !(download.totalBytes > 0) && !download.stopped; i++) await new Promise(r => setTimeout(r, 150));
-    if (download.stopped || !(download.totalBytes >= this.MIN_SIZE)) return;
+    if (download.stopped || download.succeeded || !(download.totalBytes >= this.MIN_SIZE)) return;
     const probe = await this.probe(url, download.totalBytes);
     if (!probe) return;
     const target = download.target.path;
-    await download.finalize(true).catch(() => {});
-    await this.list.remove(download).catch(() => {});
+    const tmp = `${target}.orbit-turbo`;
     try {
-      await this.turbo(url, target, probe.size, probe.validator);
+      await this.turbo(url, tmp, probe.size, probe.validator);
+      if (download.succeeded || download.canceled || window.closed) {
+        await IOUtils.remove(tmp, { ignoreAbsent: true });
+        return;
+      }
+      await download.finalize(true);
+      await this.list.remove(download).catch(() => {});
+      await IOUtils.remove(target, { ignoreAbsent: true });
+      await IOUtils.move(tmp, target);
+      const done = await this.Downloads.createDownload({ source: url, target, succeeded: true, totalBytes: probe.size });
+      (this._ours ??= new WeakSet()).add(done);
+      await this.list.add(done);
+      await this.markDownloaded(done);
     } catch (e) {
+      const dropped = download.stopped || download.succeeded || download.canceled;
+      if (!dropped || e?.name == "AbortError") await IOUtils.remove(tmp, { ignoreAbsent: true });
+      if (e?.name == "AbortError") return;
       console.error("Orbit Turbo", e);
       OrbitNotify.show({ kind: "turbo", icon: "download", title: this.t("turbo"), text: this.t("failed"), timeout: 4000 });
-      const again = await this.Downloads.createDownload({ source: url, target });
-      (this._ours ??= new WeakSet()).add(again);
-      await this.list.add(again);
-      again.start().catch(() => {});
+    }
+  },
+
+  // The normal download manager writes this mark. Turbo saves the file itself,
+  // so it has to ask for the same one (Zone.Identifier on Windows).
+  async markDownloaded(download) {
+    try {
+      const { DownloadIntegration } = ChromeUtils.importESModule("resource://gre/modules/DownloadIntegration.sys.mjs");
+      await DownloadIntegration.downloadDone(download);
+    } catch (e) {
+      console.error("Orbit Turbo mark", e);
     }
   },
 
@@ -68,8 +106,10 @@ var OrbitDownloads = {
       const range = res.headers.get("content-range");
       res.body?.cancel();
       const size = +(/\/(\d+)$/.exec(range ?? "")?.[1] ?? 0);
-      if (res.status != 206 || !size || (expected > 0 && size != expected)) return null;
-      return { size, validator: res.headers.get("etag") || res.headers.get("last-modified") || "" };
+      const validator = res.headers.get("etag") || res.headers.get("last-modified") || "";
+      if (res.status != 206 || !size || !validator || (expected > 0 && size != expected)) return null;
+      if (!this.pure().contentRange(range, 0, 0, size)) return null;
+      return { size, validator };
     } catch {
       return null;
     }
@@ -82,14 +122,19 @@ var OrbitDownloads = {
       from: i * part, to: Math.min(size, (i + 1) * part) - 1, path: `${target}.orbit-part${i}`, got: 0,
     })).filter(p => p.from <= p.to);
     const ctrl = new AbortController();
-    const card = this.card(PathUtils.filename(target), () => ctrl.abort());
+    let card;
+    try {
+      card = this.card(PathUtils.filename(target).replace(/\.orbit-turbo$/, ""), () => ctrl.abort());
+    } catch {
+      card = { update() {}, done() {}, remove() {} };
+    }
     const started = Date.now();
     const tick = setInterval(() => {
       const got = parts.reduce((a, p) => a + p.got, 0);
       card.update(got / size, got / Math.max(0.5, (Date.now() - started) / 1000), parts.length);
     }, 400);
     try {
-      await Promise.all(parts.map(p => this.segment(url, p, validator, ctrl.signal)));
+      await Promise.all(parts.map(p => this.segment(url, p, validator, ctrl.signal, size)));
       // Stitch the parts in order, a few MB at a time.
       await IOUtils.write(target, new Uint8Array(0));
       for (const p of parts) {
@@ -102,14 +147,10 @@ var OrbitDownloads = {
       const { size: written } = await IOUtils.stat(target);
       if (written != size) throw new Error(`size mismatch ${written} != ${size}`);
       card.done(this.t("done"));
-      // Listed like any other download.
-      const d = await this.Downloads.createDownload({ source: url, target, succeeded: true, totalBytes: size });
-      (this._ours ??= new WeakSet()).add(d);
-      await this.list.add(d);
     } catch (e) {
       card.remove();
       await IOUtils.remove(target, { ignoreAbsent: true });
-      if (ctrl.signal.aborted) return;
+      if (ctrl.signal.aborted) throw new DOMException("aborted", "AbortError");
       throw e;
     } finally {
       clearInterval(tick);
@@ -117,12 +158,15 @@ var OrbitDownloads = {
     }
   },
 
-  async segment(url, p, validator, signal) {
+  async segment(url, p, validator, signal, total) {
     await IOUtils.write(p.path, new Uint8Array(0));
     const headers = { Range: `bytes=${p.from}-${p.to}` };
     if (validator) headers["If-Range"] = validator;
     const res = await fetch(url, { headers, credentials: "include", cache: "no-store", signal });
-    if (res.status != 206) throw new Error(`segment ${p.from}: HTTP ${res.status}`);
+    if (res.status != 206 || !this.pure().contentRange(res.headers.get("content-range"), p.from, p.to, total)) {
+      res.body?.cancel();
+      throw new Error(`segment ${p.from}: HTTP ${res.status}`);
+    }
     const reader = res.body.getReader();
     for (;;) {
       const { value, done } = await reader.read();
@@ -131,6 +175,10 @@ var OrbitDownloads = {
       p.got += value.byteLength;
     }
     if (p.got != p.to - p.from + 1) throw new Error(`segment ${p.from}: short read`);
+  },
+
+  pure() {
+    return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs");
   },
 
   fmtSpeed(bps) {

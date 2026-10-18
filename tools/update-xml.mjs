@@ -19,6 +19,9 @@ const milestone = /Milestone=([\w.]+)/.exec(readFileSync(platformIni, "utf8"))[1
 const bytes = readFileSync(mar);
 const hash = createHash("sha512").update(bytes).digest("hex");
 const url = `https://github.com/${repo}/releases/download/${version}/windows.mar`;
+// appVersion is the branded version (surfer writes displayVersion into the
+// binary). It must stay equal to displayVersion, or installed copies ask for
+// the same update forever.
 const notes = `https://github.com/${repo}/releases/tag/${version}`;
 
 const xml = `<?xml version="1.0"?>

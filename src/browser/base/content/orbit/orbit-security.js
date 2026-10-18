@@ -11,6 +11,9 @@ var OrbitSecurity = {
   SAVED: "orbit.security.saved",
   FORTRESS: {
     "privacy.resistFingerprinting": true,
+    // Full site isolation. Orbit's memory defaults share processes; Fortress puts it back.
+    "fission.webContentIsolationStrategy": 1,
+    "dom.ipc.processCount.webIsolated": 4,
     "webgl.disabled": true,
     "media.peerconnection.enabled": false,
     "browser.contentblocking.category": "strict",

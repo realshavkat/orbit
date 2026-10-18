@@ -9,6 +9,7 @@ index b2b5db6040..c131f988c0 100644
 +% content orbit %content/orbit/
 +% resource orbit %content/orbit/
 +        content/orbit/                                (content/orbit/*.js)
++        content/orbit/                                (content/orbit/*.mjs)
 +        content/orbit/                                (content/orbit/*.css)
 +        content/orbit/                                (content/orbit/*.svg)
 +        content/orbit/                                (content/orbit/*.html)

@@ -6,12 +6,9 @@
 // "@claude question" in the address bar), and the assistant panel is
 // Firefox's chatbot sidebar (a plain web view, loaded only when opened).
 var OrbitAI = {
-  ENGINES: [
-    { name: "Claude", alias: "@claude", url: "https://claude.ai/new?q={searchTerms}", home: "https://claude.ai/new" },
-    { name: "ChatGPT", alias: "@gpt", url: "https://chatgpt.com/?q={searchTerms}", home: "https://chatgpt.com" },
-    { name: "Perplexity", alias: "@perplexity", url: "https://www.perplexity.ai/search?q={searchTerms}", home: "https://www.perplexity.ai" },
-    { name: "Le Chat", alias: "@mistral", url: "https://chat.mistral.ai/chat?q={searchTerms}", home: "https://chat.mistral.ai/chat" },
-  ],
+  get ENGINES() {
+    return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs").ASSISTANTS;
+  },
 
   async init() {
     if (Orbit.pref("orbit.ai.engines-version", 0) >= 1) return;

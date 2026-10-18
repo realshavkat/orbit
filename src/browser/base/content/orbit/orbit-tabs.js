@@ -102,16 +102,8 @@ var OrbitTabs = {
 
   // ---- orbit:// ---------------------------------------------------------------
   // orbit://<page> is Orbit's name for the built-in about:<page> pages.
-  // Typing one opens the page; built-in pages are shown with orbit:// too.
-  ALIASES: { home: "orbit:home", accueil: "orbit:home", memoire: "orbit:memory", memory: "orbit:memory", settings: "orbit:settings", preferences: "about:preferences", extensions: "about:addons",
-    addons: "about:addons", credits: "orbit:about", about: "orbit:about" },
-
   resolveOrbitURL(text) {
-    const m = /^orbit:(?:\/\/)?([\w-]+)(.*)$/i.exec(text.trim());
-    if (!m) return null;
-    const page = m[1].toLowerCase();
-    return this.ALIASES[page] ? this.ALIASES[page] + (this.ALIASES[page].startsWith("about:") ? m[2] : "")
-      : `about:${page}${m[2]}`;
+    return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs").resolveOrbitURL(text);
   },
 
   openOrbitURL(target) {

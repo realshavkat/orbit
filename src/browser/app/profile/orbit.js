@@ -218,3 +218,6 @@ pref("orbit.performance.preset", "venus");
 
 // Sites and addons.mozilla.org must see Orbit as Firefox ("Firefox/158" in the user agent).
 pref("general.useragent.compatMode.firefox", true);
+
+// BrowserGlue reads it to offer an update when the build is old (unset: JS error at startup).
+pref("app.update.checkInstallTime.days", 63);

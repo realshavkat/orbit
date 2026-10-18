@@ -131,7 +131,10 @@ var Orbit = {
 var OrbitPiP = {
   PLAYER: "chrome://global/content/pictureinpicture/player.xhtml",
   init() {
-    if (Services.wm.getEnumerator("navigator:browser").getNext() != window) return;
+    if (this._obs) return;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      if (win != window && win.OrbitPiP?._obs) return;
+    }
     const onOpen = win => {
       win.addEventListener("load", () => {
         if (win.location.href != this.PLAYER) return;
@@ -142,9 +145,18 @@ var OrbitPiP = {
         }
       }, { once: true });
     };
-    const obs = (subject, topic) => topic == "domwindowopened" && onOpen(subject);
-    Services.ww.registerNotification(obs);
-    window.addEventListener("unload", () => Services.ww.unregisterNotification(obs), { once: true });
+    this._obs = (subject, topic) => topic == "domwindowopened" && onOpen(subject);
+    Services.ww.registerNotification(this._obs);
+    window.addEventListener("unload", () => {
+      Services.ww.unregisterNotification(this._obs);
+      this._obs = null;
+      for (const win of Services.wm.getEnumerator("navigator:browser")) {
+        if (win != window && !win.closed) {
+          win.OrbitPiP?.init();
+          break;
+        }
+      }
+    }, { once: true });
   },
 };
 
