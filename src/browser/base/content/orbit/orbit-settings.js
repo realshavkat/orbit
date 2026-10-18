@@ -64,6 +64,7 @@ var OrbitSettings = {
     {
       id: "memory", icon: "gauge",
       items: [
+        { kind: "presets" },
         { kind: "choice", pref: "orbit.tabs.unload-after-minutes", label: "unload",
           options: [[0, "unload.never"], [5, "5 min"], [20, "20 min"], [60, "1 h"], [-1, "unload.adaptive"]] },
         { kind: "choice", pref: "orbit.memory.budget-mb", label: "budget",
@@ -106,7 +107,7 @@ var OrbitSettings = {
   ],
 
   t(key) {
-    return (this.STRINGS[Orbit.lang()] ?? this.STRINGS.en)[key] ?? this.STRINGS.en[key] ?? key;
+    return Orbit.dict(this.STRINGS)[key] ?? key;
   },
 
   STRINGS: {
@@ -243,10 +244,10 @@ var OrbitSettings = {
     const body = h("div", { class: "orbit-settings-body" });
     const title = h("div", { class: "orbit-settings-h" });
     const search = h("input", {
-      class: "orbit-settings-search-input", type: "search", placeholder: fr ? "Rechercher un réglage" : "Search settings",
+      class: "orbit-settings-search-input", type: "search", placeholder: Orbit.tr("Search settings", "Rechercher un réglage"),
       oninput: () => this.filter(search.value),
     });
-    const reset = h("button", { class: "orbit-settings-reset", onclick: () => this.resetSection(this._last) }, fr ? "Réinitialiser" : "Reset");
+    const reset = h("button", { class: "orbit-settings-reset", onclick: () => this.resetSection(this._last) }, Orbit.tr("Reset", "Réinitialiser"));
     const sheet = h("div", { id: "orbit-settings", onmousedown: e => e.target == sheet && this.close() },
       h("div", { class: "orbit-settings-card" },
         h("div", { class: "orbit-settings-side" },
@@ -258,14 +259,16 @@ var OrbitSettings = {
         h("div", { class: "orbit-settings-main" },
           h("div", { class: "orbit-settings-top" },
             title,
-            h("span", { class: "orbit-settings-note" }, fr ? "Tout est appliqué tout de suite · " : "Applied instantly · ", reset),
+            h("span", { class: "orbit-settings-note" }, Orbit.tr("Applied instantly · ", "Tout est appliqué tout de suite · "), reset),
             h("button", { class: "orbit-icon-button", title: "Esc", onclick: () => this.close() }, Orbit.icon("x"))),
           body)
       )
     );
     const setTitle = id => {
-      const [plain, key] = (this.TITLES[Orbit.lang()] ?? this.TITLES.en)[id] ?? [this.t(id), ""];
-      title.replaceChildren(plain.endsWith("'") ? plain : `${plain} `, h("span", { class: "orbit-key" }, key));
+      // Word order differs between languages: outside French and English the
+      // whole section name is the key word.
+      const [plain, key] = ["fr", "en"].includes(Orbit.lang()) ? Orbit.dict(this.TITLES)[id] ?? [this.t(id), ""] : ["", this.t(id)];
+      title.replaceChildren(!plain || plain.endsWith("'") ? plain : `${plain} `, h("span", { class: "orbit-key" }, key));
     };
     this.show = id => {
       this._last = id;
@@ -287,7 +290,7 @@ var OrbitSettings = {
       const needle = norm(q.trim());
       if (!needle) return this.show(this._last);
       for (const b of nav.children) b.removeAttribute("active");
-      title.replaceChildren(fr ? "Résultats pour " : "Results for ", h("span", { class: "orbit-key" }, q.trim()));
+      title.replaceChildren(Orbit.tr("Results for ", "Résultats pour "), h("span", { class: "orbit-key" }, q.trim()));
       reset.hidden = true;
       const out = [];
       for (const section of this.SECTIONS) {
@@ -296,7 +299,7 @@ var OrbitSettings = {
         if (rows.length) out.push(h("div", { class: "orbit-sheet-kicker orbit-settings-group" }, this.t(section.id).toUpperCase()), ...rows);
       }
       body.replaceChildren(...(out.length ? out : [h("div", { class: "orbit-setting-desc orbit-settings-empty" },
-        fr ? "Aucun réglage ne correspond." : "No setting matches.")]));
+        Orbit.tr("No setting matches.", "Aucun réglage ne correspond."))]));
     };
     for (const s of this.SECTIONS) {
       if (s.id == "about") nav.append(h("div", { class: "orbit-settings-spacer" }));
@@ -369,7 +372,7 @@ var OrbitSettings = {
         return this.row(null, item.label);
       case "updates": {
         const fr = Orbit.lang() == "fr";
-        const seg = this.segmented([["auto", fr ? "Automatiques" : "Automatic"], ["ask", fr ? "Me demander" : "Ask me"]], "auto",
+        const seg = this.segmented([["auto", Orbit.tr("Automatic", "Automatiques")], ["ask", Orbit.tr("Ask me", "Me demander")]], "auto",
           v => OrbitUpdates.setAuto(v == "auto"));
         OrbitUpdates.isAuto().then(auto => !auto && seg.querySelector('[data-v="ask"]')?.click());
         return this.row(seg, "updates");
@@ -380,16 +383,16 @@ var OrbitSettings = {
         return h("div", { class: "orbit-setting orbit-setting-col orbit-fortress", on: OrbitSecurity.on },
           h("div", { class: "orbit-vpn-head" },
             h("div", { class: "orbit-setting-text" },
-              h("div", { class: "orbit-setting-label" }, fr ? "Mode forteresse" : "Fortress mode"),
-              h("div", { class: "orbit-setting-desc" }, fr
-                ? "Sécurité maximale : moteur JavaScript sans compilateur JIT, pas de WebGL ni WebRTC, HTTPS obligatoire, anti-pistage strict et anti-empreinte. Certains sites seront plus lents ou moins compatibles."
-                : "Maximum security: JavaScript without JIT compilers, no WebGL or WebRTC, HTTPS only, strict tracking protection and anti-fingerprinting. Some sites get slower or less compatible.")),
+              h("div", { class: "orbit-setting-label" }, Orbit.tr("Fortress mode", "Mode forteresse")),
+              h("div", { class: "orbit-setting-desc" }, Orbit.tr("Maximum security: JavaScript without JIT compilers, no WebGL or WebRTC, HTTPS only, strict tracking protection and anti-fingerprinting. Some sites get slower or less compatible.", "Sécurité maximale : moteur JavaScript sans compilateur JIT, pas de WebGL ni WebRTC, HTTPS obligatoire, anti-pistage strict et anti-empreinte. Certains sites seront plus lents ou moins compatibles."))),
             this.switch(OrbitSecurity.on, v => { OrbitSecurity.set(v); this.show(this._last); })));
       }
       case "vault":
         return this.renderVault();
       case "mods":
         return this.renderMods();
+      case "presets":
+        return this.renderPresets();
       case "background":
         return this.renderBackground();
       case "strict":
@@ -432,31 +435,29 @@ var OrbitSettings = {
     const h = Orbit.h.bind(Orbit);
     const p = Services.prefs;
     const fr = Orbit.lang() == "fr";
-    const token = Cc["@mozilla.org/security/pk11tokendb;1"].getService(Ci.nsIPK11TokenDB).getInternalKeyToken();
-    const locked = token.hasPassword;
+    const { LoginHelper } = ChromeUtils.importESModule("resource://gre/modules/LoginHelper.sys.mjs");
+    const locked = LoginHelper.isPrimaryPasswordSet();
     const status = h("span", { class: "orbit-vault-status", ok: locked },
-      locked ? (fr ? "Mots de passe chiffrés" : "Passwords encrypted") : (fr ? "Mots de passe non protégés" : "Passwords not protected"));
+      locked ? (Orbit.tr("Passwords encrypted", "Mots de passe chiffrés")) : (Orbit.tr("Passwords not protected", "Mots de passe non protégés")));
     const row = (label, desc, on, set) => h("label", { class: "orbit-vpn-toggle orbit-vault-row" },
       h("span", {}, h("b", {}, label), h("small", {}, desc)), this.switch(on, set));
     return h("div", { class: "orbit-setting orbit-setting-col orbit-vault" },
       h("div", { class: "orbit-vpn-head" },
         h("div", { class: "orbit-setting-text" },
-          h("div", { class: "orbit-setting-label" }, fr ? "Coffre-fort anti-vol" : "Anti-theft vault"),
-          h("div", { class: "orbit-setting-desc" }, fr
-            ? "Si un logiciel malveillant copie ton profil, il ne peut rien lire sans ton mot de passe principal."
-            : "If malware copies your profile, it cannot read anything without your primary password.")),
+          h("div", { class: "orbit-setting-label" }, Orbit.tr("Anti-theft vault", "Coffre-fort anti-vol")),
+          h("div", { class: "orbit-setting-desc" }, Orbit.tr("If malware copies your profile, it cannot read anything without your primary password.", "Si un logiciel malveillant copie ton profil, il ne peut rien lire sans ton mot de passe principal."))),
         status),
       h("button", { class: locked ? "orbit-button" : "orbit-button primary", onclick: () => {
         window.openDialog("chrome://mozapps/content/preferences/changemp.xhtml", "", "centerscreen,chrome,modal,titlebar");
         this.show(this._last);
-      } }, Orbit.icon("shield"), locked ? (fr ? "Changer le mot de passe principal" : "Change primary password")
-        : (fr ? "Créer un mot de passe principal" : "Create a primary password")),
-      row(fr ? "Windows Hello pour voir les mots de passe" : "Windows Hello to view passwords",
-        fr ? "Ton code PIN ou ton visage avant d'afficher ou d'exporter un mot de passe" : "Your PIN or face before showing or exporting a password",
+      } }, Orbit.icon("shield"), locked ? (Orbit.tr("Change primary password", "Changer le mot de passe principal"))
+        : (Orbit.tr("Create a primary password", "Créer un mot de passe principal"))),
+      row(Orbit.tr("Windows Hello to view passwords", "Windows Hello pour voir les mots de passe"),
+        Orbit.tr("Your PIN or face before showing or exporting a password", "Ton code PIN ou ton visage avant d'afficher ou d'exporter un mot de passe"),
         Orbit.pref("signon.management.page.os-auth.locked.enabled", true),
         on => p.setBoolPref("signon.management.page.os-auth.locked.enabled", on)),
-      row(fr ? "Effacer cookies et sessions à la fermeture" : "Clear cookies and sessions on close",
-        fr ? "Un vol de cookies ne sert à rien. Tu devras te reconnecter à tes sites." : "Stolen cookies become useless. You will sign in to sites again.",
+      row(Orbit.tr("Clear cookies and sessions on close", "Effacer cookies et sessions à la fermeture"),
+        Orbit.tr("Stolen cookies become useless. You will sign in to sites again.", "Un vol de cookies ne sert à rien. Tu devras te reconnecter à tes sites."),
         Orbit.pref("privacy.clearOnShutdown_v2.cookiesAndStorage", false) && Orbit.pref("privacy.sanitize.sanitizeOnShutdown", false),
         on => {
           p.setBoolPref("privacy.sanitize.sanitizeOnShutdown", on);
@@ -475,14 +476,14 @@ var OrbitSettings = {
       if (t == "image" || t == "video") {
         kids.push(h("button", { class: "orbit-button", onclick: async () => {
           if (await OrbitBackground.choose()) this.show(this._last);
-        } }, Orbit.icon("upload"), fr ? "Choisir un fichier…" : "Choose a file…"));
+        } }, Orbit.icon("upload"), Orbit.tr("Choose a file…", "Choisir un fichier…")));
       }
       if (t == "color") {
         kids.push(h("input", { type: "color", class: "orbit-bg-color", value: Orbit.pref("orbit.background.color", "#0b0b14"),
           oninput: e => p.setStringPref("orbit.background.color", e.target.value) }));
       }
       if (t != "liquid") {
-        kids.push(h("span", { class: "orbit-setting-desc" }, fr ? "Assombrir" : "Dim"),
+        kids.push(h("span", { class: "orbit-setting-desc" }, Orbit.tr("Dim", "Assombrir")),
           this.slider({ min: 0, max: 85, unit: " %", value: Orbit.pref("orbit.background.dim", 35),
             onInput: v => p.setIntPref("orbit.background.dim", v) }));
       }
@@ -492,15 +493,38 @@ var OrbitSettings = {
     return h("div", { class: "orbit-setting orbit-setting-col" },
       h("div", { class: "orbit-vpn-head" },
         h("div", { class: "orbit-setting-text" },
-          h("div", { class: "orbit-setting-label" }, fr ? "Fond" : "Background"),
-          h("div", { class: "orbit-setting-desc" }, fr ? "Le fond liquide d'Orbit, ta photo, une vidéo en boucle ou une couleur"
-            : "Orbit's liquid background, your picture, a looping video or a color")),
-        this.segmented([["liquid", fr ? "Liquide" : "Liquid"], ["image", "Image"], ["video", fr ? "Vidéo" : "Video"], ["color", fr ? "Couleur" : "Color"]],
+          h("div", { class: "orbit-setting-label" }, Orbit.tr("Background", "Fond")),
+          h("div", { class: "orbit-setting-desc" }, Orbit.tr("Orbit's liquid background, your picture, a looping video or a color", "Le fond liquide d'Orbit, ta photo, une vidéo en boucle ou une couleur"))),
+        this.segmented([["liquid", Orbit.tr("Liquid", "Liquide")], ["image", "Image"], ["video", Orbit.tr("Video", "Vidéo")], ["color", Orbit.tr("Color", "Couleur")]],
           type, v => {
             fillExtra(v);
             if (v == "liquid" || v == "color" || Orbit.pref("orbit.background.file", "")) p.setStringPref("orbit.background.type", v);
           })),
       extra);
+  },
+
+  renderPresets() {
+    const h = Orbit.h.bind(Orbit);
+    const PLANETS = [
+      ["mercure", Orbit.tr("Mercury", "Mercure"), Orbit.tr("Maximum speed", "Vitesse maximale"), "#c9a27e"],
+      ["venus", Orbit.tr("Venus", "Vénus"), Orbit.tr("Balanced", "Équilibré"), "#e8c26a"],
+      ["saturne", Orbit.tr("Saturn", "Saturne"), Orbit.tr("Light on memory", "Économe"), "#d8b98a"],
+      ["neptune", Orbit.tr("Neptune", "Neptune"), Orbit.tr("Ultra light", "Ultra léger"), "#5b7cff"],
+    ];
+    const current = Orbit.pref("orbit.performance.preset", "venus");
+    const note = h("div", { class: "orbit-setting-desc", hidden: true }, this.t("restart"));
+    const cards = h("div", { class: "orbit-presets" }, ...PLANETS.map(([id, name, desc, color]) =>
+      h("button", { class: "orbit-preset", active: id == current, style: `--planet:${color}`, onclick: e => {
+        OrbitMemory.applyPreset(id);
+        for (const c of cards.children) c.toggleAttribute("active", c == e.currentTarget);
+        note.hidden = false;
+      } }, h("span", { class: "orbit-planet" }), h("b", {}, name), h("small", {}, desc))));
+    return h("div", { class: "orbit-setting orbit-setting-col" },
+      h("div", { class: "orbit-setting-text" },
+        h("div", { class: "orbit-setting-label" }, Orbit.tr("Performance", "Performances")),
+        h("div", { class: "orbit-setting-desc" }, Orbit.tr("A preset per planet, from the fastest to the lightest. Every setting below stays adjustable.",
+          "Un préréglage par planète, du plus rapide au plus léger. Chaque réglage ci-dessous reste modifiable."))),
+      cards, note);
   },
 
   renderMods() {
@@ -512,19 +536,17 @@ var OrbitSettings = {
       const off = OrbitMods.disabled();
       list.replaceChildren(...(names.length ? names.map(n => h("div", { class: "orbit-mods-item" },
         h("span", {}, n), this.switch(!off.has(n), on => OrbitMods.toggle(n, on))))
-        : [h("div", { class: "orbit-setting-desc" }, fr ? "Aucun mod pour l'instant." : "No mods yet.")]));
+        : [h("div", { class: "orbit-setting-desc" }, Orbit.tr("No mods yet.", "Aucun mod pour l'instant."))]));
     };
     fill();
     return h("div", { class: "orbit-setting orbit-setting-col" },
       h("div", { class: "orbit-setting-text" },
-        h("div", { class: "orbit-setting-label" }, fr ? "Mods" : "Mods"),
-        h("div", { class: "orbit-setting-desc" }, fr
-          ? "Des fichiers .css qui changent l'interface d'Orbit : couleurs, tailles, animations. userChrome.css fonctionne aussi."
-          : ".css files that change Orbit's interface: colors, sizes, animations. userChrome.css works too.")),
+        h("div", { class: "orbit-setting-label" }, Orbit.tr("Mods", "Mods")),
+        h("div", { class: "orbit-setting-desc" }, Orbit.tr(".css files that change Orbit's interface: colors, sizes, animations. userChrome.css works too.", "Des fichiers .css qui changent l'interface d'Orbit : couleurs, tailles, animations. userChrome.css fonctionne aussi."))),
       list,
       h("div", { class: "orbit-mods-actions" },
-        h("button", { class: "orbit-button", onclick: () => OrbitMods.openFolder() }, Orbit.icon("external-link"), fr ? "Ouvrir le dossier" : "Open folder"),
-        h("button", { class: "orbit-button", onclick: async () => { await OrbitMods.apply(); fill(); } }, Orbit.icon("refresh-cw"), fr ? "Recharger" : "Reload")));
+        h("button", { class: "orbit-button", onclick: () => OrbitMods.openFolder() }, Orbit.icon("external-link"), Orbit.tr("Open folder", "Ouvrir le dossier")),
+        h("button", { class: "orbit-button", onclick: async () => { await OrbitMods.apply(); fill(); } }, Orbit.icon("refresh-cw"), Orbit.tr("Reload", "Recharger"))));
   },
 
   renderVPN() {
@@ -542,18 +564,14 @@ var OrbitSettings = {
       },
     });
     const custom = h("div", { class: "orbit-vpn-custom" }, input,
-      h("div", { class: "orbit-setting-desc" }, fr
-        ? "Ton propre serveur SOCKS5 ou HTTPS : un VPS, Tor (socks5://127.0.0.1:9050) ou le proxy d'une appli VPN."
-        : "Your own SOCKS5 or HTTPS server: a VPS, Tor (socks5://127.0.0.1:9050) or a VPN app's proxy."));
+      h("div", { class: "orbit-setting-desc" }, Orbit.tr("Your own SOCKS5 or HTTPS server: a VPS, Tor (socks5://127.0.0.1:9050) or a VPN app's proxy.", "Ton propre serveur SOCKS5 ou HTTPS : un VPS, Tor (socks5://127.0.0.1:9050) ou le proxy d'une appli VPN.")));
     const sync = () => (custom.hidden = Orbit.pref("orbit.vpn.mode", "custom") != "custom");
     sync();
     return h("div", { class: "orbit-setting orbit-setting-col" },
       h("div", { class: "orbit-vpn-head" },
         h("div", { class: "orbit-setting-text" },
           h("div", { class: "orbit-setting-label" }, "Orbit VPN"),
-          h("div", { class: "orbit-setting-desc" }, fr
-            ? "Masque ton adresse IP. Les DNS passent par le tunnel et WebRTC ne peut pas révéler ta vraie IP."
-            : "Hides your IP address. DNS goes through the tunnel and WebRTC cannot reveal your real IP.")),
+          h("div", { class: "orbit-setting-desc" }, Orbit.tr("Hides your IP address. DNS goes through the tunnel and WebRTC cannot reveal your real IP.", "Masque ton adresse IP. Les DNS passent par le tunnel et WebRTC ne peut pas révéler ta vraie IP."))),
         this.switch(Orbit.pref("orbit.vpn.enabled", false), on => OrbitVPN.apply(on))),
       custom);
   },
@@ -577,7 +595,7 @@ var OrbitSettings = {
     const fr = Orbit.lang() == "fr";
     return h("div", { class: "orbit-shortcuts" }, ...this.SHORTCUTS.map(([keys, frLabel, enLabel]) =>
       h("div", { class: "orbit-setting" },
-        h("div", { class: "orbit-setting-label" }, fr ? frLabel : enLabel),
+        h("div", { class: "orbit-setting-label" }, Orbit.tr(enLabel, frLabel)),
         h("span", { class: "orbit-keys" }, ...(fr ? keys : keys.replace("Maj", "Shift")).split(" ").map(k => h("kbd", {}, k))))));
   },
 

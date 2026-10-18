@@ -13,9 +13,9 @@ var OrbitDownloads = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      turbo: "Orbit Turbo", cancel: fr ? "Annuler" : "Cancel", done: fr ? "Téléchargé" : "Downloaded",
-      failed: fr ? "Turbo indisponible, téléchargement normal." : "Turbo unavailable, normal download.",
-      conn: fr ? "connexions" : "connections",
+      turbo: "Orbit Turbo", cancel: Orbit.tr("Cancel", "Annuler"), done: Orbit.tr("Downloaded", "Téléchargé"),
+      failed: Orbit.tr("Turbo unavailable, normal download.", "Turbo indisponible, téléchargement normal."),
+      conn: Orbit.tr("connections", "connexions"),
     }[k];
   },
 
@@ -136,7 +136,7 @@ var OrbitDownloads = {
   fmtSpeed(bps) {
     const mb = bps / 1048576;
     const fr = Orbit.lang() == "fr";
-    return mb >= 1 ? `${mb.toFixed(1).replace(".", fr ? "," : ".")} ${fr ? "Mo" : "MB"}/s` : `${Math.round(bps / 1024)} ${fr ? "Ko" : "KB"}/s`;
+    return mb >= 1 ? `${mb.toFixed(1).replace(".", Orbit.tr(".", ","))} ${Orbit.tr("MB", "Mo")}/s` : `${Math.round(bps / 1024)} ${Orbit.tr("KB", "Ko")}/s`;
   },
 
   // Progress card in the toast stack.

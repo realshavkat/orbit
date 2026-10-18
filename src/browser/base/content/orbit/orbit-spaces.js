@@ -272,8 +272,7 @@ var OrbitSpaces = {
           icon("pencil")),
         h("button", {
           id: "orbit-space-clear", class: "orbit-icon-button",
-          title: Orbit.lang() == "fr" ? "Fermer les onglets non sélectionnés (double-clic : tout fermer)"
-            : "Close unselected tabs (double-click: close all)",
+          title: Orbit.tr("Close unselected tabs (double-click: close all)", "Fermer les onglets non sélectionnés (double-clic : tout fermer)"),
           onclick: e => e.detail < 2 && this.clearTabs(),
           ondblclick: e => { e.stopPropagation(); this.clearTabs(true); },
         }, icon("brush-cleaning"))
@@ -287,7 +286,7 @@ var OrbitSpaces = {
         class: "orbit-icon-button", id: "orbit-compact-button", title: `${t("compact.toggle")} (Ctrl+Alt+C)`,
         onclick: () => OrbitLayout.toggleCompact(),
       }, icon("panel-left")),
-      h("div", { id: "orbit-drop-hint" }, fr ? "Lâchez sur un espace pour y déplacer l'onglet" : "Drop on a space to move the tab there"),
+      h("div", { id: "orbit-drop-hint" }, Orbit.tr("Drop on a space to move the tab there", "Lâchez sur un espace pour y déplacer l'onglet")),
       h("div", { id: "orbit-space-switcher" },
         this.indicator,
         ...this.spaces.map((s, i) =>
@@ -423,7 +422,7 @@ var OrbitSpaces = {
       if (e.target != menu) return;
       const tab = TabContextMenu.contextTab;
       const fr = Services.locale.appLocaleAsBCP47.startsWith("fr");
-      item.setAttribute("label", fr ? "Déplacer vers l'espace" : "Move to space");
+      item.setAttribute("label", Orbit.tr("Move to space", "Déplacer vers l'espace"));
       item.hidden = !tab || tab.pinned || this.spaces.length < 2;
       popup.replaceChildren(
         ...this.spaces.filter(s => s.id != this.spaceOf(tab)).map(s =>

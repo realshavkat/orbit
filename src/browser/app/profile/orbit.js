@@ -213,3 +213,5 @@ pref("network.http.pacing.requests.enabled", false);
 pref("network.http.max-connections", 1800);
 pref("network.http.max-persistent-connections-per-proxy", 48);
 pref("gfx.content.skia-font-cache-size", 32);
+
+pref("orbit.performance.preset", "venus");

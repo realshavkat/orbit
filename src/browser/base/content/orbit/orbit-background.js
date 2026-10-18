@@ -55,8 +55,8 @@ var OrbitBackground = {
   async choose() {
     const fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
     const fr = Orbit.lang() == "fr";
-    fp.init(window.browsingContext, fr ? "Choisir un fond" : "Choose a background", Ci.nsIFilePicker.modeOpen);
-    fp.appendFilter(fr ? "Images et vidéos" : "Images and videos", [...this.IMAGE, ...this.VIDEO].map(e => `*.${e}`).join(";"));
+    fp.init(window.browsingContext, Orbit.tr("Choose a background", "Choisir un fond"), Ci.nsIFilePicker.modeOpen);
+    fp.appendFilter(Orbit.tr("Images and videos", "Images et vidéos"), [...this.IMAGE, ...this.VIDEO].map(e => `*.${e}`).join(";"));
     const result = await new Promise(r => fp.open(r));
     if (result != Ci.nsIFilePicker.returnOK) return false;
     const ext = fp.file.leafName.split(".").pop().toLowerCase();

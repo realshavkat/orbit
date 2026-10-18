@@ -71,7 +71,7 @@ export class OrbitHomeParent extends JSWindowActorParent {
     } catch {}
     return {
       name: pref("orbit.user.name", ""),
-      lang: Services.locale.appLocaleAsBCP47.startsWith("fr") ? "fr" : "en",
+      lang: Services.locale.appLocaleAsBCP47.split("-")[0],
       search,
       tiles: await this.tiles(),
       blocked: await this.blockedToday(),

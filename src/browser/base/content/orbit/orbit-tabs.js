@@ -28,7 +28,7 @@ var OrbitTabs = {
     const text = document.getElementById("pinned-drop-indicator-text");
     if (text) {
       text.removeAttribute("data-l10n-id");
-      text.textContent = fr ? "Lâchez ici pour l'ajouter aux favoris" : "Drop here to add to Essentials";
+      text.textContent = Orbit.tr("Drop here to add to Essentials", "Lâchez ici pour l'ajouter aux favoris");
     }
     // Only freshly opened tabs slide in; a tab moved by drag must not replay it.
     tc.addEventListener("TabOpen", e => {

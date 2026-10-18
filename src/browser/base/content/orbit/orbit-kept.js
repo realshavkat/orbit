@@ -12,8 +12,8 @@ var OrbitKept = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      keep: fr ? "Épingler dans l'espace" : "Pin in space",
-      unkeep: fr ? "Retirer des épinglés" : "Unpin from space",
+      keep: Orbit.tr("Pin in space", "Épingler dans l'espace"),
+      unkeep: Orbit.tr("Unpin from space", "Retirer des épinglés"),
     }[k];
   },
 

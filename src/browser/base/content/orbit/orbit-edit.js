@@ -18,21 +18,21 @@ var OrbitEdit = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      edit: fr ? "Modifier Orbit" : "Edit Orbit",
-      newSpace: fr ? "Nouvel espace" : "New space",
-      compact: fr ? "Mode compact" : "Compact mode",
-      side: fr ? "Barre latérale à droite" : "Sidebar on the right",
-      layout: fr ? "Paramètres de disposition" : "Layout settings",
-      title: fr ? "Mode édition" : "Edit mode",
-      hint: fr ? "Glisse les boutons de la barre pour les réordonner, × pour en retirer." : "Drag toolbar buttons to reorder them, × to remove one.",
-      add: fr ? "Ajouter" : "Add",
-      none: fr ? "Tous les boutons sont déjà dans la barre." : "Every button is already in the toolbar.",
-      done: fr ? "Terminé" : "Done",
-      reset: fr ? "Réinitialiser" : "Reset",
-      left: fr ? "Gauche" : "Left", right: fr ? "Droite" : "Right",
-      tabs: fr ? "Onglets" : "Tabs",
-      width: fr ? "Largeur" : "Width",
-      remove: fr ? "Retirer" : "Remove",
+      edit: Orbit.tr("Edit Orbit", "Modifier Orbit"),
+      newSpace: Orbit.tr("New space", "Nouvel espace"),
+      compact: Orbit.tr("Compact mode", "Mode compact"),
+      side: Orbit.tr("Sidebar on the right", "Barre latérale à droite"),
+      layout: Orbit.tr("Layout settings", "Paramètres de disposition"),
+      title: Orbit.tr("Edit mode", "Mode édition"),
+      hint: Orbit.tr("Drag toolbar buttons to reorder them, × to remove one.", "Glisse les boutons de la barre pour les réordonner, × pour en retirer."),
+      add: Orbit.tr("Add", "Ajouter"),
+      none: Orbit.tr("Every button is already in the toolbar.", "Tous les boutons sont déjà dans la barre."),
+      done: Orbit.tr("Done", "Terminé"),
+      reset: Orbit.tr("Reset", "Réinitialiser"),
+      left: Orbit.tr("Left", "Gauche"), right: Orbit.tr("Right", "Droite"),
+      tabs: Orbit.tr("Tabs", "Onglets"),
+      width: Orbit.tr("Width", "Largeur"),
+      remove: Orbit.tr("Remove", "Retirer"),
     }[k];
   },
 
@@ -75,7 +75,7 @@ var OrbitEdit = {
     const fr = Orbit.lang() == "fr";
     return ContextualIdentityService.getPublicIdentities().map(identity => {
       const name = ContextualIdentityService.getUserContextLabel(identity.userContextId);
-      const el = item("plus", `${fr ? "Onglet" : "Tab"} ${name}`, () => {
+      const el = item("plus", `${Orbit.tr("Tab", "Onglet")} ${name}`, () => {
         const tab = gBrowser.addTrustedTab(OrbitTabs.homeURL(), { userContextId: identity.userContextId, inBackground: false });
         OrbitSpaces.setTabSpace(tab, OrbitSpaces.activeId);
       });
@@ -89,7 +89,7 @@ var OrbitEdit = {
     for (const item of view.querySelectorAll(".unified-extensions-item")) {
       if (item.querySelector(".orbit-ext-pin") || !CustomizableUI.getPlacementOfWidget(item.id)) continue;
       const pin = Orbit.h("button", {
-        class: "orbit-ext-pin orbit-icon-button", title: fr ? "Épingler à la barre d'outils" : "Pin to toolbar",
+        class: "orbit-ext-pin orbit-icon-button", title: Orbit.tr("Pin to toolbar", "Épingler à la barre d'outils"),
         onclick: e => {
           e.stopPropagation();
           gUnifiedExtensions.pinToToolbar(item.id, true);

@@ -5,15 +5,36 @@
 // Orbit home (orbit://home): an unprivileged static page. Orbit's
 // OrbitHome actor answers "OrbitHome:Ready" with the data it needs.
 "use strict";
-let fr = navigator.language.startsWith("fr");
-const $ = id => document.getElementById(id);
-const T = () => fr
-  ? { morning: "Bonjour", evening: "Bonsoir", night: "Bonne nuit", ph: "Rechercher, saisir une adresse ou demander à l'IA",
+const STRINGS = {
+  fr: { morning: "Bonjour", evening: "Bonsoir", night: "Bonne nuit", ph: "Rechercher, saisir une adresse ou demander à l'IA",
     ask: "Demander à", add: "Ajouter", remove: "Retirer", blocked: n => `${n} PISTEUR${n > 1 ? "S" : ""} BLOQUÉ${n > 1 ? "S" : ""} AUJOURD'HUI`,
-    slept: n => `${n} ONGLET${n > 1 ? "S" : ""} EN VEILLE · MÉMOIRE LIBÉRÉE` }
-  : { morning: "Good morning", evening: "Good evening", night: "Good night", ph: "Search, type an address or ask AI",
+    slept: n => `${n} ONGLET${n > 1 ? "S" : ""} EN VEILLE · MÉMOIRE LIBÉRÉE` },
+  en: { morning: "Good morning", evening: "Good evening", night: "Good night", ph: "Search, type an address or ask AI",
     ask: "Ask", add: "Add", remove: "Remove", blocked: n => `${n} TRACKER${n > 1 ? "S" : ""} BLOCKED TODAY`,
-    slept: n => `${n} TAB${n > 1 ? "S" : ""} ASLEEP · MEMORY FREED` };
+    slept: n => `${n} TAB${n > 1 ? "S" : ""} ASLEEP · MEMORY FREED` },
+  es: { morning: "Buenos días", evening: "Buenas tardes", night: "Buenas noches", ph: "Busca, escribe una dirección o pregunta a la IA",
+    ask: "Preguntar a", add: "Añadir", remove: "Quitar", blocked: n => `${n} RASTREADOR${n > 1 ? "ES" : ""} BLOQUEADO${n > 1 ? "S" : ""} HOY`,
+    slept: n => `${n} PESTAÑA${n > 1 ? "S" : ""} EN REPOSO · MEMORIA LIBERADA` },
+  de: { morning: "Guten Morgen", evening: "Guten Abend", night: "Gute Nacht", ph: "Suchen, Adresse eingeben oder die KI fragen",
+    ask: "Fragen:", add: "Hinzufügen", remove: "Entfernen", blocked: n => `${n} TRACKER HEUTE BLOCKIERT`,
+    slept: n => `${n} TAB${n > 1 ? "S" : ""} SCHLAFEN · SPEICHER FREI` },
+  pt: { morning: "Bom dia", evening: "Boa noite", night: "Boa noite", ph: "Pesquise, digite um endereço ou pergunte à IA",
+    ask: "Perguntar a", add: "Adicionar", remove: "Remover", blocked: n => `${n} RASTREADOR${n > 1 ? "ES" : ""} BLOQUEADO${n > 1 ? "S" : ""} HOJE`,
+    slept: n => `${n} ABA${n > 1 ? "S" : ""} EM REPOUSO · MEMÓRIA LIBERADA` },
+  it: { morning: "Buongiorno", evening: "Buonasera", night: "Buonanotte", ph: "Cerca, scrivi un indirizzo o chiedi all'IA",
+    ask: "Chiedi a", add: "Aggiungi", remove: "Rimuovi", blocked: n => `${n} TRACCIANT${n > 1 ? "I" : "E"} BLOCCAT${n > 1 ? "I" : "O"} OGGI`,
+    slept: n => `${n} SCHED${n > 1 ? "E" : "A"} SOSPES${n > 1 ? "E" : "A"} · MEMORIA LIBERATA` },
+  ru: { morning: "Доброе утро", evening: "Добрый вечер", night: "Доброй ночи", ph: "Ищите, введите адрес или спросите ИИ",
+    ask: "Спросить", add: "Добавить", remove: "Удалить", blocked: n => `ТРЕКЕРОВ ЗАБЛОКИРОВАНО СЕГОДНЯ: ${n}`,
+    slept: n => `ВКЛАДОК СПИТ: ${n} · ПАМЯТЬ ОСВОБОЖДЕНА` },
+  uk: { morning: "Доброго ранку", evening: "Добрий вечір", night: "Добраніч", ph: "Шукайте, введіть адресу або запитайте ШІ",
+    ask: "Запитати", add: "Додати", remove: "Прибрати", blocked: n => `ТРЕКЕРІВ ЗАБЛОКОВАНО СЬОГОДНІ: ${n}`,
+    slept: n => `ВКЛАДОК СПИТЬ: ${n} · ПАМ'ЯТЬ ЗВІЛЬНЕНО` },
+};
+let lang = navigator.language.split("-")[0];
+let fr = lang == "fr";
+const $ = id => document.getElementById(id);
+const T = () => STRINGS[lang] ?? STRINGS.en;
 
 const AI = [
   ["Claude", "https://claude.ai/new?q="],
@@ -41,9 +62,12 @@ q.addEventListener("keydown", e => {
 });
 
 function render(data = {}) {
-  if (data.lang) fr = data.lang == "fr";
+  if (data.lang) {
+    lang = data.lang;
+    fr = lang == "fr";
+  }
   const t = T();
-  document.documentElement.lang = fr ? "fr" : "en";
+  document.documentElement.lang = STRINGS[lang] ? lang : "en";
   if (/^https:\/\//.test(data.search || "")) searchTpl = data.search;
   const hour = new Date().getHours();
   $("hello").textContent = hour < 5 ? t.night : hour < 18 ? t.morning : t.evening;
@@ -105,7 +129,7 @@ function render(data = {}) {
 const dateEl = $("date");
 const tick = () => {
   const d = new Date();
-  const loc = fr ? "fr-FR" : "en-US";
+  const loc = { fr: "fr-FR", es: "es-ES", de: "de-DE", pt: "pt-BR", it: "it-IT", ru: "ru-RU", uk: "uk-UA" }[lang] ?? "en-US";
   dateEl.textContent = d.toLocaleDateString(loc, { weekday: "long", day: "numeric", month: "long" }) +
     " · " + d.toLocaleTimeString(loc, { hour: "2-digit", minute: "2-digit" });
 };

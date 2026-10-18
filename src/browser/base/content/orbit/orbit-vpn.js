@@ -18,12 +18,12 @@ var OrbitVPN = {
     const fr = Orbit.lang() == "fr";
     return {
       name: "Orbit VPN",
-      on: fr ? "Orbit VPN activé" : "Orbit VPN on",
-      off: fr ? "Orbit VPN désactivé" : "Orbit VPN off",
-      onD: fr ? "Ta navigation passe par {h}. Ton adresse IP est masquée." : "Browsing goes through {h}. Your IP address is hidden.",
-      offD: fr ? "Connexion directe." : "Direct connection.",
-      noServer: fr ? "Ajoute d'abord un serveur dans Paramètres › Vie privée." : "Add a server first in Settings › Privacy.",
-      bad: fr ? "Adresse invalide. Exemple : socks5://127.0.0.1:9050" : "Invalid address. Example: socks5://127.0.0.1:9050",
+      on: Orbit.tr("Orbit VPN on", "Orbit VPN activé"),
+      off: Orbit.tr("Orbit VPN off", "Orbit VPN désactivé"),
+      onD: Orbit.tr("Browsing goes through {h}. Your IP address is hidden.", "Ta navigation passe par {h}. Ton adresse IP est masquée."),
+      offD: Orbit.tr("Direct connection.", "Connexion directe."),
+      noServer: Orbit.tr("Add a server first in Settings › Privacy.", "Ajoute d'abord un serveur dans Paramètres › Vie privée."),
+      bad: Orbit.tr("Invalid address. Example: socks5://127.0.0.1:9050", "Adresse invalide. Exemple : socks5://127.0.0.1:9050"),
     }[k];
   },
 
@@ -74,22 +74,22 @@ var OrbitVPN = {
   P(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      on: fr ? "Protégé" : "Protected", off: fr ? "Non protégé" : "Not protected",
-      onD: fr ? "Ton adresse IP est masquée" : "Your IP address is hidden",
-      offD: fr ? "Les sites voient ton adresse IP" : "Sites can see your IP address",
-      via: fr ? "Via" : "Via", noServer: fr ? "Aucun serveur" : "No server",
-      check: fr ? "Vérifier mon IP" : "Check my IP", checking: fr ? "Vérification…" : "Checking…",
-      ip: fr ? "IP visible par les sites : " : "IP seen by sites: ", ipFail: fr ? "Impossible de joindre le service de vérification." : "Could not reach the check service.",
-      advanced: fr ? "Mode avancé" : "Advanced mode", simple: fr ? "Mode simple" : "Simple mode",
-      choose: fr ? "Choisis un serveur pour commencer :" : "Pick a server to start:",
-      "tor-browser": fr ? "Tor Browser ouvert" : "Tor Browser running", tor: fr ? "Service Tor" : "Tor service",
-      own: fr ? "Mon serveur…" : "My server…",
-      torD: fr ? "Tor est gratuit : lance Tor Browser (ou le service Tor) puis active Orbit VPN." : "Tor is free: start Tor Browser (or the Tor service), then turn Orbit VPN on.",
-      server: fr ? "SERVEUR" : "SERVER",
-      serverD: fr ? "SOCKS5 ou HTTPS : un VPS, Tor (socks5://127.0.0.1:9050) ou le proxy d'une appli VPN." : "SOCKS5 or HTTPS: a VPS, Tor (socks5://127.0.0.1:9050) or a VPN app's proxy.",
-      dns: fr ? "DNS dans le tunnel" : "DNS through the tunnel", webrtc: fr ? "Bloquer les fuites WebRTC" : "Block WebRTC leaks",
-      bypass: fr ? "EXCEPTIONS" : "EXCEPTIONS", bypassD: fr ? "Sites qui ne passent pas par le VPN, séparés par des virgules." : "Sites that skip the VPN, comma separated.",
-      kill: fr ? "Si le serveur ne répond plus, rien ne passe : aucune fuite de ton IP." : "If the server stops answering, nothing goes through: your IP never leaks.",
+      on: Orbit.tr("Protected", "Protégé"), off: Orbit.tr("Not protected", "Non protégé"),
+      onD: Orbit.tr("Your IP address is hidden", "Ton adresse IP est masquée"),
+      offD: Orbit.tr("Sites can see your IP address", "Les sites voient ton adresse IP"),
+      via: Orbit.tr("Via", "Via"), noServer: Orbit.tr("No server", "Aucun serveur"),
+      check: Orbit.tr("Check my IP", "Vérifier mon IP"), checking: Orbit.tr("Checking…", "Vérification…"),
+      ip: Orbit.tr("IP seen by sites: ", "IP visible par les sites : "), ipFail: Orbit.tr("Could not reach the check service.", "Impossible de joindre le service de vérification."),
+      advanced: Orbit.tr("Advanced mode", "Mode avancé"), simple: Orbit.tr("Simple mode", "Mode simple"),
+      choose: Orbit.tr("Pick a server to start:", "Choisis un serveur pour commencer :"),
+      "tor-browser": Orbit.tr("Tor Browser running", "Tor Browser ouvert"), tor: Orbit.tr("Tor service", "Service Tor"),
+      own: Orbit.tr("My server…", "Mon serveur…"),
+      torD: Orbit.tr("Tor is free: start Tor Browser (or the Tor service), then turn Orbit VPN on.", "Tor est gratuit : lance Tor Browser (ou le service Tor) puis active Orbit VPN."),
+      server: Orbit.tr("SERVER", "SERVEUR"),
+      serverD: Orbit.tr("SOCKS5 or HTTPS: a VPS, Tor (socks5://127.0.0.1:9050) or a VPN app's proxy.", "SOCKS5 ou HTTPS : un VPS, Tor (socks5://127.0.0.1:9050) ou le proxy d'une appli VPN."),
+      dns: Orbit.tr("DNS through the tunnel", "DNS dans le tunnel"), webrtc: Orbit.tr("Block WebRTC leaks", "Bloquer les fuites WebRTC"),
+      bypass: Orbit.tr("EXCEPTIONS", "EXCEPTIONS"), bypassD: Orbit.tr("Sites that skip the VPN, comma separated.", "Sites qui ne passent pas par le VPN, séparés par des virgules."),
+      kill: Orbit.tr("If the server stops answering, nothing goes through: your IP never leaks.", "Si le serveur ne répond plus, rien ne passe : aucune fuite de ton IP."),
     }[k];
   },
 

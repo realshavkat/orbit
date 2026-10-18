@@ -75,14 +75,14 @@ var OrbitMenu = {
         }, Orbit.icon(icon));
         sync();
         menu.append(h("div", { class: "orbit-menu-zoom" },
-          h("span", {}, lang == "fr" ? "Zoom" : "Zoom"),
+          h("span", {}, "Zoom"),
           h("div", { class: "orbit-zoom-controls" },
             zbtn("zoom-out", "cmd_fullZoomReduce"),
             h("button", { class: "orbit-zoom-reset", onclick: () => { FullZoom.reset(); setTimeout(sync, 50); } }, pct),
             zbtn("zoom-in", "cmd_fullZoomEnlarge"))));
       } else {
         menu.append(h("button", { class: "orbit-menu-item", role: "menuitem", onclick: () => run(item) },
-          Orbit.icon(item.icon), h("span", { class: "orbit-menu-label" }, item[lang]),
+          Orbit.icon(item.icon), h("span", { class: "orbit-menu-label" }, Orbit.tr(item.en, item.fr)),
           item.key ? h("span", { class: "orbit-menu-key" }, lang == "fr" ? item.key : item.key.replace("Maj", "Shift")) : null));
       }
     }

@@ -10,14 +10,37 @@ var Orbit = {
   BASE: "chrome://orbit/content/",
   XHTML: "http://www.w3.org/1999/xhtml",
 
-  // Tiny i18n: French or English, picked from the app locale.
-  // UI language of Orbit's own strings: follows the app locale (fr or en).
+  // i18n. Orbit's strings are written in English and French; every other
+  // language is a dictionary in locales/<lang>.js keyed by the English text.
+  // Only the active language is loaded.
+  LANGS: ["fr", "en", "es", "de", "pt", "it", "ru", "uk"],
+
   lang() {
-    return Services.locale.appLocaleAsBCP47.startsWith("fr") ? "fr" : "en";
+    const l = Services.locale.appLocaleAsBCP47.split("-")[0];
+    return this.LANGS.includes(l) ? l : "en";
+  },
+
+  // tr("Hello", "Bonjour") -> the string in the UI language.
+  tr(en, fr) {
+    const l = this.lang();
+    if (l == "fr") return fr ?? en;
+    return (l != "en" && ORBIT_I18N[l]?.[en]) || en;
+  },
+
+  // A {fr: {...}, en: {...}} table seen in the UI language (strings and arrays).
+  dict(table) {
+    const l = this.lang();
+    if (table[l]) return table[l];
+    const cache = (this._dicts ??= new WeakMap());
+    if (!cache.has(table)) {
+      const tr = v => (typeof v == "string" ? this.tr(v) : Array.isArray(v) ? v.map(tr) : v);
+      cache.set(table, Object.fromEntries(Object.entries(table.en).map(([k, v]) => [k, tr(v)])));
+    }
+    return cache.get(table);
   },
 
   t(key) {
-    return ORBIT_STRINGS[this.lang()][key] ?? ORBIT_STRINGS.en[key] ?? key;
+    return this.dict(ORBIT_STRINGS)[key] ?? key;
   },
 
   pref(name, fallback) {
@@ -54,6 +77,14 @@ var Orbit = {
   },
 
   init() {
+    const l = this.lang();
+    if (l != "fr" && l != "en") {
+      try {
+        Services.scriptloader.loadSubScript(`${this.BASE}locales/${l}.js`, window);
+      } catch (e) {
+        console.error(`Orbit: no translation for ${l}`, e);
+      }
+    }
     for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js", "orbit-edit.js", "orbit-vpn.js", "orbit-extras.js", "orbit-folders.js", "orbit-kept.js", "orbit-updates.js", "orbit-mods.js", "orbit-import.js", "orbit-downloads.js", "orbit-background.js", "orbit-security.js"]) {
       Services.scriptloader.loadSubScript(this.BASE + f, window);
     }
@@ -115,6 +146,8 @@ var OrbitPiP = {
     window.addEventListener("unload", () => Services.ww.unregisterNotification(obs), { once: true });
   },
 };
+
+var ORBIT_I18N = {};
 
 var ORBIT_STRINGS = {
   fr: {

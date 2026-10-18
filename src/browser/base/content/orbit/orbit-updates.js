@@ -11,17 +11,17 @@ var OrbitUpdates = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      kicker: fr ? "MISE À JOUR" : "UPDATE",
-      title: fr ? "Orbit {v} est" : "Orbit {v} is",
-      key: fr ? "disponible" : "available",
-      now: fr ? "Mettre à jour" : "Update now",
-      later: fr ? "Plus tard" : "Later",
-      downloading: fr ? "Téléchargement… {p}" : "Downloading… {p}",
-      restart: fr ? "Redémarrer pour terminer" : "Restart to finish",
-      failed: fr ? "Le téléchargement a échoué. Réessaie plus tard." : "Download failed. Try again later.",
-      notes: fr ? "Nouveautés" : "What's new",
-      noNotes: fr ? "Corrections et améliorations." : "Fixes and improvements.",
-      current: fr ? "Tu as la version {v}." : "You have version {v}.",
+      kicker: Orbit.tr("UPDATE", "MISE À JOUR"),
+      title: Orbit.tr("Orbit {v} is", "Orbit {v} est"),
+      key: Orbit.tr("available", "disponible"),
+      now: Orbit.tr("Update now", "Mettre à jour"),
+      later: Orbit.tr("Later", "Plus tard"),
+      downloading: Orbit.tr("Downloading… {p}", "Téléchargement… {p}"),
+      restart: Orbit.tr("Restart to finish", "Redémarrer pour terminer"),
+      failed: Orbit.tr("Download failed. Try again later.", "Le téléchargement a échoué. Réessaie plus tard."),
+      notes: Orbit.tr("What's new", "Nouveautés"),
+      noNotes: Orbit.tr("Fixes and improvements.", "Corrections et améliorations."),
+      current: Orbit.tr("You have version {v}.", "Tu as la version {v}."),
     }[k];
   },
 

@@ -104,6 +104,40 @@ var OrbitMemory = {
     }
   },
 
+  // ---- performance presets ----------------------------------------------------------
+  // Four planets, from fastest to lightest. Process counts apply after a restart.
+  PRESETS: {
+    mercure: {
+      "dom.ipc.processCount": 8, "dom.ipc.processPrelaunch.enabled": true, "orbit.tabs.unload-after-minutes": 60,
+      "orbit.memory.budget-mb": 0, "orbit.memory.eco": false, "orbit.effects.nebula": true, "orbit.effects.animations": true,
+      "image.mem.surfacecache.max_size_kb": 524288,
+    },
+    venus: {
+      "dom.ipc.processCount": 4, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
+      "orbit.memory.budget-mb": 0, "orbit.memory.eco": false, "orbit.effects.nebula": true, "orbit.effects.animations": true,
+      "image.mem.surfacecache.max_size_kb": 262144,
+    },
+    saturne: {
+      "dom.ipc.processCount": 2, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
+      "orbit.memory.budget-mb": 2048, "orbit.memory.eco": true, "orbit.effects.nebula": false, "orbit.effects.animations": true,
+      "image.mem.surfacecache.max_size_kb": 131072,
+    },
+    neptune: {
+      "dom.ipc.processCount": 1, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": 5,
+      "orbit.memory.budget-mb": 1024, "orbit.memory.eco": true, "orbit.effects.nebula": false, "orbit.effects.animations": false,
+      "orbit.effects.grain": false, "image.mem.surfacecache.max_size_kb": 65536,
+    },
+  },
+
+  applyPreset(id) {
+    const p = Services.prefs;
+    for (const [name, value] of Object.entries(this.PRESETS[id] ?? {})) {
+      if (typeof value == "boolean") p.setBoolPref(name, value);
+      else p.setIntPref(name, value);
+    }
+    p.setStringPref("orbit.performance.preset", id);
+  },
+
   fmt(bytes) {
     const mb = bytes / 1048576;
     return mb >= 1024 ? `${(mb / 1024).toFixed(1).replace(".", ",")} Go` : `${Math.round(mb)} Mo`;
@@ -113,19 +147,19 @@ var OrbitMemory = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     const S = {
-      title: [fr ? "Orbit utilise" : "Orbit uses"],
-      all: [fr ? "Tout mettre en veille" : "Put all to sleep"],
-      sleep: [fr ? "Mettre en veille" : "Sleep"],
-      active: [fr ? "Actif" : "Active"], asleep: [fr ? "En veille" : "Asleep"],
-      tabs: [fr ? "Onglets actifs" : "Active tabs"], ui: [fr ? "Interface Orbit" : "Orbit interface"],
-      budget: [fr ? "PLAFOND MÉMOIRE" : "MEMORY LIMIT"], off: [fr ? "Désactivé" : "Off"],
-      budgetD: [fr ? "Au-delà, les onglets les plus anciens passent en veille." : "Above it, the oldest tabs go to sleep."],
-      after: [fr ? "MISE EN VEILLE APRÈS" : "SLEEP AFTER"], adaptive: [fr ? "Adaptatif" : "Adaptive"],
-      afterD: [fr ? "Adaptatif : plus court quand Windows manque de mémoire." : "Adaptive: shorter when memory runs low."],
-      eco: [fr ? "MODE ÉCO" : "ECO MODE"],
-      ecoD: [fr ? "2 processus au lieu de 4 (au prochain démarrage), fond figé, cache d'images réduit." : "2 processes instead of 4 (next start), still background, smaller image cache."],
-      tab: [fr ? "ONGLET" : "TAB"], state: [fr ? "ÉTAT" : "STATE"], mem: [fr ? "MÉMOIRE" : "MEMORY"],
-      playing: [fr ? "Son en cours" : "Playing"],
+      title: [Orbit.tr("Orbit uses", "Orbit utilise")],
+      all: [Orbit.tr("Put all to sleep", "Tout mettre en veille")],
+      sleep: [Orbit.tr("Sleep", "Mettre en veille")],
+      active: [Orbit.tr("Active", "Actif")], asleep: [Orbit.tr("Asleep", "En veille")],
+      tabs: [Orbit.tr("Active tabs", "Onglets actifs")], ui: [Orbit.tr("Orbit interface", "Interface Orbit")],
+      budget: [Orbit.tr("MEMORY LIMIT", "PLAFOND MÉMOIRE")], off: [Orbit.tr("Off", "Désactivé")],
+      budgetD: [Orbit.tr("Above it, the oldest tabs go to sleep.", "Au-delà, les onglets les plus anciens passent en veille.")],
+      after: [Orbit.tr("SLEEP AFTER", "MISE EN VEILLE APRÈS")], adaptive: [Orbit.tr("Adaptive", "Adaptatif")],
+      afterD: [Orbit.tr("Adaptive: shorter when memory runs low.", "Adaptatif : plus court quand Windows manque de mémoire.")],
+      eco: [Orbit.tr("ECO MODE", "MODE ÉCO")],
+      ecoD: [Orbit.tr("2 processes instead of 4 (next start), still background, smaller image cache.", "2 processus au lieu de 4 (au prochain démarrage), fond figé, cache d'images réduit.")],
+      tab: [Orbit.tr("TAB", "ONGLET")], state: [Orbit.tr("STATE", "ÉTAT")], mem: [Orbit.tr("MEMORY", "MÉMOIRE")],
+      playing: [Orbit.tr("Playing", "Son en cours")],
     };
     return S[k][0];
   },
@@ -166,9 +200,7 @@ var OrbitMemory = {
     const head = h("div", { class: "orbit-mem-head" },
       h("div", {},
         h("div", { class: "orbit-mem-total" }, `${this.t("title")} `, h("span", { class: "orbit-key" }, this.fmt(total))),
-        h("div", { class: "orbit-setting-desc" }, Orbit.lang() == "fr"
-          ? `${tabs.length} onglets ouverts, dont ${tabs.length - awake.length} en veille : ils ne consomment presque rien.`
-          : `${tabs.length} open tabs, ${tabs.length - awake.length} asleep: they use almost nothing.`)),
+        h("div", { class: "orbit-setting-desc" }, Orbit.tr(`${tabs.length} open tabs, ${tabs.length - awake.length} asleep: they use almost nothing.`, `${tabs.length} onglets ouverts, dont ${tabs.length - awake.length} en veille : ils ne consomment presque rien.`))),
       h("button", { class: "orbit-button primary", onclick: () => { this.sleepAll(); this.renderSheet(body, false); } }, this.t("all")));
     const pct = x => `${Math.max(2, Math.round((x / Math.max(total, 1)) * 100))}`;
     const bar = h("div", { class: "orbit-mem-bar" },

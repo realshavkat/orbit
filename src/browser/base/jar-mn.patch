@@ -1,8 +1,8 @@
 diff --git a/browser/base/jar.mn b/browser/base/jar.mn
-index b2b5db6040..6c0d8b6a4b 100644
+index b2b5db6040..c131f988c0 100644
 --- a/browser/base/jar.mn
 +++ b/browser/base/jar.mn
-@@ -3,6 +3,21 @@
+@@ -3,6 +3,22 @@
  # file, You can obtain one at http://mozilla.org/MPL/2.0/.
  browser.jar:
  %  content browser %content/browser/ contentaccessible=yes
@@ -14,6 +14,7 @@ index b2b5db6040..6c0d8b6a4b 100644
 +        content/orbit/                                (content/orbit/*.html)
 +        content/orbit/icons/                          (content/orbit/icons/*.svg)
 +        content/orbit/actors/                         (content/orbit/actors/*.sys.mjs)
++        content/orbit/locales/                        (content/orbit/locales/*.js)
 +        content/orbit/fonts/                          (content/orbit/fonts/*.ttf)
 +% override chrome://global/skin/illustrations/kit-concerned.svg chrome://orbit/content/illustration.svg
 +% override chrome://global/skin/illustrations/kit-confetti.svg chrome://orbit/content/illustration.svg

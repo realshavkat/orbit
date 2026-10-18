@@ -34,7 +34,7 @@ var OrbitWelcome = {
   },
 
   t(k) {
-    return this.S[Orbit.lang()][k] ?? k;
+    return Orbit.dict(this.S)[k] ?? k;
   },
 
   maybeShow() {

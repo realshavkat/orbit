@@ -11,13 +11,13 @@ var OrbitExtras = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      rename: fr ? "Renommer l'onglet" : "Rename tab",
-      resetName: fr ? "Rétablir le nom d'origine" : "Restore original name",
-      copy: fr ? "Copier le lien" : "Copy link",
-      copied: fr ? "Lien copié" : "Link copied",
-      glance: fr ? "Ouvrir dans Glance" : "Open in Glance",
-      unloadSpace: fr ? "Mettre l'espace en veille" : "Put space to sleep",
-      unloadOthers: fr ? "Mettre les autres espaces en veille" : "Put other spaces to sleep",
+      rename: Orbit.tr("Rename tab", "Renommer l'onglet"),
+      resetName: Orbit.tr("Restore original name", "Rétablir le nom d'origine"),
+      copy: Orbit.tr("Copy link", "Copier le lien"),
+      copied: Orbit.tr("Link copied", "Lien copié"),
+      glance: Orbit.tr("Open in Glance", "Ouvrir dans Glance"),
+      unloadSpace: Orbit.tr("Put space to sleep", "Mettre l'espace en veille"),
+      unloadOthers: Orbit.tr("Put other spaces to sleep", "Mettre les autres espaces en veille"),
     }[k];
   },
 
@@ -191,7 +191,7 @@ var OrbitExtras = {
       if (el) morePopup.append(el);
     }
     menu.insertBefore(h("xul:menuseparator", { class: "orbit-menu-sep" }), anchor);
-    menu.insertBefore(h("xul:menu", { id: "orbit-tab-more", label: fr ? "Plus d'options" : "More options" }, morePopup), anchor);
+    menu.insertBefore(h("xul:menu", { id: "orbit-tab-more", label: Orbit.tr("More options", "Plus d'options") }, morePopup), anchor);
     for (const id of this.TAB_MENU_HIDDEN) take(id)?.setAttribute("orbit-hidden", "true");
   },
 

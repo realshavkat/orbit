@@ -35,7 +35,7 @@ var OrbitNotify = {
   },
 
   t(k, vars = {}) {
-    return (this.S[Orbit.lang()][k] ?? k).replace(/\{(\w+)\}/g, (_, v) => vars[v] ?? "");
+    return (Orbit.dict(this.S)[k] ?? k).replace(/\{(\w+)\}/g, (_, v) => vars[v] ?? "");
   },
 
   enabled(kind) {
@@ -92,7 +92,7 @@ var OrbitNotify = {
       return;
     }
     if (this.enabled("tips")) {
-      const tips = this.S[Orbit.lang()].tips;
+      const tips = Orbit.dict(this.S).tips;
       this.show({ kind: "tips", icon: "sparkles", title: this.t("tips.t"), text: tips[launches % tips.length], never: true, timeout: 8000 });
     }
   },

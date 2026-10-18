@@ -13,23 +13,22 @@ var OrbitImport = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      kicker: fr ? "IMPORTER" : "IMPORT",
-      title: fr ? "Retrouve" : "Bring",
-      key: fr ? "tes affaires" : "your stuff",
-      sub: fr ? "Orbit a trouvé ces navigateurs sur ton ordinateur." : "Orbit found these browsers on your computer.",
-      none: fr ? "Aucun autre navigateur trouvé." : "No other browser found.",
-      all: fr ? "Tout importer" : "Import everything",
-      importing: fr ? "Import en cours…" : "Importing…",
-      done: fr ? "Importé" : "Imported",
-      failed: fr ? "Échec, réessaie" : "Failed, try again",
-      more: fr ? "Plus d'options (fichier, choix précis)" : "More options (file, pick items)",
-      note: fr ? "Les cookies de Chrome, Edge et Brave sont chiffrés par Windows et ne peuvent pas être copiés : reconnecte-toi une fois à tes sites."
-        : "Chrome, Edge and Brave cookies are encrypted by Windows and cannot be copied: sign in to your sites once.",
-      bookmarks: fr ? "Marque-pages" : "Bookmarks", history: fr ? "Historique" : "History",
-      passwords: fr ? "Mots de passe" : "Passwords", forms: fr ? "Formulaires" : "Form data",
-      payments: fr ? "Cartes" : "Cards", extensions: fr ? "Extensions" : "Extensions",
-      tabs: fr ? "Onglets ouverts" : "Open tabs", cookies: fr ? "Cookies et sessions" : "Cookies and sessions",
-      containers: fr ? "Conteneurs" : "Containers",
+      kicker: Orbit.tr("IMPORT", "IMPORTER"),
+      title: Orbit.tr("Bring", "Retrouve"),
+      key: Orbit.tr("your stuff", "tes affaires"),
+      sub: Orbit.tr("Orbit found these browsers on your computer.", "Orbit a trouvé ces navigateurs sur ton ordinateur."),
+      none: Orbit.tr("No other browser found.", "Aucun autre navigateur trouvé."),
+      all: Orbit.tr("Import everything", "Tout importer"),
+      importing: Orbit.tr("Importing…", "Import en cours…"),
+      done: Orbit.tr("Imported", "Importé"),
+      failed: Orbit.tr("Failed, try again", "Échec, réessaie"),
+      more: Orbit.tr("More options (file, pick items)", "Plus d'options (fichier, choix précis)"),
+      note: Orbit.tr("Chrome, Edge and Brave cookies are encrypted by Windows and cannot be copied: sign in to your sites once.", "Les cookies de Chrome, Edge et Brave sont chiffrés par Windows et ne peuvent pas être copiés : reconnecte-toi une fois à tes sites."),
+      bookmarks: Orbit.tr("Bookmarks", "Marque-pages"), history: Orbit.tr("History", "Historique"),
+      passwords: Orbit.tr("Passwords", "Mots de passe"), forms: Orbit.tr("Form data", "Formulaires"),
+      payments: Orbit.tr("Cards", "Cartes"), extensions: Orbit.tr("Extensions", "Extensions"),
+      tabs: Orbit.tr("Open tabs", "Onglets ouverts"), cookies: Orbit.tr("Cookies and sessions", "Cookies et sessions"),
+      containers: Orbit.tr("Containers", "Conteneurs"),
     }[k];
   },
 
@@ -97,13 +96,10 @@ var OrbitImport = {
   async importGeckoProfile(src) {
     const fr = Orbit.lang() == "fr";
     if (await this.isRunning(src.path)) {
-      Services.prompt.alert(window, "Orbit", fr ? `Ferme d'abord ${src.name.split(" · ")[0]}, puis réessaie.`
-        : `Close ${src.name.split(" · ")[0]} first, then try again.`);
+      Services.prompt.alert(window, "Orbit", Orbit.tr(`Close ${src.name.split(" · ")[0]} first, then try again.`, `Ferme d'abord ${src.name.split(" · ")[0]}, puis réessaie.`));
       return false;
     }
-    const ok = Services.prompt.confirm(window, "Orbit", fr
-      ? "Orbit va créer un profil avec toutes tes données (marque-pages, historique, mots de passe, cookies et sessions, extensions, conteneurs, onglets) puis redémarrer dessus. Ton profil Orbit actuel reste disponible."
-      : "Orbit will create a profile with all your data (bookmarks, history, passwords, cookies and sessions, extensions, containers, tabs) and restart into it. Your current Orbit profile stays available.");
+    const ok = Services.prompt.confirm(window, "Orbit", Orbit.tr("Orbit will create a profile with all your data (bookmarks, history, passwords, cookies and sessions, extensions, containers, tabs) and restart into it. Your current Orbit profile stays available.", "Orbit va créer un profil avec toutes tes données (marque-pages, historique, mots de passe, cookies et sessions, extensions, conteneurs, onglets) puis redémarrer dessus. Ton profil Orbit actuel reste disponible."));
     if (!ok) return false;
     const service = Cc["@mozilla.org/toolkit/profile-service;1"].getService(Ci.nsIToolkitProfileService);
     const profile = service.createProfile(null, `Orbit (${src.name.split(" · ")[0]})`);

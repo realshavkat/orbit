@@ -14,12 +14,12 @@ var OrbitFolders = {
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
-      icon: fr ? "Changer l'icône…" : "Change icon…",
-      pin: fr ? "Épingler le dossier" : "Pin folder",
-      unpin: fr ? "Désépingler le dossier" : "Unpin folder",
-      sub: fr ? "Nouveau sous-dossier" : "New sub-folder",
-      subName: fr ? "Sous-dossier" : "Sub-folder",
-      newFolder: fr ? "Nouveau dossier" : "New folder",
+      icon: Orbit.tr("Change icon…", "Changer l'icône…"),
+      pin: Orbit.tr("Pin folder", "Épingler le dossier"),
+      unpin: Orbit.tr("Unpin folder", "Désépingler le dossier"),
+      sub: Orbit.tr("New sub-folder", "Nouveau sous-dossier"),
+      subName: Orbit.tr("Sub-folder", "Sous-dossier"),
+      newFolder: Orbit.tr("New folder", "Nouveau dossier"),
     }[k];
   },
 
