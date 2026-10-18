@@ -30,6 +30,7 @@ ac_add_options --disable-default-browser-agent
 
 # Bundled Orbit language packs are repacked (unsigned) and live in the app dir.
 ac_add_options --with-unsigned-addon-scopes=app,system
+ac_add_options --allow-addon-sideload
 
 # No telemetry pipeline.
 mk_add_options MOZ_DATA_REPORTING=

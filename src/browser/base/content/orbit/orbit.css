@@ -1618,3 +1618,12 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
   .orbit-welcome-logo { width: 100px; height: 100px; }
   .orbit-welcome-nav { bottom: 16px; }
 }
+
+/* 8px gutter: every row's left edge lines up with the toolbar's first button. */
+#vertical-tabs .tabbrowser-tab { padding-inline: 0 !important; margin-inline: 0 !important; }
+#vertical-tabs .tabbrowser-tab .tab-background { margin-inline: 0 !important; }
+#vertical-tabs .tabbrowser-tab:not([pinned]) .tab-content { padding-inline: 8px 4px !important; }
+#tabs-newtab-button { margin-inline: 0 !important; }
+#orbit-sidebar-header { padding-inline: 8px 2px !important; }
+#pinned-tabs-container .tabbrowser-tab[pinned] .tab-background { margin: 0 !important; }
+#orbit-sidebar-footer .orbit-icon-button { width: 32px; }

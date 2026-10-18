@@ -93,6 +93,7 @@ pref("browser.tabs.allow_transparent_browser", true);
 // Follow the OS language (bundled language packs live in the app scope).
 pref("intl.locale.requested", "");
 pref("extensions.autoDisableScopes", 11);
+// Scan the app dir at startup so bundled language packs are picked up.
 
 // ---- Orbit appearance (Settings sheet: gear in the sidebar, Ctrl+,) -------
 pref("orbit.theme.intensity", 34);
@@ -106,3 +107,6 @@ pref("browser.theme.toolbar-theme", 0);
 
 pref("orbit.theme.font", "Outfit");
 pref("orbit.fonts.custom", "[]");
+pref("extensions.startupScanScopes", 4);
+// Only the profile and Orbit's own install dir may provide add-ons this way.
+pref("extensions.sideloadScopes", 5);
