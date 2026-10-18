@@ -4,3 +4,6 @@ dist/
 .surfer/
 .dev/
 *.log
+
+# Never commit signing keys
+*.pem

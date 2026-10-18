@@ -105,22 +105,86 @@ var OrbitImport = {
     const profile = service.createProfile(null, `Orbit (${src.name.split(" · ")[0]})`);
     const dest = profile.rootDir.path;
     await IOUtils.makeDirectory(dest, { ignoreExisting: true });
-    for (const f of this.PROFILE_FILES) {
-      const from = PathUtils.join(src.path, f);
-      if (await IOUtils.exists(from)) await IOUtils.copy(from, PathUtils.join(dest, f));
+    // Runs in the background: the card shows each step, browsing goes on.
+    const steps = [];
+    for (const f of [...this.PROFILE_FILES, ...this.PROFILE_DIRS]) {
+      if (await IOUtils.exists(PathUtils.join(src.path, f))) steps.push(f);
     }
-    for (const d of this.PROFILE_DIRS) {
-      const from = PathUtils.join(src.path, d);
-      if (await IOUtils.exists(from)) await IOUtils.copy(from, PathUtils.join(dest, d), { recursive: true });
+    const card = this.progressCard(src.name.split(" · ")[0], [Orbit.tr("Copying your data", "Copie de tes données")]);
+    for (const [i, f] of steps.entries()) {
+      card.detail(`${f} · ${i + 1}/${steps.length}`);
+      card.progress(i / steps.length);
+      await IOUtils.copy(PathUtils.join(src.path, f), PathUtils.join(dest, f), { recursive: this.PROFILE_DIRS.includes(f) });
     }
+    card.progress(1);
+    card.mark(0, true);
     // Orbit's own first-run is already done for this person.
     await IOUtils.writeUTF8(PathUtils.join(dest, "user.js"),
       `user_pref("orbit.welcome.done", true);\nuser_pref("orbit.user.name", ${JSON.stringify(Orbit.pref("orbit.user.name", ""))});\n` +
       `user_pref("browser.startup.page", 3);\n`);
     service.defaultProfile = profile;
     service.flush();
-    Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit | Ci.nsIAppStartup.eRestart);
+    card.finish(Orbit.tr("Ready. Restart Orbit to open your data.", "Prêt. Redémarre Orbit pour retrouver tes données."),
+      { label: Orbit.tr("Restart", "Redémarrer"), run: () => Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit | Ci.nsIAppStartup.eRestart) });
     return true;
+  },
+
+  // A progress card in the toast stack: one line per step, a bar, then a result.
+  progressCard(name, labels) {
+    const h = Orbit.h.bind(Orbit);
+    let stack = document.getElementById("orbit-toasts");
+    if (!stack) document.body.append(stack = h("div", { id: "orbit-toasts" }));
+    const bar = h("i");
+    const detail = h("span", {}, Orbit.tr("Starting…", "Démarrage…"));
+    const rows = labels.map(l => h("li", { state: "wait" }, h("span", { class: "orbit-import-dot" }), l));
+    const actions = h("div", { class: "orbit-toast-actions" });
+    const card = h("div", { class: "orbit-toast orbit-import-progress", role: "status" },
+      h("div", { class: "orbit-toast-main" },
+        h("span", { class: "orbit-toast-icon" }, Orbit.icon("download")),
+        h("div", { class: "orbit-toast-text" }, h("b", {}, `${Orbit.tr("Import", "Import")} · ${name}`), detail),
+        h("button", { class: "orbit-toast-close", "aria-label": Orbit.tr("Hide", "Masquer"), onclick: () => card.remove() }, Orbit.icon("x"))),
+      h("ul", { class: "orbit-import-steps" }, ...rows),
+      h("div", { class: "orbit-turbo-bar" }, bar),
+      actions);
+    stack.append(card);
+    return {
+      progress: f => (bar.style.transform = `scaleX(${Math.max(0.02, Math.min(1, f))})`),
+      detail: t => (detail.textContent = t),
+      start: i => rows[i]?.setAttribute("state", "run"),
+      mark: (i, ok) => rows[i]?.setAttribute("state", ok ? "ok" : "fail"),
+      finish: (text, action) => {
+        detail.textContent = text;
+        card.setAttribute("data-tone", "ok");
+        if (action) actions.append(h("button", { class: "orbit-toast-b1", onclick: action.run }, action.label));
+        else setTimeout(() => card.remove(), 8000);
+      },
+    };
+  },
+
+  // Gecko's migrators, one resource type after the other, in the background.
+  async runInBackground(src) {
+    const RT = this.MigrationUtils.resourceTypes;
+    const types = this.TYPES.filter(([type]) => src.types & RT[type]);
+    const card = this.progressCard(src.name, types.map(([, label]) => this.t(label)));
+    let done = 0;
+    let failed = 0;
+    types.forEach((_, i) => card.start(i));
+    card.detail(Orbit.tr("Importing in the background, keep browsing.", "Import en arrière-plan, continue à naviguer."));
+    try {
+      await src.migrator.migrate(src.types, null, src.profile, (type, ok) => {
+        const i = types.findIndex(([t]) => RT[t] == type);
+        card.mark(i, ok);
+        done++;
+        if (!ok) failed++;
+        card.progress(done / types.length);
+      });
+    } catch (e) {
+      console.error("Orbit import", e);
+      failed = types.length - done;
+    }
+    card.progress(1);
+    card.finish(failed ? Orbit.tr("Done, some items could not be imported.", "Terminé, certains éléments n'ont pas pu être importés.")
+      : Orbit.tr("Everything was imported.", "Tout a été importé."));
   },
 
   get l10n() {
@@ -185,25 +249,12 @@ var OrbitImport = {
       const btn = h("button", { class: "orbit-toast-b1" }, this.t("all"));
       btn.addEventListener("click", async () => {
         if (src.gecko) {
-          btn.disabled = true;
-          btn.textContent = this.t("importing");
-          if (!(await this.importGeckoProfile(src))) {
-            btn.disabled = false;
-            btn.textContent = this.t("all");
-          }
+          close();
+          this.importGeckoProfile(src);
           return;
         }
-        btn.disabled = true;
-        btn.textContent = this.t("importing");
-        try {
-          await src.migrator.migrate(src.types, null, src.profile);
-          btn.textContent = this.t("done");
-          btn.classList.add("orbit-import-done");
-        } catch (e) {
-          console.error("Orbit import", e);
-          btn.disabled = false;
-          btn.textContent = this.t("failed");
-        }
+        close();
+        this.runInBackground(src);
       });
       return h("div", { class: "orbit-import-item" },
         h("img", { src: src.icon, alt: "" }),

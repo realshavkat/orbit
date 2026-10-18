@@ -2,13 +2,13 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Prepares a release after `npm run package`:
-//   - dist/output.mar          -> dist/release/windows.mar
-//   - dist/orbit.installer.exe -> dist/release/Orbit-Setup-<version>.exe
-//   - dist/update/browser/**   -> updates/browser/** (served from the repo,
-//     this is what installed copies poll for auto-updates)
-// With --publish it also creates the GitHub release via `gh`.
-import { cpSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+// Prepares a release after `tools/package.sh`:
+//   - dist/update/browser/** -> updates/browser/** (served from the repo:
+//     installed copies poll it for auto-updates once it is pushed)
+// With --publish it also creates the GitHub release <version> with the
+// signed MAR and the installer (via `gh`). Publishing reaches every
+// installed copy: only do it on purpose.
+import { cpSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 
@@ -16,29 +16,25 @@ const root = resolve(import.meta.dirname, "..");
 const cfg = JSON.parse(readFileSync(join(root, "surfer.json"), "utf8"));
 const { displayVersion: version, github } = cfg.brands.release.release;
 const dist = join(root, "dist");
-const out = join(dist, "release");
+const installer = join(dist, `Orbit-Setup-${version}.exe`);
+const mar = join(dist, "windows.mar");
 
-const need = ["output.mar", "orbit.installer.exe", "update"];
-for (const f of need) {
-  if (!existsSync(join(dist, f))) {
-    console.error(`Missing dist/${f}. Run \`npm run build\` then \`npm run package\` first.`);
+for (const f of [installer, mar, join(dist, "update/browser")]) {
+  if (!existsSync(f)) {
+    console.error(`Missing ${f}. Run \`tools\\mozbuild.cmd sh tools/package.sh\` first.`);
     process.exit(1);
   }
 }
-mkdirSync(out, { recursive: true });
-cpSync(join(dist, "output.mar"), join(out, "windows.mar"));
-const installer = `Orbit-Setup-${version}.exe`;
-cpSync(join(dist, "orbit.installer.exe"), join(out, installer));
-cpSync(join(dist, "update/browser"), join(root, "updates/browser"), { recursive: true });
-console.log(`Release ${version} ready in dist/release, update manifest copied to updates/browser/.`);
 
-// Patch notes shown in Orbit's update window: notes/<version>.md (Markdown).
-const notesFile = join(root, "notes", `${version}.md`);
-const notesArgs = existsSync(notesFile) ? ["--notes-file", notesFile] : ["--notes", `Orbit ${version}`];
 if (process.argv.includes("--publish")) {
-  execFileSync("gh", ["release", "create", version, join(out, "windows.mar"), join(out, installer),
+  // Patch notes shown in Orbit's update window: notes/<version>.md (Markdown).
+  const notesFile = join(root, "notes", `${version}.md`);
+  const notesArgs = existsSync(notesFile) ? ["--notes-file", notesFile] : ["--notes", `Orbit ${version}`];
+  execFileSync("gh", ["release", "create", version, mar, installer,
     "--repo", github.repo, "--title", `Orbit ${version}`, ...notesArgs], { stdio: "inherit" });
-  console.log("Now commit and push updates/browser/ so installed browsers see the update.");
+  // Only now point installed copies at it.
+  cpSync(join(dist, "update/browser"), join(root, "updates/browser"), { recursive: true });
+  console.log("Release created. Now commit and push updates/browser/ so installed copies see it.");
 } else {
-  console.log("Next: `node tools/release.mjs --publish`, then commit + push updates/browser/.");
+  console.log(`Ready: ${installer}, ${mar}. Publish with \`node tools/release.mjs --publish\`.`);
 }

@@ -94,6 +94,8 @@ var OrbitSettings = {
         { kind: "toggle", pref: "privacy.fingerprintingProtection", label: "fingerprint", def: false },
         { kind: "choice", pref: "network.trr.mode", label: "doh", options: [[0, "doh.off"], [2, "doh.on"], [3, "doh.max"]] },
         { kind: "vpn" },
+        { kind: "toggle", pref: "xpinstall.signatures.required", label: "unsigned", invert: true, def: true },
+        { kind: "link", label: "installExt", icon: "puzzle", action: () => OrbitChromeExt.installFromDisk() },
         { kind: "link", label: "privacyAdvanced", icon: "external-link", action: () => openPreferences("privacy") },
       ],
     },
@@ -114,6 +116,8 @@ var OrbitSettings = {
     fr: {
       title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
+      unsigned: "Extensions Chrome et non signées", "unsigned.d": "Permet d'installer les extensions du Chrome Web Store. Elles ne sont pas vérifiées par Mozilla",
+      installExt: "Installer une extension depuis un fichier (.crx, .xpi, .zip)",
       themes: "Thèmes Firefox", "themes.d": "Installe un thème depuis addons.mozilla.org : Orbit prend ses couleurs",
       turbo: "Orbit Turbo", "turbo.d": "Les gros téléchargements utilisent plusieurs connexions : fini les sites bridés par connexion",
       turboConn: "Connexions par téléchargement",
@@ -168,6 +172,8 @@ var OrbitSettings = {
     en: {
       title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
+      unsigned: "Chrome and unsigned extensions", "unsigned.d": "Lets you install extensions from the Chrome Web Store. Mozilla does not check them",
+      installExt: "Install an extension from a file (.crx, .xpi, .zip)",
       themes: "Firefox themes", "themes.d": "Install a theme from addons.mozilla.org: Orbit takes its colors",
       turbo: "Orbit Turbo", "turbo.d": "Big downloads use several connections: no more sites throttling each connection",
       turboConn: "Connections per download",

@@ -3006,3 +3006,31 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 }
 .orbit-preset:nth-child(3) .orbit-planet { box-shadow: 0 0 0 1px rgb(255 255 255 / .08), 0 0 0 4px color-mix(in srgb, var(--planet) 30%, transparent); }
 @media (max-width: 760px) { .orbit-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Import running in the background. */
+.orbit-import-progress .orbit-toast-icon { color: #7c86ff; }
+.orbit-import-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 12px;
+  font-size: 12px;
+  color: var(--orbit-fg-dim);
+  & li { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  & li[state="ok"] { color: var(--orbit-fg); }
+  & li[state="fail"] { color: #ff9a76; }
+}
+.orbit-import-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--orbit-border);
+  [state="run"] > & { background: #7c86ff; animation: orbit-import-pulse 1s ease-in-out infinite alternate; }
+  [state="ok"] > & { background: #7ee2a8; }
+  [state="fail"] > & { background: #ff9a76; }
+}
+@keyframes orbit-import-pulse { to { opacity: .35; transform: scale(.7); } }
+.orbit-import-progress[data-tone="ok"] .orbit-turbo-bar i { background: #7ee2a8; }

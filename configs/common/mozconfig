@@ -39,6 +39,11 @@ mk_add_options MOZ_TELEMETRY_REPORTING=
 ac_add_options MOZ_DATA_REPORTING=
 ac_add_options MOZ_TELEMETRY_REPORTING=
 
+# Add-on signatures stay required by default (xpinstall.signatures.required),
+# but are no longer forced by the build: Orbit's settings can allow Chrome
+# Web Store and other unsigned extensions when the user asks for it.
+export MOZ_REQUIRE_SIGNING=
+
 # Release CI only (slow, memory hungry): ORBIT_RELEASE=1 enables LTO.
 if test "$ORBIT_RELEASE"; then
   export MOZ_LTO=cross,thin

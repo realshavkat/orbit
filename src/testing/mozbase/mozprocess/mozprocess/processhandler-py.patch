@@ -1,0 +1,14 @@
+diff --git a/testing/mozbase/mozprocess/mozprocess/processhandler.py b/testing/mozbase/mozprocess/mozprocess/processhandler.py
+index 60967649ae..38e0aafced 100644
+--- a/testing/mozbase/mozprocess/mozprocess/processhandler.py
++++ b/testing/mozbase/mozprocess/mozprocess/processhandler.py
+@@ -142,6 +142,9 @@ class ProcessHandlerMixin:
+             if universal_newlines:
+                 kwargs["universal_newlines"] = universal_newlines
+                 kwargs["encoding"] = encoding
++                # Orbit: localized Windows tools print non-UTF-8 text; never let
++                # one odd byte kill the output reader (and stall the build).
++                kwargs["errors"] = "replace"
+             try:
+                 subprocess.Popen.__init__(self, args, **kwargs)
+             except OSError:

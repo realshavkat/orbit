@@ -215,3 +215,6 @@ pref("network.http.max-persistent-connections-per-proxy", 48);
 pref("gfx.content.skia-font-cache-size", 32);
 
 pref("orbit.performance.preset", "venus");
+
+// Sites and addons.mozilla.org must see Orbit as Firefox ("Firefox/158" in the user agent).
+pref("general.useragent.compatMode.firefox", true);
