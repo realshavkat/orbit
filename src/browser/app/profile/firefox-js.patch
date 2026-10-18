@@ -1,0 +1,10 @@
+diff --git a/browser/app/profile/firefox.js b/browser/app/profile/firefox.js
+--- a/browser/app/profile/firefox.js
++++ b/browser/app/profile/firefox.js
+@@ -3824,3 +3824,6 @@
+ #ifdef XP_MACOSX
+   pref("browser.macAppMenu.setAsDefaultShown", false);
+ #endif
++
++// Orbit defaults (browser/app/profile/orbit.js) override the ones above.
++#include orbit.js

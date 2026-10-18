@@ -1,0 +1,31 @@
+{
+  "name": "orbit-browser",
+  "version": "0.1.0",
+  "description": "Orbit — a calm, fast, beautiful browser built on Gecko.",
+  "private": true,
+  "license": "MPL-2.0",
+  "type": "module",
+  "scripts": {
+    "init": "npm run download && npm run import && npm run bootstrap",
+    "download": "surfer download",
+    "import": "surfer import && node tools/postimport.mjs",
+    "bootstrap": "surfer bootstrap",
+    "build": "surfer build",
+    "build:ui": "surfer build --ui",
+    "package": "surfer package",
+    "start": "cd engine && python ./mach run --noprofile",
+    "export": "surfer export",
+    "reset-ff": "surfer reset",
+    "branding": "node tools/branding.mjs",
+    "dev": "node tools/dev.mjs",
+    "release": "node tools/release.mjs",
+    "surfer": "surfer"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/realshavkat/orbit.git"
+  },
+  "devDependencies": {
+    "@zen-browser/surfer": "^1.14.9"
+  }
+}

@@ -1,0 +1,1620 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Orbit browser chrome, on top of Firefox's native vertical tabs.
+   Layout (like Zen): one toolbar on top (navigation, address bar,
+   extensions, window controls), a simple tab sidebar on the left, and the
+   page in a rounded card. The window wears the active space's gradient. */
+
+@namespace xul url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
+@namespace html url("http://www.w3.org/1999/xhtml");
+
+/* Bundled fonts (SIL OFL). The UI font is chosen in Settings (--orbit-font). */
+@font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url("chrome://orbit/content/fonts/Inter.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
+@font-face { font-family: "Space Grotesk"; src: url("chrome://orbit/content/fonts/SpaceGrotesk.ttf"); font-weight: 300 700; }
+@font-face { font-family: "DM Sans"; src: url("chrome://orbit/content/fonts/DMSans.ttf"); font-weight: 100 1000; }
+
+/* Animatable theme colors: the gradient morphs when switching spaces. */
+@property --orbit-c1 { syntax: "<color>"; inherits: true; initial-value: #6a4cff; }
+@property --orbit-c2 { syntax: "<color>"; inherits: true; initial-value: #2a1a5e; }
+
+/* ==========================================================================
+   Tokens
+   ========================================================================== */
+:root {
+  --orbit-gap: 8px;
+  --orbit-radius: 7px;
+  --orbit-radius-sm: var(--orbit-radius);
+  --orbit-radius-lg: calc(var(--orbit-radius) + 3px);
+  --orbit-sidebar-width: 240px;
+  --orbit-toolbox-height: 44px;
+  --orbit-ease: cubic-bezier(.2, .9, .25, 1);
+  --orbit-spring: cubic-bezier(.34, 1.35, .64, 1);
+
+  /* dark (default) */
+  --orbit-base: #09090c;
+  --orbit-card: #111115;
+  --orbit-mix: 34%;
+  --orbit-fg: #ededf2;
+  --orbit-fg-dim: rgb(237 237 242 / .55);
+  --orbit-hover: rgb(255 255 255 / .055);
+  --orbit-active: rgb(255 255 255 / .1);
+  --orbit-tile: rgb(255 255 255 / .05);
+  --orbit-surface: rgb(20 19 26 / .96);
+  --orbit-panel: #17161d;
+  --orbit-field: rgb(255 255 255 / .06);
+  --orbit-border: rgb(255 255 255 / .08);
+  --orbit-shadow: 0 0 0 1px rgb(0 0 0 / .25), 0 6px 24px rgb(0 0 0 / .28);
+
+  --orbit-bg-1: color-mix(in oklch, var(--orbit-c1) var(--orbit-mix), var(--orbit-base));
+  --orbit-bg-2: color-mix(in oklch, var(--orbit-c2) var(--orbit-mix), var(--orbit-base));
+  --orbit-accent: color-mix(in oklch, var(--orbit-c1) 80%, white);
+
+  /* Liquid glass: soft top light, faint rim, darker bottom edge. */
+  --orbit-glass: linear-gradient(180deg, rgb(255 255 255 / .11), rgb(255 255 255 / .035) 60%, rgb(255 255 255 / .05));
+  --orbit-glass-edge: inset 0 1px 0 rgb(255 255 255 / .16), inset 0 0 0 1px rgb(255 255 255 / .06), inset 0 -1px 0 rgb(0 0 0 / .3);
+
+  transition: --orbit-c1 .7s var(--orbit-ease), --orbit-c2 .7s var(--orbit-ease);
+  --orbit-font: "Outfit";
+
+  /* Firefox theme variables: transparent chrome so the gradient shows. */
+  --toolbox-bgcolor: transparent !important;
+  --toolbox-bgcolor-inactive: transparent !important;
+  --toolbox-non-lwt-bgcolor: transparent !important;
+  --toolbox-non-lwt-bgcolor-inactive: transparent !important;
+  --toolbar-bgcolor: transparent !important;
+  --toolbar-field-background-color: var(--orbit-hover) !important;
+  --toolbar-field-focus-background-color: var(--orbit-panel) !important;
+  --toolbar-field-border-color: transparent !important;
+  --toolbar-field-color: var(--orbit-fg) !important;
+  --toolbar-field-focus-color: var(--orbit-fg) !important;
+  --toolbox-textcolor: var(--orbit-fg) !important;
+  --toolbox-textcolor-inactive: var(--orbit-fg-dim) !important;
+  --toolbar-color: var(--orbit-fg) !important;
+  --sidebar-background-color: transparent !important;
+  --sidebar-text-color: var(--orbit-fg) !important;
+  --tab-selected-bgcolor: var(--orbit-active) !important;
+  --tab-hover-background-color: var(--orbit-hover) !important;
+  --focus-outline-color: var(--orbit-accent) !important;
+  --chrome-content-separator-color: transparent !important;
+  --toolbarbutton-border-radius: var(--orbit-radius) !important;
+  --tab-border-radius: var(--orbit-radius-sm) !important;
+  --arrowpanel-background: var(--orbit-panel) !important;
+  --arrowpanel-color: var(--orbit-fg) !important;
+  --arrowpanel-border-color: var(--orbit-border) !important;
+  --arrowpanel-border-radius: var(--orbit-radius-lg) !important;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --orbit-base: #f1f0f5;
+    --orbit-card: #ffffff;
+    --orbit-mix: 18%;
+    --orbit-fg: #1b1a22;
+    --orbit-fg-dim: rgb(27 26 34 / .55);
+    --orbit-hover: rgb(0 0 0 / .045);
+    --orbit-active: rgb(255 255 255 / .9);
+    --orbit-tile: rgb(255 255 255 / .6);
+    --orbit-surface: rgb(255 255 255 / .97);
+    --orbit-panel: #ffffff;
+    --orbit-field: rgb(0 0 0 / .04);
+    --orbit-border: rgb(0 0 0 / .08);
+    --orbit-shadow: 0 0 0 1px rgb(0 0 0 / .06), 0 4px 18px rgb(0 0 0 / .08);
+    --orbit-accent: color-mix(in oklch, var(--orbit-c1) 85%, black);
+  }
+}
+
+/* ==========================================================================
+   Window background: deep space. Space gradient + liquid nebula + stars + grain
+   ========================================================================== */
+:root:not([customizing]) {
+  background:
+    radial-gradient(80% 100% at 100% 0%, var(--orbit-bg-1), transparent 70%),
+    radial-gradient(70% 90% at 0% 100%, var(--orbit-bg-2), transparent 75%),
+    var(--orbit-base) !important;
+  color: var(--orbit-fg);
+}
+
+/* Liquid nebula: blobs that slowly drift and morph (transform only). */
+:root:not([customizing]) #browser::after {
+  content: "";
+  position: fixed;
+  inset: -25%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(30% 26% at 25% 30%, color-mix(in oklch, var(--orbit-c1) 42%, transparent), transparent 70%),
+    radial-gradient(26% 32% at 72% 72%, color-mix(in oklch, var(--orbit-c2) 60%, transparent), transparent 70%),
+    radial-gradient(18% 20% at 60% 25%, color-mix(in oklch, var(--orbit-c1) 22%, transparent), transparent 70%);
+  animation: orbit-nebula 42s ease-in-out infinite alternate;
+  opacity: .7;
+}
+/* Stars and film grain, painted once (no animation cost). */
+:root:not([customizing]) #browser::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: .55;
+  background-image:
+    radial-gradient(1px 1px at 23px 41px, rgb(255 255 255 / .55), transparent),
+    radial-gradient(1px 1px at 137px 89px, rgb(255 255 255 / .4), transparent),
+    radial-gradient(1.5px 1.5px at 211px 167px, rgb(200 190 255 / .6), transparent),
+    radial-gradient(1px 1px at 71px 213px, rgb(255 255 255 / .35), transparent),
+    radial-gradient(1px 1px at 289px 31px, rgb(255 255 255 / .45), transparent),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  background-size: 310px 260px, 310px 260px, 310px 260px, 310px 260px, 310px 260px, 180px 180px;
+}
+:root:-moz-window-inactive #browser::after { animation-play-state: paused; }
+@keyframes orbit-nebula {
+  0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
+  33%  { transform: translate(5%, -3%) rotate(6deg) scale(1.08, .96); }
+  66%  { transform: translate(-3%, 4%) rotate(-4deg) scale(.96, 1.06); }
+  100% { transform: translate(-6%, -2%) rotate(3deg) scale(1.04); }
+}
+@media (prefers-color-scheme: light) {
+  :root:not([customizing]) #browser::before { opacity: .25; }
+}
+
+:root:not([customizing]) :is(body, #navigator-toolbox, #nav-bar, #browser,
+  #sidebar-container, sidebar-main, #vertical-tabs) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* ==========================================================================
+   Top toolbar: nav buttons | address bar | extensions + window controls
+   ========================================================================== */
+:root:not([customizing], [inDOMFullscreen]) {
+  & #toolbar-menubar[autohide="true"]:not([inactive="false"]),
+  & #TabsToolbar,
+  & #PersonalToolbar,
+  & #alltabs-button,
+  & #new-tab-button,
+  & #fxa-toolbar-menu-button,
+  & #vertical-spacer {
+    display: none !important;
+  }
+
+  & #nav-bar {
+    min-height: var(--orbit-toolbox-height) !important;
+    padding: 0 0 0 6px !important;
+    align-items: center;
+  }
+
+  & #urlbar-container {
+    max-width: 900px !important;
+    margin-inline: 8px !important;
+    --urlbar-container-height: 40px !important;
+    --urlbar-height: 32px !important;
+  }
+
+  & #nav-bar .titlebar-buttonbox-container { align-self: stretch; }
+  & #nav-bar .titlebar-button { padding-inline: 16px !important; }
+  & #nav-bar .titlebar-close:hover { background-color: #e5484d !important; }
+}
+
+/* Address bar: quiet pill; the results open as a rounded panel. */
+#urlbar {
+  --urlbar-background-color-focus: var(--orbit-panel) !important;
+  --urlbar-background-border-radius: var(--orbit-radius) !important;
+  --urlbar-background-border-open: 1px solid var(--orbit-border) !important;
+  --urlbar-background-box-shadow-open: 0 18px 50px rgb(0 0 0 / .4) !important;
+  --urlbar-background-outline-focused: none !important;
+  --urlbar-background-border-focused: 1px solid var(--orbit-border) !important;
+
+  & .urlbarView-row { border-radius: var(--orbit-radius) !important; }
+  & .urlbarView-row[selected] {
+    background: color-mix(in oklch, var(--orbit-c1) 30%, transparent) !important;
+  }
+}
+#urlbar:not([focused], [open]) {
+  & .urlbar-background {
+    background: var(--orbit-hover) !important;
+    border: none !important;
+    box-shadow: none !important;
+    transition: background-color .15s;
+  }
+  &:hover .urlbar-background { background: var(--orbit-active) !important; }
+  & .urlbar-input { font-size: 13px; }
+  & .searchmode-switcher { display: none !important; }
+}
+#urlbar[open] .urlbar-background { animation: orbit-fade-in .18s ease-out; }
+#urlbar[open] .urlbarView-row { animation: orbit-row-in .2s var(--orbit-ease) backwards; }
+#urlbar[open] .urlbarView-row:nth-child(2) { animation-delay: 15ms; }
+#urlbar[open] .urlbarView-row:nth-child(3) { animation-delay: 30ms; }
+#urlbar[open] .urlbarView-row:nth-child(4) { animation-delay: 45ms; }
+#urlbar[open] .urlbarView-row:nth-child(n+5) { animation-delay: 60ms; }
+@keyframes orbit-row-in { from { opacity: 0; transform: translateY(-4px); } }
+
+/* Command bar (Ctrl+T): the address bar floats in the middle of the window.
+   No transforms on #urlbar: the results popover is anchored to it. */
+:root[orbit-commandbar] #urlbar:is([focused], [open]) {
+  position: fixed !important;
+  top: 22vh !important;
+  left: calc(50% - min(700px, 86vw) / 2) !important;
+  width: min(700px, 86vw) !important;
+  z-index: 10 !important;
+  --urlbar-height: 48px !important;
+  --urlbar-background-border-radius: var(--orbit-radius-lg) !important;
+  --urlbar-background-box-shadow-open: 0 24px 80px rgb(0 0 0 / .5) !important;
+
+  & .urlbar-input { font-size: 15px !important; }
+  & .urlbar-background { animation: orbit-pop-in .28s var(--orbit-spring); }
+}
+#orbit-urlbar-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+  pointer-events: none;
+  opacity: 0;
+  background: rgb(0 0 0 / .3);
+  transition: opacity .2s;
+}
+:root[orbit-commandbar] #orbit-urlbar-backdrop { opacity: 1; }
+
+/* Lucide icons for navigation. */
+#back-button { list-style-image: url("chrome://orbit/content/icons/arrow-left.svg") !important; }
+#forward-button { list-style-image: url("chrome://orbit/content/icons/arrow-right.svg") !important; }
+#reload-button { list-style-image: url("chrome://orbit/content/icons/rotate-cw.svg") !important; }
+#sidebar-button { list-style-image: url("chrome://orbit/content/icons/panel-left.svg") !important; }
+:is(#back-button, #forward-button, #reload-button, #sidebar-button) {
+  -moz-context-properties: stroke, fill, fill-opacity !important;
+  stroke: currentColor !important;
+}
+#nav-bar .toolbarbutton-1:not([disabled]):active > :is(.toolbarbutton-icon, .toolbarbutton-badge-stack) {
+  transform: scale(.9);
+}
+#nav-bar .toolbarbutton-1 > :is(.toolbarbutton-icon, .toolbarbutton-badge-stack) {
+  transition: transform .2s var(--orbit-spring), background-color .15s;
+}
+
+/* ==========================================================================
+   Sidebar
+   ========================================================================== */
+:root:not([customizing], [inDOMFullscreen]) {
+  & #sidebar-container {
+    flex-direction: column !important;
+    width: var(--orbit-sidebar-width) !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 2px 0 6px;
+  }
+  & #sidebar-container:has(sidebar-main:not([expanded])) { width: auto !important; }
+  & sidebar-main { flex: 1 !important; min-height: 0; width: auto !important; }
+  & #sidebar-launcher-splitter {
+    display: flex !important;
+    border: none !important;
+    background: transparent !important;
+    width: var(--orbit-gap) !important;
+    margin: 0 !important;
+    cursor: ew-resize;
+  }
+
+  /* The page lives in a rounded card. */
+  & #tabbrowser-tabbox {
+    margin: 0 var(--orbit-gap) var(--orbit-gap) 0 !important;
+    border-radius: var(--orbit-radius) !important;
+    overflow: clip !important;
+    box-shadow: var(--orbit-shadow) !important;
+    outline: none !important;
+    background: var(--orbit-card) !important;
+    position: relative;
+  }
+  & :is(#tabbrowser-tabpanels, .browserSidebarContainer, .browserStack) {
+    background: transparent !important;
+  }
+}
+
+#tabbrowser-tabs[orient="vertical"] {
+  --tab-min-height: 36px !important;
+  padding-inline: 8px 4px !important;
+}
+
+/* Tabs */
+#vertical-tabs .tabbrowser-tab {
+  padding-block: 1px !important;
+
+  & .tab-background {
+    border-radius: var(--orbit-radius-sm) !important;
+    margin-block: 0 !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transition: background-color .15s;
+  }
+  &:hover .tab-background:not([selected]) { background: var(--orbit-hover) !important; }
+  & .tab-background[selected] { background: var(--orbit-active) !important; }
+  & .tab-label { font-size: 13px; color: var(--orbit-fg); }
+  &:not([selected]) .tab-label { color: color-mix(in srgb, var(--orbit-fg) 85%, transparent); }
+  &[pending] .tab-icon-image { opacity: .6; }
+
+  & .tab-close-button {
+    border-radius: var(--orbit-radius) !important;
+    opacity: 0;
+    transition: opacity .12s;
+  }
+  &:is(:hover, [selected]) .tab-close-button { opacity: .7; }
+}
+#tabbrowser-arrowscrollbox .tabbrowser-tab[fadein]:not([pinned]) {
+  animation: orbit-tab-in .3s var(--orbit-spring);
+}
+@keyframes orbit-tab-in { from { opacity: 0; transform: translateX(-8px); } }
+
+/* Essentials: pinned tabs as 3-per-row tiles, shared by every space. */
+#pinned-tabs-container[orient="vertical"] {
+  margin-bottom: 4px !important;
+}
+#vertical-tabs .tabbrowser-tab[pinned] {
+  & .tab-stack { transition: transform .25s var(--orbit-spring); }
+  & .tab-background {
+    border-radius: var(--orbit-radius) !important;
+    background: var(--orbit-tile) !important;
+  }
+  &:hover .tab-background { background: var(--orbit-active) !important; }
+  &:active .tab-stack { transform: scale(.95); }
+  & .tab-background[selected] {
+    background: var(--orbit-active) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--orbit-c1) 55%, transparent) !important;
+  }
+}
+#vertical-pinned-tabs-splitter { display: none !important; }
+
+/* Space label between the essentials and the tabs. */
+#orbit-sidebar-header {
+  padding: 6px 4px 6px 8px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--orbit-border);
+}
+#orbit-space-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--orbit-fg-dim);
+
+  & .orbit-space-title-icon { width: 14px; height: 14px; }
+  & .orbit-space-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  & .orbit-icon-button { width: 22px; height: 22px; opacity: 0; transition: opacity .15s; }
+  &:hover .orbit-icon-button { opacity: .8; }
+}
+sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
+#tabbrowser-tabs:not([expanded]) #orbit-sidebar-header { display: none; }
+
+/* "+ New Tab" row on top of the list. */
+#tabbrowser-arrowscrollbox-periphery { order: -1; }
+#tabs-newtab-button {
+  width: 100% !important;
+  justify-content: flex-start !important;
+  border-radius: var(--orbit-radius-sm) !important;
+  padding-inline: 10px !important;
+  color: var(--orbit-fg-dim) !important;
+  &:hover { background: var(--orbit-hover) !important; color: var(--orbit-fg) !important; }
+  & .toolbarbutton-icon {
+    list-style-image: url("chrome://orbit/content/icons/plus.svg") !important;
+    -moz-context-properties: stroke !important;
+    stroke: currentColor !important;
+    width: 16px !important;
+    height: 16px !important;
+    padding: 0 !important;
+  }
+}
+
+/* Footer: compact mode, spaces, new space. */
+#orbit-sidebar-footer {
+  gap: 2px;
+  padding: 4px 4px 0 8px;
+}
+#orbit-space-switcher {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+}
+#orbit-space-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--orbit-radius);
+  pointer-events: none;
+  background: var(--orbit-active);
+  transition: transform .4s var(--orbit-spring);
+}
+.orbit-space-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--orbit-radius);
+  display: grid;
+  place-items: center;
+  z-index: 1;
+  color: var(--orbit-fg-dim);
+  transition: color .15s, transform .2s var(--orbit-spring);
+
+  & .orbit-icon { width: 15px; height: 15px; }
+  &:hover { color: var(--orbit-fg); }
+  &:active { transform: scale(.88); }
+  &[active] { color: var(--orbit-fg); }
+}
+
+/* Empty sidebar chrome drags the window. */
+#orbit-sidebar-footer, #orbit-space-switcher { -moz-window-dragging: drag; }
+#orbit-sidebar-footer button { -moz-window-dragging: no-drag; }
+
+/* ==========================================================================
+   Shared controls
+   ========================================================================== */
+.orbit-icon {
+  width: 16px;
+  height: 16px;
+  -moz-context-properties: stroke, fill;
+  stroke: currentColor;
+  fill: currentColor;
+  pointer-events: none;
+}
+.orbit-icon-button {
+  appearance: none;
+  border: none;
+  background: transparent;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--orbit-radius);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  color: var(--orbit-fg-dim);
+  transition: background-color .15s, color .15s, transform .2s var(--orbit-spring);
+  &:hover { background: var(--orbit-hover); color: var(--orbit-fg); }
+  &:active { transform: scale(.9); }
+  & .orbit-icon { width: 15px; height: 15px; }
+}
+.orbit-button {
+  appearance: none;
+  border: none;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--orbit-radius);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--orbit-fg);
+  background: var(--orbit-hover);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color .15s, transform .2s var(--orbit-spring);
+  &:hover { background: var(--orbit-active); }
+  &:active { transform: scale(.95); }
+  &.primary {
+    color: white;
+    background: var(--c1, var(--orbit-c1));
+    &:hover { filter: brightness(1.1); }
+  }
+  &.danger:hover { background: #e5484d; color: white; }
+}
+
+/* ==========================================================================
+   Space editor popover
+   ========================================================================== */
+#orbit-space-editor {
+  position: fixed;
+  left: 10px;
+  bottom: 44px;
+  z-index: 30;
+  width: min(300px, calc(100vw - 20px));
+  padding: 14px;
+  border-radius: var(--orbit-radius-lg);
+  background: var(--orbit-surface);
+  backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid var(--orbit-border);
+  box-shadow: 0 24px 60px rgb(0 0 0 / .45);
+  color: var(--orbit-fg);
+  font-size: 12.5px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transform-origin: bottom left;
+  animation: orbit-pop-in .28s var(--orbit-spring);
+  &.closing { animation: orbit-pop-out .16s ease-in forwards; }
+}
+@keyframes orbit-pop-in { from { opacity: 0; transform: translateY(8px) scale(.95); } }
+@keyframes orbit-pop-out { to { opacity: 0; transform: translateY(6px) scale(.97); } }
+@keyframes orbit-fade-in { from { opacity: 0; } }
+@keyframes orbit-fade-out { to { opacity: 0; } }
+
+.orbit-editor-title { font-weight: 650; font-size: 14px; }
+.orbit-editor-label { color: var(--orbit-fg-dim); font-size: 11.5px; margin-top: 4px; }
+.orbit-input {
+  appearance: none;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--orbit-radius);
+  border: 1px solid var(--orbit-border);
+  background: var(--orbit-hover);
+  color: var(--orbit-fg);
+  font: inherit;
+  font-size: 13px;
+  &:focus { outline: 2px solid color-mix(in oklch, var(--c1) 70%, transparent); outline-offset: -1px; }
+}
+.orbit-icon-grid, .orbit-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+.orbit-pick-icon {
+  appearance: none;
+  border: none;
+  aspect-ratio: 1;
+  border-radius: var(--orbit-radius);
+  background: transparent;
+  color: var(--orbit-fg-dim);
+  display: grid;
+  place-items: center;
+  &:hover { background: var(--orbit-hover); color: var(--orbit-fg); }
+  &[active] { background: color-mix(in oklch, var(--c1) 40%, transparent); color: var(--orbit-fg); }
+}
+.orbit-pick-theme {
+  appearance: none;
+  border: none;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--c1), var(--c2));
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2);
+  transition: transform .2s var(--orbit-spring);
+  &:hover { transform: scale(1.12); }
+  &[active] { box-shadow: 0 0 0 2px var(--orbit-panel), 0 0 0 4px var(--c1); }
+}
+.orbit-editor-actions { display: flex; gap: 6px; margin-top: 6px; }
+.orbit-spacer { flex: 1; }
+
+/* ==========================================================================
+   Compact mode: sidebar hidden, peeks from the left edge
+   ========================================================================== */
+:root[orbit-compact]:not([customizing]) {
+  & #sidebar-container {
+    position: fixed !important;
+    top: var(--orbit-toolbox-height);
+    bottom: var(--orbit-gap);
+    left: calc(-1 * var(--orbit-sidebar-width) - 20px);
+    z-index: 10;
+    padding-top: 6px;
+    border-radius: var(--orbit-radius-lg);
+    background: var(--orbit-surface) !important;
+    backdrop-filter: blur(30px) saturate(1.5);
+    box-shadow: 0 0 0 1px var(--orbit-border), 0 20px 60px rgb(0 0 0 / .4) !important;
+    transition: left .4s var(--orbit-spring);
+  }
+  & #sidebar-launcher-splitter { display: none !important; }
+  & #tabbrowser-tabbox { margin-inline-start: var(--orbit-gap) !important; }
+  &[orbit-peek] #sidebar-container { left: var(--orbit-gap); }
+}
+
+/* ==========================================================================
+   Glance
+   ========================================================================== */
+#orbit-glance {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / .35);
+  animation: orbit-fade-in .2s ease-out;
+  &[closing] { animation: orbit-fade-out .2s ease-in forwards; }
+  &[closing] .orbit-glance-card { animation: orbit-glance-out .2s ease-in forwards; }
+}
+.orbit-glance-card {
+  width: 86%;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--orbit-radius-lg);
+  overflow: clip;
+  background: var(--orbit-panel);
+  box-shadow: 0 30px 90px rgb(0 0 0 / .5), 0 0 0 1px var(--orbit-border);
+  transform-origin: var(--orbit-glance-origin, 50% 50%);
+  animation: orbit-glance-in .38s var(--orbit-spring);
+}
+.orbit-glance-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 0 6px 0 14px;
+  color: var(--orbit-fg);
+}
+.orbit-glance-url {
+  flex: 1;
+  font-size: 12px;
+  color: var(--orbit-fg-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.orbit-glance-browser { flex: 1; min-height: 0; }
+@keyframes orbit-glance-in { from { opacity: 0; transform: scale(.2); } }
+@keyframes orbit-glance-out { to { opacity: 0; transform: translateY(16px) scale(.96); } }
+
+:root[orbit-resizing] * { transition: none !important; }
+
+@media (prefers-reduced-motion: reduce) {
+  :root { transition: none; }
+  #orbit-glance, .orbit-glance-card, #orbit-space-editor, #urlbar *,
+  #tabbrowser-arrowscrollbox .tabbrowser-tab[fadein] {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   Liquid glass
+   ========================================================================== */
+#vertical-tabs .tabbrowser-tab:not([pinned]) .tab-background[selected],
+#vertical-tabs .tabbrowser-tab[pinned] .tab-background,
+#orbit-space-indicator {
+  background-image: var(--orbit-glass) !important;
+  box-shadow: var(--orbit-glass-edge) !important;
+  backdrop-filter: blur(12px) saturate(1.6);
+}
+#vertical-tabs .tabbrowser-tab[pinned] .tab-background[selected] {
+  box-shadow: var(--orbit-glass-edge), inset 0 0 0 1px color-mix(in oklch, var(--orbit-c1) 50%, transparent) !important;
+}
+#urlbar:not([focused], [open]) .urlbar-background {
+  background-image: var(--orbit-glass) !important;
+  box-shadow: var(--orbit-glass-edge) !important;
+}
+:is(#orbit-space-editor, .orbit-glance-card) {
+  box-shadow: var(--orbit-glass-edge), 0 24px 70px rgb(0 0 0 / .55) !important;
+}
+
+/* Liquid shine: a highlight glides across a tab on hover. */
+#vertical-tabs .tabbrowser-tab .tab-background { overflow: clip; }
+#vertical-tabs .tabbrowser-tab .tab-background::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 255 255 / .1) 50%, transparent 65%);
+  transform: translateX(-120%);
+}
+#vertical-tabs .tabbrowser-tab:hover .tab-background::after {
+  animation: orbit-shine .9s var(--orbit-ease);
+}
+@keyframes orbit-shine { to { transform: translateX(120%); } }
+
+
+
+/* Page card: thin luminous rim. */
+:root:not([customizing], [inDOMFullscreen]) #tabbrowser-tabbox {
+  box-shadow: 0 0 0 1px var(--orbit-border), 0 8px 30px rgb(0 0 0 / .35) !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #browser::after, .tab-background::after { animation: none !important; }
+}
+
+/* The nav-bar is its own stacking context (will-change): lift the whole
+   toolbox above the backdrop so the floating command bar stays on top. */
+:root[orbit-commandbar] #navigator-toolbox {
+  position: relative;
+  z-index: 11;
+}
+
+/* ==========================================================================
+   Command bar (Ctrl+T), Zen style: a clean floating search field
+   ========================================================================== */
+:root[orbit-commandbar] #urlbar:is([focused], [open]) {
+  top: 24vh !important;
+  left: calc(50% - min(680px, 86vw) / 2) !important;
+  width: min(680px, 86vw) !important;
+  --urlbar-height: 52px !important;
+  --urlbar-background-border-radius: var(--orbit-radius) !important;
+
+  & :is(#identity-box, #remote-control-box, .searchmode-switcher, #page-action-buttons,
+        .urlbar-go-button, #tracking-protection-icon-container, #urlbar-label-box) {
+    display: none !important;
+  }
+  & .urlbar-input-container::before {
+    content: "";
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-inline: 10px 8px;
+    background: url("chrome://orbit/content/icons/search.svg") center / 18px no-repeat;
+    -moz-context-properties: stroke;
+    stroke: var(--orbit-fg-dim);
+  }
+  & .urlbar-input { font-size: 16px !important; }
+  & .urlbar-input::placeholder { color: var(--orbit-fg-dim); }
+  & .urlbarView-row { min-height: 40px; }
+}
+
+/* Automation stripes (only shown under test tools): keep the robot cue,
+   drop the red stripes. */
+:root[remotecontrol] #urlbar .urlbar-background { background-image: none !important; }
+:root[remotecontrol] #urlbar:not([focused], [open]) .urlbar-background { background-image: var(--orbit-glass) !important; }
+
+/* Sidebar on the right: mirror the page card margins. */
+:root[orbit-sidebar-end]:not([customizing], [inDOMFullscreen]) #tabbrowser-tabbox {
+  margin: 0 0 var(--orbit-gap) var(--orbit-gap) !important;
+}
+
+/* ==========================================================================
+   Effect switches (Settings)
+   ========================================================================== */
+:root[orbit-no-nebula] #browser::after { display: none !important; }
+:root[orbit-no-grain] #browser::before { display: none !important; }
+:root[orbit-no-glass] {
+  & #vertical-tabs .tabbrowser-tab .tab-background,
+  & #orbit-space-indicator,
+  & #urlbar .urlbar-background {
+    background-image: none !important;
+    backdrop-filter: none !important;
+  }
+  & #vertical-tabs .tabbrowser-tab:not([pinned]) .tab-background[selected],
+  & #vertical-tabs .tabbrowser-tab[pinned] .tab-background,
+  & #orbit-space-indicator { box-shadow: none !important; }
+  & #vertical-tabs .tabbrowser-tab .tab-background::after { display: none; }
+  & :is(#orbit-space-editor, .orbit-settings-card) { backdrop-filter: none !important; }
+}
+:root[orbit-no-motion] {
+  transition: none !important;
+  & *, & *::before, & *::after { animation: none !important; transition: none !important; }
+}
+
+/* ==========================================================================
+   Settings sheet
+   ========================================================================== */
+#orbit-settings {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / .45);
+  animation: orbit-fade-in .2s ease-out;
+  &[closing] { animation: orbit-fade-out .18s ease-in forwards; }
+  &[closing] .orbit-settings-card { animation: orbit-pop-out .18s ease-in forwards; }
+}
+.orbit-settings-card {
+  display: flex;
+  width: min(820px, calc(100vw - 40px));
+  height: min(580px, calc(100vh - 60px));
+  border-radius: var(--orbit-radius-lg);
+  overflow: hidden;
+  color: var(--orbit-fg);
+  font-size: 13px;
+  background: var(--orbit-panel);
+  box-shadow: 0 0 0 1px var(--orbit-border), 0 30px 90px rgb(0 0 0 / .5);
+  animation: orbit-pop-in .32s var(--orbit-spring);
+}
+.orbit-settings-side {
+  width: 210px;
+  flex-shrink: 0;
+  padding: 16px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: color-mix(in srgb, var(--orbit-panel) 70%, var(--orbit-base));
+  border-inline-end: 1px solid var(--orbit-border);
+}
+.orbit-settings-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 10px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.orbit-settings-logo {
+  width: 22px;
+  height: 22px;
+  -moz-context-properties: fill;
+  fill: var(--orbit-fg);
+}
+.orbit-settings-nav { display: flex; flex-direction: column; gap: 2px; }
+.orbit-settings-tab {
+  appearance: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--orbit-radius);
+  background: transparent;
+  color: var(--orbit-fg-dim);
+  font: inherit;
+  font-weight: 500;
+  text-align: start;
+  transition: background-color .15s, color .15s;
+  &:hover { background: var(--orbit-hover); color: var(--orbit-fg); }
+  &[active] { color: var(--orbit-fg); background: var(--orbit-active); box-shadow: var(--orbit-glass-edge); }
+}
+.orbit-settings-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.orbit-settings-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 16px 8px 28px;
+}
+.orbit-settings-h { font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.orbit-settings-body { flex: 1; overflow-y: auto; padding: 6px 28px 28px; }
+
+.orbit-setting {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 56px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border-radius: var(--orbit-radius-lg);
+  background: var(--orbit-field);
+  box-shadow: inset 0 0 0 1px var(--orbit-border);
+}
+.orbit-setting-col { flex-direction: column; align-items: stretch; gap: 14px; }
+.orbit-setting-text { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+.orbit-setting-label { font-weight: 500; font-size: 13.5px; }
+.orbit-setting-desc { font-size: 12px; color: var(--orbit-fg-dim); }
+.orbit-setting-link {
+  appearance: none;
+  border: none;
+  width: 100%;
+  color: var(--orbit-fg);
+  font: inherit;
+  justify-content: space-between;
+  transition: background-color .15s;
+  &:hover { background: var(--orbit-hover); }
+}
+.orbit-restart { margin-top: 8px; height: 28px; font-size: 12px; }
+
+/* Switch */
+.orbit-switch {
+  appearance: none;
+  border: none;
+  position: relative;
+  flex-shrink: 0;
+  width: 40px;
+  height: 22px;
+  border-radius: var(--orbit-radius);
+  background: color-mix(in srgb, var(--orbit-fg) 18%, transparent);
+  transition: background-color .25s;
+  &[on] { background: var(--orbit-c1); }
+  &:focus-visible { outline: 2px solid var(--orbit-accent); outline-offset: 2px; }
+}
+.orbit-switch-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .3);
+  transition: transform .3s var(--orbit-spring), width .2s;
+}
+.orbit-switch:active .orbit-switch-knob { width: 20px; }
+.orbit-switch[on] > .orbit-switch-knob { transform: translateX(18px); }
+.orbit-switch[on]:active > .orbit-switch-knob { transform: translateX(14px); }
+
+/* Custom slider */
+.orbit-slider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  touch-action: none;
+  outline: none;
+}
+.orbit-slider-track {
+  position: relative;
+  width: 180px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--orbit-fg) 14%, transparent);
+}
+.orbit-slider-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  border-radius: inherit;
+  background: var(--orbit-c1);
+}
+.orbit-slider-thumb {
+  position: absolute;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 1px 4px rgb(0 0 0 / .35), 0 0 0 0 color-mix(in oklch, var(--orbit-c1) 40%, transparent);
+  transition: box-shadow .2s, transform .2s var(--orbit-spring);
+}
+.orbit-slider:hover .orbit-slider-thumb,
+.orbit-slider:focus-visible .orbit-slider-thumb { box-shadow: 0 1px 4px rgb(0 0 0 / .35), 0 0 0 5px color-mix(in oklch, var(--orbit-c1) 25%, transparent); }
+.orbit-slider[dragging] .orbit-slider-thumb { transform: scale(1.15); }
+.orbit-slider-value {
+  min-width: 46px;
+  padding: 3px 0;
+  border-radius: var(--orbit-radius);
+  text-align: center;
+  font-size: 12px;
+  color: var(--orbit-fg-dim);
+  background: var(--orbit-hover);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Segmented control with a gliding pill */
+.orbit-segmented {
+  position: relative;
+  display: flex;
+  padding: 3px;
+  border-radius: var(--orbit-radius);
+  background: color-mix(in srgb, var(--orbit-fg) 8%, transparent);
+  & > button {
+    position: relative;
+    z-index: 1;
+    appearance: none;
+    border: none;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--orbit-radius);
+    background: transparent;
+    color: var(--orbit-fg-dim);
+    font: inherit;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: color .2s;
+    &:hover, &[active] { color: var(--orbit-fg); }
+  }
+}
+.orbit-segmented-pill {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  height: 28px;
+  border-radius: var(--orbit-radius);
+  background: var(--orbit-panel);
+  box-shadow: 0 1px 3px rgb(0 0 0 / .2), inset 0 0 0 1px var(--orbit-border);
+  transition: transform .35s var(--orbit-spring), width .35s var(--orbit-spring);
+}
+
+/* Custom dropdown */
+.orbit-dropdown { position: relative; }
+.orbit-dropdown-button {
+  appearance: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 200px;
+  height: 34px;
+  padding: 0 10px 0 12px;
+  border-radius: var(--orbit-radius);
+  background: var(--orbit-panel);
+  box-shadow: inset 0 0 0 1px var(--orbit-border), 0 1px 2px rgb(0 0 0 / .15);
+  color: var(--orbit-fg);
+  font: inherit;
+  font-size: 13px;
+  transition: box-shadow .15s;
+  &:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-fg) 22%, transparent), 0 1px 2px rgb(0 0 0 / .15); }
+  & .orbit-icon { width: 14px; height: 14px; color: var(--orbit-fg-dim); }
+}
+.orbit-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 5;
+  min-width: 100%;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 5px;
+  border-radius: var(--orbit-radius);
+  background: var(--orbit-panel);
+  box-shadow: 0 0 0 1px var(--orbit-border), 0 16px 40px rgb(0 0 0 / .4);
+  transform-origin: top right;
+  animation: orbit-menu-in .2s var(--orbit-ease);
+}
+@keyframes orbit-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.orbit-dropdown-item {
+  appearance: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--orbit-radius);
+  background: transparent;
+  color: var(--orbit-fg);
+  font-size: 13px;
+  text-align: start;
+  white-space: nowrap;
+  &:hover { background: var(--orbit-hover); }
+  &[active] { background: var(--orbit-active); }
+  & .orbit-icon { width: 14px; height: 14px; }
+}
+.orbit-dropdown-add { justify-content: flex-start; color: var(--orbit-fg-dim); }
+.orbit-dropdown-sep { height: 1px; margin: 5px 4px; background: var(--orbit-border); }
+
+/* Space colors */
+.orbit-custom-colors {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--orbit-fg-dim);
+}
+.orbit-swatch {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--c);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .2), 0 1px 3px rgb(0 0 0 / .3);
+  cursor: pointer;
+  transition: transform .2s var(--orbit-spring);
+  &:hover { transform: scale(1.08); }
+  & input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+}
+.orbit-custom-colors[active] .orbit-swatch { box-shadow: 0 0 0 2px var(--orbit-panel), 0 0 0 3.5px var(--orbit-fg-dim); }
+
+/* About */
+.orbit-about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 26px 0 10px;
+  text-align: center;
+}
+.orbit-about-logo {
+  width: 84px;
+  height: 84px;
+  border-radius: var(--orbit-radius-lg);
+  box-shadow: 0 10px 30px rgb(0 0 0 / .35);
+  animation: orbit-pop-in .5s var(--orbit-spring);
+}
+.orbit-about-name { margin-top: 10px; font-size: 26px; font-weight: 600; letter-spacing: -.02em; }
+.orbit-about-version { font-size: 12px; color: var(--orbit-fg-dim); }
+.orbit-about-tagline { margin-top: 6px; font-size: 14px; }
+.orbit-about-author {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--orbit-fg-dim);
+  & strong { color: var(--orbit-fg); font-weight: 600; }
+}
+.orbit-about-heart { width: 14px; height: 14px; margin-inline-start: 4px; color: #ff5c8a; fill: #ff5c8a; }
+.orbit-about-actions { display: flex; gap: 8px; margin: 18px 0 14px; }
+.orbit-about-fine { font-size: 11.5px; color: var(--orbit-fg-dim); max-width: 440px; }
+
+/* One font everywhere in the chrome (menus and panels included). */
+:root, :root :is(*, *::before, *::after):not(.titlebar-buttonbox-container *) {
+  font-family: var(--orbit-font), "Segoe UI Variable Text", system-ui, sans-serif !important;
+}
+
+:root[orbit-no-glass] {
+  --orbit-glass: none;
+  --orbit-glass-edge: inset 0 0 0 1px var(--orbit-border);
+}
+
+#urlbar {
+  --urlbar-input-container-outline-open: none !important;
+  --urlbar-input-container-outline-open-focused: none !important;
+  --urlbar-background-outline-focused: none !important;
+  & .urlbar-input-container { outline: none !important; }
+}
+
+/* ==========================================================================
+   App menu (Orbit's own) and native menus / panels in Orbit colors
+   ========================================================================== */
+#orbit-menu {
+  position: fixed;
+  z-index: 45;
+  min-width: 270px;
+  padding: 6px;
+  border-radius: var(--orbit-radius-lg);
+  background: var(--orbit-panel);
+  color: var(--orbit-fg);
+  box-shadow: 0 0 0 1px var(--orbit-border), 0 18px 50px rgb(0 0 0 / .45);
+  transform-origin: top right;
+  animation: orbit-menu-in .2s var(--orbit-ease);
+  &[closing] { animation: orbit-fade-out .14s ease-in forwards; }
+}
+.orbit-menu-item {
+  appearance: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--orbit-radius);
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  text-align: start;
+  outline: none;
+  &:is(:hover, :focus-visible) { background: var(--orbit-hover); }
+  & .orbit-icon { width: 16px; height: 16px; color: var(--orbit-fg-dim); }
+}
+.orbit-menu-label { flex: 1; }
+.orbit-menu-key { font-size: 11.5px; color: var(--orbit-fg-dim); }
+.orbit-menu-sep { height: 1px; margin: 5px 6px; background: var(--orbit-border); }
+.orbit-menu-zoom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 4px 0 38px;
+  font-size: 13px;
+}
+.orbit-zoom-controls { display: flex; align-items: center; gap: 2px; }
+.orbit-zoom-reset {
+  appearance: none;
+  border: none;
+  min-width: 52px;
+  height: 26px;
+  border-radius: var(--orbit-radius);
+  background: var(--orbit-hover);
+  color: var(--orbit-fg);
+  font-size: 12px;
+  &:hover { background: var(--orbit-active); }
+}
+#PanelUI-menu-button[open] > .toolbarbutton-badge-stack { background: var(--orbit-active) !important; }
+
+/* Native context menus and panels (extensions, downloads, permissions...) */
+:root {
+  --menu-background-color: var(--orbit-panel) !important;
+  --menu-color: var(--orbit-fg) !important;
+  --menu-border-color: var(--orbit-border) !important;
+  --menuitem-hover-background-color: var(--orbit-hover) !important;
+  --menu-disabled-color: var(--orbit-fg-dim) !important;
+  --panel-background: var(--orbit-panel) !important;
+  --panel-color: var(--orbit-fg) !important;
+  --panel-border-color: var(--orbit-border) !important;
+  --panel-border-radius: var(--orbit-radius-lg) !important;
+  --panel-separator-color: var(--orbit-border) !important;
+  --panel-item-hover-bgcolor: var(--orbit-hover) !important;
+  --panel-item-active-bgcolor: var(--orbit-active) !important;
+  --arrowpanel-dimmed: var(--orbit-hover) !important;
+  --arrowpanel-dimmed-further: var(--orbit-active) !important;
+  --panel-shadow: 0 18px 50px rgb(0 0 0 / .45) !important;
+  --button-background-color-primary: var(--orbit-c1) !important;
+  --button-background-color-primary-hover: color-mix(in oklch, var(--orbit-c1) 85%, white) !important;
+  --color-accent-primary: var(--orbit-c1) !important;
+}
+menupopup {
+  --panel-padding: 5px !important;
+  --panel-border-radius: var(--orbit-radius) !important;
+  &::part(content) { border-radius: var(--orbit-radius) !important; }
+}
+menupopup > :is(menuitem, menu) {
+  min-height: 30px;
+  margin-inline: 0 !important;
+  padding-inline: 8px !important;
+  border-radius: var(--orbit-radius) !important;
+}
+menupopup > menuseparator { margin: 4px 6px !important; }
+panel {
+  --panel-padding: 6px !important;
+  &::part(content) { border-radius: var(--orbit-radius-lg) !important; }
+}
+#unified-extensions-view {
+  & .unified-extensions-item,
+  & .toolbaritem-combined-buttons { border-radius: var(--orbit-radius) !important; }
+  & .panel-header { font-weight: 600; }
+}
+#unified-extensions-panel .panel-subview-body { padding-inline: 6px !important; }
+
+/* ==========================================================================
+   First-run setup
+   ========================================================================== */
+#orbit-welcome {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: #f1f0f7;
+  background: #07060b;
+  animation: orbit-fade-in .5s ease-out;
+  &[closing] { animation: orbit-welcome-out .45s cubic-bezier(.4, 0, .2, 1) forwards; }
+}
+@keyframes orbit-welcome-out { to { opacity: 0; transform: scale(1.04); filter: blur(6px); } }
+.orbit-welcome-sky {
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+  background:
+    radial-gradient(30% 28% at 30% 35%, rgb(106 76 255 / .35), transparent 70%),
+    radial-gradient(28% 32% at 72% 70%, rgb(60 30 140 / .45), transparent 70%),
+    radial-gradient(1px 1px at 40px 60px, white, transparent),
+    radial-gradient(1px 1px at 160px 120px, rgb(255 255 255 / .6), transparent),
+    radial-gradient(1.5px 1.5px at 260px 40px, rgb(200 190 255 / .8), transparent),
+    radial-gradient(1px 1px at 90px 220px, rgb(255 255 255 / .5), transparent);
+  background-size: auto, auto, 300px 260px, 300px 260px, 300px 260px, 300px 260px;
+  animation: orbit-nebula 30s ease-in-out infinite alternate;
+}
+.orbit-welcome-skip {
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  appearance: none;
+  border: none;
+  background: none;
+  color: rgb(241 240 247 / .55);
+  font-size: 13px;
+  &:hover { color: #fff; }
+}
+.orbit-welcome-stage {
+  position: relative;
+  display: grid;
+  width: min(720px, 90vw);
+  min-height: 380px;
+  text-align: center;
+  & > * { grid-area: 1 / 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  & h1 { margin: 18px 0 6px; font-size: 38px; font-weight: 600; letter-spacing: -.03em; }
+  & p { margin: 0 0 26px; font-size: 15px; color: rgb(241 240 247 / .6); }
+}
+.orbit-welcome-logo {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: grid;
+  place-items: center;
+  animation: orbit-logo-in 1s cubic-bezier(.2, .9, .25, 1.2) both;
+  & img { width: 84px; -moz-context-properties: fill; fill: #fff; }
+}
+@keyframes orbit-logo-in { from { opacity: 0; transform: scale(.4) rotate(-40deg); } }
+.orbit-welcome-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid rgb(255 255 255 / .14);
+  border-top-color: rgb(160 140 255 / .9);
+  animation: orbit-spin 3.2s linear infinite;
+}
+@keyframes orbit-spin { to { transform: rotate(360deg); } }
+
+.orbit-welcome-cards { display: flex; gap: 14px; }
+.orbit-welcome-card {
+  appearance: none;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 12px;
+  border-radius: var(--orbit-radius-lg);
+  background: rgb(255 255 255 / .04);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08);
+  color: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  transition: transform .3s var(--orbit-spring), box-shadow .2s, background-color .2s;
+  &:hover { transform: translateY(-3px); background: rgb(255 255 255 / .07); }
+  &[active] { box-shadow: inset 0 0 0 2px #8b73ff; background: rgb(139 115 255 / .1); }
+}
+/* Mini window previews drawn with three boxes: sidebar (i), toolbar (b), page (u). */
+.orbit-welcome-preview {
+  position: relative;
+  width: 150px;
+  height: 96px;
+  border-radius: var(--orbit-radius);
+  overflow: hidden;
+  background: #121118;
+  & > * { position: absolute; border-radius: 4px; }
+  & i { left: 6px; top: 18px; bottom: 6px; width: 34px; background: rgb(255 255 255 / .12); }
+  & b { left: 6px; right: 6px; top: 6px; height: 8px; background: rgb(255 255 255 / .1); }
+  & u { left: 46px; right: 6px; top: 18px; bottom: 6px; background: rgb(255 255 255 / .2); }
+  &.p-light { background: #ecebf2; & i, & b { background: rgb(0 0 0 / .1); } & u { background: #fff; } }
+  &.p-system { background: linear-gradient(110deg, #121118 50%, #ecebf2 50%); }
+  &.p-right { & i { left: auto; right: 6px; } & u { left: 6px; right: 46px; } }
+  &.p-compact { & i { display: none; } & u { left: 6px; } }
+}
+.orbit-welcome-swatches { display: flex; gap: 10px; margin-top: 22px; }
+.orbit-welcome-swatches .orbit-pick-theme { width: 26px; height: 26px; }
+.orbit-welcome-swatches .orbit-pick-theme[active] { box-shadow: 0 0 0 2px #07060b, 0 0 0 4px #fff; }
+
+.orbit-welcome-actions { display: flex; flex-direction: column; gap: 10px; width: min(380px, 80vw); }
+.orbit-welcome-action {
+  appearance: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 50px;
+  padding: 0 16px;
+  border-radius: var(--orbit-radius-lg);
+  background: rgb(255 255 255 / .05);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08);
+  color: inherit;
+  font-size: 14px;
+  text-align: start;
+  transition: background-color .2s, transform .25s var(--orbit-spring);
+  &:hover { background: rgb(255 255 255 / .09); transform: translateY(-1px); }
+  & span { flex: 1; }
+  & .orbit-done { opacity: 0; color: #7ee2a8; transform: scale(.5); transition: all .3s var(--orbit-spring); }
+  &[done] .orbit-done { opacity: 1; transform: none; }
+}
+.orbit-welcome-keys {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 10px 26px;
+  text-align: start;
+  font-size: 14px;
+  & > div { display: flex; align-items: center; gap: 12px; }
+  & kbd {
+    min-width: 92px;
+    padding: 5px 9px;
+    border-radius: var(--orbit-radius);
+    background: rgb(255 255 255 / .08);
+    box-shadow: inset 0 -1px 0 rgb(0 0 0 / .4), inset 0 0 0 1px rgb(255 255 255 / .08);
+    font-size: 12px;
+    text-align: center;
+  }
+  & span { color: rgb(241 240 247 / .7); }
+}
+.orbit-welcome-nav {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 26px;
+}
+.orbit-welcome-nav .orbit-button { height: 38px; padding: 0 20px; font-size: 13.5px; border-radius: var(--orbit-radius); }
+.orbit-welcome-back { background: rgb(255 255 255 / .06); color: #f1f0f7; }
+.orbit-welcome-next { min-width: 150px; justify-content: center; background: #7c63ff !important; }
+.orbit-welcome-dots { display: flex; gap: 7px; }
+.orbit-welcome-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 4px;
+  background: rgb(255 255 255 / .2);
+  transition: width .35s var(--orbit-spring), background-color .3s;
+}
+.orbit-welcome-dots span[active] { width: 22px; background: #fff; }
+
+/* ==========================================================================
+   Harmony pass: one radius, one rhythm (8px), pointer cursors, no glows
+   ========================================================================== */
+
+:root[orbit-no-glass] { --orbit-glass-edge: none; }
+
+/* Clickable things look clickable. */
+:is(button, toolbarbutton, .tabbrowser-tab, menuitem, menu, .orbit-slider, .orbit-swatch,
+    #urlbar .urlbar-input-container > :not(.urlbar-input-box), .subviewbutton) {
+  cursor: pointer !important;
+}
+:is(button, toolbarbutton)[disabled] { cursor: default !important; }
+
+/* Toolbar and sidebar share the same 8px inset. */
+:root:not([customizing], [inDOMFullscreen]) #nav-bar {
+  padding-inline: 8px 0 !important;
+  min-height: 42px !important;
+}
+#nav-bar .toolbarbutton-1 {
+  --toolbarbutton-outer-padding: 1px !important;
+  --toolbarbutton-inner-padding: 7px !important;
+  --toolbarbutton-border-radius: var(--orbit-radius) !important;
+}
+#nav-bar #sidebar-button { margin-inline-start: 0 !important; padding-inline-start: 0 !important; }
+#sidebar-container { padding-top: 0 !important; }
+#tabbrowser-tabs[orient="vertical"] {
+  padding-inline: 8px !important;
+  --tab-inner-inline-margin: 8px;
+}
+#vertical-tabs .tabbrowser-tab .tab-content { padding-inline: 8px 6px !important; }
+#orbit-sidebar-header { padding: 4px 2px 6px 4px !important; margin-bottom: 4px; }
+#orbit-sidebar-footer { padding: 6px 8px 0 !important; }
+#tabs-newtab-button { padding-inline: 8px !important; }
+
+/* Tabs: flat selection, no glossy edges or drop shadows. */
+#vertical-tabs .tabbrowser-tab .tab-background {
+  box-shadow: none !important;
+  background-image: none !important;
+}
+:root:not([orbit-no-glass]) #vertical-tabs .tabbrowser-tab .tab-background[selected] {
+  background-image: var(--orbit-glass) !important;
+}
+#vertical-tabs .tabbrowser-tab[pinned] .tab-background[selected] {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-fg) 16%, transparent) !important;
+}
+
+/* Drag a tab up: a clear "drop to pin" zone appears above the tabs. */
+#pinned-drop-indicator {
+  color: var(--orbit-fg-dim) !important;
+  outline: 1.5px dashed color-mix(in srgb, var(--orbit-fg) 30%, transparent) !important;
+  outline-offset: -1.5px;
+  border-radius: var(--orbit-radius) !important;
+  &[visible] { background: var(--orbit-hover) !important; }
+  &[interactive] {
+    color: var(--orbit-fg) !important;
+    outline-color: var(--orbit-c1) !important;
+    background: color-mix(in oklch, var(--orbit-c1) 14%, transparent) !important;
+  }
+  & #pinned-drop-indicator-text { font-size: 12px; }
+}
+#tabbrowser-tabs[movingtab] #pinned-tabs-container:not(:empty) {
+  outline: 1.5px dashed color-mix(in srgb, var(--orbit-fg) 25%, transparent);
+  outline-offset: 2px;
+  border-radius: var(--orbit-radius-lg);
+}
+.tab-drop-indicator { border-radius: 2px; background: var(--orbit-c1) !important; }
+
+/* ==========================================================================
+   Tooltips
+   ========================================================================== */
+tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-button-tooltip, #forward-button-tooltip {
+  appearance: none !important;
+  --tooltip-background-color: var(--orbit-panel) !important;
+  --tooltip-color: var(--orbit-fg) !important;
+  --tooltip-border-color: var(--orbit-border) !important;
+  background: var(--orbit-panel) !important;
+  color: var(--orbit-fg) !important;
+  border: 1px solid var(--orbit-border) !important;
+  border-radius: var(--orbit-radius) !important;
+  padding: 5px 9px !important;
+  font-size: 12px !important;
+  box-shadow: 0 8px 24px rgb(0 0 0 / .35) !important;
+  & description, & label { color: inherit !important; margin: 0 !important; }
+  & .tooltip-label + .tooltip-label { color: var(--orbit-fg-dim) !important; margin-top: 2px !important; }
+}
+
+/* ==========================================================================
+   Extensions panel: no illustrations, Orbit rows
+   ========================================================================== */
+#unified-extensions-empty-state > img {
+  content: url("chrome://orbit/content/icons/puzzle.svg") !important;
+  width: 40px !important;
+  height: 40px !important;
+  aspect-ratio: auto !important;
+  margin: 18px auto 4px !important;
+  -moz-context-properties: stroke;
+  stroke: var(--orbit-fg-dim);
+}
+#unified-extensions-empty-state > :is(h2, description) { text-align: center; }
+#unified-extensions-panel, #editBookmarkPanel, #downloadsPanel, #permission-popup, #identity-popup,
+#protections-popup, #appMenu-popup, #customizationui-widget-panel {
+  --panel-border-radius: var(--orbit-radius-lg) !important;
+  --arrowpanel-border-radius: var(--orbit-radius-lg) !important;
+  --panel-padding: 8px !important;
+  &::part(content) { border-radius: var(--orbit-radius-lg) !important; }
+}
+:is(#unified-extensions-view, #editBookmarkPanel, #downloadsPanel) :is(.panel-header, .panel-header > h1) {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+:is(panel, menupopup) .subviewbutton { border-radius: var(--orbit-radius) !important; }
+:is(panel) toolbarseparator { border-color: var(--orbit-border) !important; }
+:is(panel) button:is(.primary, [default="true"], .footer-button.primary) {
+  background: var(--orbit-c1) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: var(--orbit-radius) !important;
+}
+:is(panel) button:not(.primary, [default="true"], .close-icon, .subviewbutton, .panel-info-button) {
+  border-radius: var(--orbit-radius) !important;
+}
+
+/* ==========================================================================
+   Bookmark panel (star)
+   ========================================================================== */
+#editBookmarkPanel {
+  --panel-width: 340px;
+  & .panel-header { min-height: 40px; }
+  & #editBookmarkPanelContent { padding: 4px 6px !important; gap: 4px; }
+  & label { color: var(--orbit-fg-dim) !important; font-size: 12px !important; margin: 8px 0 4px !important; }
+  & :is(input, html|input, menulist, #editBMPanel_namePicker, #editBMPanel_tagsField) {
+    appearance: none !important;
+    min-height: 34px !important;
+    padding-inline: 10px !important;
+    border-radius: var(--orbit-radius) !important;
+    border: 1px solid var(--orbit-border) !important;
+    background: var(--orbit-field) !important;
+    color: var(--orbit-fg) !important;
+    outline: none !important;
+    box-shadow: none !important;
+    &:focus-within, &:focus { border-color: color-mix(in srgb, var(--orbit-fg) 30%, transparent) !important; }
+  }
+  & #editBMPanel_foldersExpander {
+    border-radius: var(--orbit-radius) !important;
+    border: 1px solid var(--orbit-border) !important;
+    background: var(--orbit-field) !important;
+    outline: none !important;
+  }
+  & checkbox { font-size: 12px; color: var(--orbit-fg-dim); }
+  & .panel-footer {
+    gap: 8px !important;
+    padding: 10px 8px 6px !important;
+    background: none !important;
+    & button {
+      flex: 1;
+      min-height: 32px !important;
+      margin: 0 !important;
+      border: none !important;
+      border-radius: var(--orbit-radius) !important;
+      background: var(--orbit-hover) !important;
+      color: var(--orbit-fg) !important;
+      font-weight: 500 !important;
+      &:hover { background: var(--orbit-active) !important; }
+    }
+    & button[default="true"], & #editBookmarkPanelDoneButton {
+      background: var(--orbit-c1) !important;
+      color: white !important;
+      &:hover { filter: brightness(1.1); }
+    }
+  }
+}
+#star-button-box:hover { background: var(--orbit-hover) !important; border-radius: var(--orbit-radius) !important; }
+
+/* ==========================================================================
+   App menu header
+   ========================================================================== */
+.orbit-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--orbit-border);
+  & img { width: 26px; height: 26px; border-radius: var(--orbit-radius); }
+  & b { display: block; font-size: 13.5px; font-weight: 600; }
+  & span { font-size: 11.5px; color: var(--orbit-fg-dim); }
+}
+
+/* ==========================================================================
+   Responsive
+   ========================================================================== */
+@media (max-width: 900px) {
+  #urlbar-container { max-width: none !important; }
+  .orbit-settings-side { width: 64px; padding-inline: 8px; }
+  .orbit-settings-brand span, .orbit-settings-tab > span { display: none; }
+  .orbit-settings-tab { justify-content: center; padding: 0; }
+  .orbit-setting { flex-wrap: wrap; }
+  .orbit-slider-track { width: 140px; }
+  .orbit-welcome-cards { flex-wrap: wrap; justify-content: center; }
+  .orbit-welcome-stage h1 { font-size: 30px; }
+}
+@media (max-width: 640px) {
+  :root { --orbit-sidebar-width: 200px !important; }
+  .orbit-settings-card { width: calc(100vw - 16px); height: calc(100vh - 16px); }
+  .orbit-settings-body { padding-inline: 14px; }
+  .orbit-welcome-preview { width: 110px; height: 72px; }
+  .orbit-welcome-keys { grid-template-columns: auto; }
+  #orbit-menu { min-width: 230px; }
+}
+@media (max-height: 560px) {
+  .orbit-welcome-stage { min-height: 280px; }
+  .orbit-welcome-logo { width: 100px; height: 100px; }
+  .orbit-welcome-nav { bottom: 16px; }
+}

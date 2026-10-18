@@ -1,0 +1,11 @@
+diff --git a/browser/base/moz.build b/browser/base/moz.build
+index 3ca8d96f56..36f610f03e 100644
+--- a/browser/base/moz.build
++++ b/browser/base/moz.build
+@@ -90,3 +90,6 @@ GENERATED_FILES["license.html"].inputs = [
+ ]
+ 
+ JAR_MANIFESTS += ["jar.mn"]
++
++# Orbit: Orbit-branded language packs (app scope, see tools/langpack.py).
++FINAL_TARGET_FILES.extensions += ["langpacks/langpack-fr@firefox.mozilla.org.xpi"]

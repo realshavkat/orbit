@@ -1,0 +1,38 @@
+{
+  "name": "Orbit",
+  "vendor": "Orbit",
+  "appId": "orbit",
+  "binaryName": "orbit",
+  "version": {
+    "product": "firefox",
+    "version": "158.0",
+    "candidate": "158.0",
+    "candidateBuild": 1
+  },
+  "buildOptions": {
+    "generateBranding": true
+  },
+  "addons": {},
+  "brands": {
+    "release": {
+      "backgroundColor": "#0B0B10",
+      "brandShorterName": "Orbit",
+      "brandShortName": "Orbit",
+      "brandFullName": "Orbit",
+      "release": {
+        "displayVersion": "158.0.1",
+        "github": {
+          "repo": "realshavkat/orbit"
+        },
+        "archives": {
+          "windows": "windows.mar"
+        }
+      }
+    }
+  },
+  "license": {
+    "ignoredFiles": [".*\\.json"],
+    "licenseType": "MPL-2.0"
+  },
+  "updateHostname": "raw.githubusercontent.com/realshavkat/orbit/main"
+}

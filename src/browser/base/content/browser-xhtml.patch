@@ -1,0 +1,12 @@
+diff --git a/browser/base/content/browser.xhtml b/browser/base/content/browser.xhtml
+--- a/browser/base/content/browser.xhtml
++++ b/browser/base/content/browser.xhtml
+@@ -113,6 +113,8 @@
+ 
+   <script src="chrome://browser/content/global-scripts.js"></script>
+   <script src="chrome://browser/content/browser-main.js"></script>
++  <link rel="stylesheet" href="chrome://orbit/content/orbit.css" />
++  <script src="chrome://orbit/content/orbit.js"></script>
+ </head>
+ <html:body xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul">
+ # All sets except for popupsets (commands, keys, and stringbundles)

@@ -1,0 +1,8 @@
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+ac_add_options --target=x86_64-pc-windows-msvc
+ac_add_options --enable-eme=widevine,wmfcdm
+# The maintenance service needs Mozilla-signed binaries; Orbit installs per user.
+ac_add_options --disable-maintenance-service

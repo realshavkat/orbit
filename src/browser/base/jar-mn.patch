@@ -1,0 +1,25 @@
+diff --git a/browser/base/jar.mn b/browser/base/jar.mn
+index b2b5db6040..990bfedf93 100644
+--- a/browser/base/jar.mn
++++ b/browser/base/jar.mn
+@@ -3,6 +3,20 @@
+ # file, You can obtain one at http://mozilla.org/MPL/2.0/.
+ browser.jar:
+ %  content browser %content/browser/ contentaccessible=yes
++% content orbit %content/orbit/
++% resource orbit %content/orbit/
++        content/orbit/                                (content/orbit/*.js)
++        content/orbit/                                (content/orbit/*.css)
++        content/orbit/                                (content/orbit/*.svg)
++        content/orbit/icons/                          (content/orbit/icons/*.svg)
++        content/orbit/actors/                         (content/orbit/actors/*.sys.mjs)
++        content/orbit/fonts/                          (content/orbit/fonts/*.ttf)
++% override chrome://global/skin/illustrations/kit-concerned.svg chrome://orbit/content/illustration.svg
++% override chrome://global/skin/illustrations/kit-confetti.svg chrome://orbit/content/illustration.svg
++% override chrome://global/skin/illustrations/kit-happy.svg chrome://orbit/content/illustration.svg
++% override chrome://global/skin/illustrations/kit-holding-lock.svg chrome://orbit/content/illustration.svg
++% override chrome://global/skin/illustrations/kit-in-circle.svg chrome://orbit/content/illustration.svg
++% override chrome://global/skin/illustrations/kit-sympathetic.svg chrome://orbit/content/illustration.svg
+ 
+         content/browser/aboutDialog-appUpdater.js     (content/aboutDialog-appUpdater.js)
+ *       content/browser/aboutDialog.xhtml                    (content/aboutDialog.xhtml)

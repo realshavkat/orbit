@@ -1,0 +1,152 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Orbit look for the built-in pages (orbit://preferences, extensions,
+   downloads, config...). Registered as a user sheet by OrbitLayout.
+   Most widgets there are web components: we restyle them through the
+   design tokens they read (custom properties cross shadow roots). */
+@font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Inter"; src: url("chrome://orbit/content/fonts/Inter.ttf"); font-weight: 100 900; }
+@font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
+@font-face { font-family: "Space Grotesk"; src: url("chrome://orbit/content/fonts/SpaceGrotesk.ttf"); font-weight: 300 700; }
+@font-face { font-family: "DM Sans"; src: url("chrome://orbit/content/fonts/DMSans.ttf"); font-weight: 100 1000; }
+
+@-moz-document url-prefix("about:preferences"), url-prefix("about:settings"), url-prefix("about:addons"),
+  url-prefix("about:downloads"), url-prefix("about:config"), url-prefix("about:logins"),
+  url-prefix("about:profiles"), url-prefix("about:support"), url-prefix("about:protections"),
+  url-prefix("about:certificate"), url-prefix("about:processes"), url-prefix("about:policies"),
+  url-prefix("about:editprofile"), url-prefix("about:translations") {
+  :root {
+    --o-accent: #7c63ff;
+    --o-accent-hover: #8d78ff;
+    --o-bg: #0b0b0e;
+    --o-box: #141419;
+    --o-box-2: #1b1b22;
+    --o-line: rgb(255 255 255 / .07);
+    --o-text: #ededf2;
+    --o-dim: rgb(237 237 242 / .55);
+    --o-hover: rgb(255 255 255 / .05);
+    --o-sel: rgb(255 255 255 / .08);
+    --o-radius: 7px;
+
+    --in-content-page-background: var(--o-bg) !important;
+    --in-content-page-color: var(--o-text) !important;
+    --in-content-text-color: var(--o-text) !important;
+    --in-content-deemphasized-text: var(--o-dim) !important;
+    --in-content-box-background: var(--o-box) !important;
+    --in-content-box-background-hover: var(--o-box-2) !important;
+    --in-content-box-border-color: var(--o-line) !important;
+    --in-content-border-color: var(--o-line) !important;
+    --in-content-primary-button-background: var(--o-accent) !important;
+    --in-content-primary-button-background-hover: var(--o-accent-hover) !important;
+    --in-content-primary-button-text-color: #fff !important;
+    --in-content-link-color: #a898ff !important;
+    --in-content-focus-outline-color: var(--o-accent) !important;
+    --in-content-item-selected: var(--o-accent) !important;
+
+    --background-color-canvas: var(--o-bg) !important;
+    --background-color-box: var(--o-box) !important;
+    --background-color-box-info: var(--o-box-2) !important;
+    --text-color: var(--o-text) !important;
+    --text-color-deemphasized: var(--o-dim) !important;
+    --border-color: var(--o-line) !important;
+    --border-color-card: var(--o-line) !important;
+    --border-color-interactive: rgb(255 255 255 / .16) !important;
+    --border-color-selected: var(--o-accent) !important;
+    --color-accent-primary: var(--o-accent) !important;
+    --color-accent-primary-hover: var(--o-accent-hover) !important;
+    --color-accent-primary-active: #6a50f5 !important;
+    --link-color: #a898ff !important;
+    --link-color-hover: #c2b6ff !important;
+    --focus-outline-color: var(--o-accent) !important;
+
+    --border-radius-small: var(--o-radius) !important;
+    --border-radius-medium: var(--o-radius) !important;
+    --border-radius-large: calc(var(--o-radius) + 3px) !important;
+    --button-border-radius: var(--o-radius) !important;
+    --card-border-radius: calc(var(--o-radius) + 3px) !important;
+    --card-box-shadow: none !important;
+    --box-shadow-card: none !important;
+
+    --button-background-color: var(--o-box-2) !important;
+    --button-background-color-hover: #24242c !important;
+    --button-background-color-active: #2b2b35 !important;
+    --button-background-color-primary: var(--o-accent) !important;
+    --button-background-color-primary-hover: var(--o-accent-hover) !important;
+    --button-text-color-primary: #fff !important;
+    --button-background-color-ghost-hover: var(--o-hover) !important;
+
+    --page-nav-button-border-radius: var(--o-radius) !important;
+    --page-nav-button-background-color: transparent !important;
+    --button-background-color-ghost: transparent !important;
+    --page-nav-button-text-color: var(--o-dim) !important;
+    --page-nav-button-text-color-hover: var(--o-text) !important;
+    --page-nav-button-background-color-hover: var(--o-hover) !important;
+    --page-nav-button-background-color-selected: var(--o-sel) !important;
+    --page-nav-button-text-color-selected: var(--o-text) !important;
+    --page-nav-button-indicator-background-color: transparent !important;
+
+    --toggle-background-color-pressed: var(--o-accent) !important;
+    --toggle-background-color-pressed-hover: var(--o-accent-hover) !important;
+    --toggle-border-color: transparent !important;
+    --toggle-background-color: rgb(255 255 255 / .16) !important;
+    --toggle-dot-background-color: #fff !important;
+
+    --font-family-sans-serif: var(--orbit-page-font, "Outfit"), system-ui, sans-serif !important;
+    color-scheme: dark !important;
+    background-color: var(--o-bg) !important;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --o-accent: #5b45e0;
+      --o-accent-hover: #6c58ea;
+      --o-bg: #f4f3f8;
+      --o-box: #ffffff;
+      --o-box-2: #f6f5fa;
+      --o-line: rgb(0 0 0 / .08);
+      --o-text: #1b1a22;
+      --o-dim: rgb(27 26 34 / .56);
+      --o-hover: rgb(0 0 0 / .04);
+      --o-sel: rgb(0 0 0 / .06);
+      --button-background-color: #efeef4 !important;
+      --button-background-color-hover: #e6e5ee !important;
+      --button-background-color-active: #dddce8 !important;
+      --border-color-interactive: rgb(0 0 0 / .16) !important;
+      --toggle-background-color: rgb(0 0 0 / .14) !important;
+      --in-content-link-color: #5b45e0 !important;
+      --link-color: #5b45e0 !important;
+      color-scheme: light !important;
+    }
+  }
+
+  :root, body, :root * {
+    font-family: var(--orbit-page-font, "Outfit"), system-ui, sans-serif !important;
+  }
+  :root :is(code, pre, kbd, .monospace, #about-config-search, .cell-value, .cell-name) {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace !important;
+  }
+
+  moz-page-nav-button[selected] { --color-accent-primary: var(--o-sel); --button-text-color-primary: var(--o-text); }
+  :is(groupbox, .card, moz-card, .addon-card) {
+    border-radius: calc(var(--o-radius) + 3px) !important;
+    border: 1px solid var(--o-line) !important;
+    box-shadow: none !important;
+    background-color: var(--o-box) !important;
+  }
+  :is(button, select, menulist, input[type="text"], input[type="search"], input[type="number"], search-textbox) {
+    border-radius: var(--o-radius) !important;
+  }
+  :is(button, select, menulist, a, moz-page-nav-button, moz-button, moz-toggle, label[for], .category) {
+    cursor: pointer !important;
+  }
+  :is(input, search-textbox, moz-input-search):focus-within {
+    outline-width: 1.5px !important;
+  }
+
+  /* Hide Mozilla account / promos / labs entries */
+  :is(#category-more-from-mozilla, #category-experimental, #firefoxMoreFromMozilla,
+      #mozillaVPN, #sync-pane-promo, .sync-promo, #category-ai-controls, moz-page-nav-button[support-page]) {
+    display: none !important;
+  }
+}
