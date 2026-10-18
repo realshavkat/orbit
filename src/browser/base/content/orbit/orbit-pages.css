@@ -18,8 +18,8 @@
   url-prefix("about:certificate"), url-prefix("about:processes"), url-prefix("about:policies"),
   url-prefix("about:editprofile"), url-prefix("about:translations") {
   :root {
-    --o-accent: #7c63ff;
-    --o-accent-hover: #8d78ff;
+    --o-accent: #7c86ff;
+    --o-accent-hover: #939cff;
     --o-bg: #0b0b0e;
     --o-box: #141419;
     --o-box-2: #1b1b22;
@@ -149,4 +149,17 @@
       #mozillaVPN, #sync-pane-promo, .sync-promo, #category-ai-controls, moz-page-nav-button[support-page]) {
     display: none !important;
   }
+}
+
+/* Reader view: Outfit, calm dark page, accent links. */
+@-moz-document url-prefix("about:reader") {
+  body.dark {
+    --main-background: #0b0b0e !important;
+    --main-foreground: #ececf1 !important;
+    --link-foreground: #939cff !important;
+    --visited-link-foreground: #b3b9ff !important;
+  }
+  body:not(.serif) { --font-family: "Outfit", system-ui, sans-serif !important; }
+  .reader-title { font-weight: 600 !important; letter-spacing: -.02em; }
+  .toolbar-container .toolbar { border-radius: 10px !important; }
 }

@@ -50,11 +50,36 @@ var OrbitSettings = {
       items: [
         { kind: "toggle", pref: "orbit.urlbar.replace-newtab", label: "commandbar" },
         { kind: "toggle", pref: "orbit.glance.enabled", label: "glance" },
-        { kind: "choice", pref: "orbit.tabs.unload-after-minutes", label: "unload",
-          options: [[0, "unload.never"], [10, "10 min"], [20, "20 min"], [60, "1 h"]] },
+        { kind: "addon", id: "uBOLiteRedux@raymondhill.net", label: "adblock" },
+        { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
         { kind: "link", label: "advanced", icon: "external-link", action: () => openPreferences() },
         { kind: "link", label: "import", icon: "upload", action: () => MigrationUtils.showMigrationWizard(window, {}) },
       ],
+    },
+    {
+      id: "memory", icon: "gauge",
+      items: [
+        { kind: "choice", pref: "orbit.tabs.unload-after-minutes", label: "unload",
+          options: [[0, "unload.never"], [5, "5 min"], [20, "20 min"], [60, "1 h"], [-1, "unload.adaptive"]] },
+        { kind: "choice", pref: "orbit.memory.budget-mb", label: "budget",
+          options: [[0, "budget.off"], [1024, "1 Go"], [2048, "2 Go"], [4096, "4 Go"]] },
+        { kind: "eco" },
+        { kind: "link", label: "memoryPage", action: () => OrbitMemory.open() },
+      ],
+    },
+    {
+      id: "ai", icon: "bot",
+      items: [
+        { kind: "choice-str", pref: "browser.ml.chat.provider", label: "aiProvider",
+          options: OrbitAI.ENGINES.map(e => [e.home, e.name]) },
+        { kind: "link", label: "aiPanel", action: () => OrbitAI.toggleAssistant() },
+        { kind: "info", label: "aiSearch" },
+      ],
+    },
+    {
+      id: "notify", icon: "bell",
+      items: ["pin", "default", "update", "sleep", "tips"].map(k =>
+        ({ kind: "toggle", pref: `orbit.notify.${k}`, label: `notify.${k}`, def: k != "tips" })),
     },
     { id: "about", icon: "info", items: [{ kind: "about" }] },
   ],
@@ -67,23 +92,38 @@ var OrbitSettings = {
     fr: {
       title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
+      memory: "Mémoire", ai: "IA", notify: "Notifications",
+      "unload.adaptive": "Adaptatif", "unload.d": "Un onglet en veille ne consomme presque rien et se recharge au clic",
+      budget: "Plafond mémoire", "budget.d": "Au-delà, les onglets les plus anciens passent en veille", "budget.off": "Aucun",
+      eco: "Mode éco", "eco.d": "2 processus au lieu de 4 (au prochain démarrage), fond figé, cache d'images réduit",
+      memoryPage: "Voir la mémoire par onglet (orbit://memoire)",
+      adblock: "Bloqueur de publicités", "adblock.d": "uBlock Origin Lite : bloque pubs et traqueurs, sans coût mémoire",
+      mediaPlayer: "Lecteur dans la barre latérale", "mediaPlayer.d": "Contrôle la musique ou la vidéo d'un autre onglet",
+      aiProvider: "Assistant du panneau", "aiProvider.d": "Ouvert à côté de la page avec Ctrl+Maj+U",
+      aiPanel: "Ouvrir le panneau assistant",
+      aiSearch: "Recherche avec l'IA", "aiSearch.d": "Tape @claude, @gpt, @perplexity ou @mistral suivi de ta question dans la barre d'adresse",
+      "notify.pin": "Épingler à la barre des tâches", "notify.pin.d": "Proposé une seule fois au début",
+      "notify.default": "Navigateur par défaut", "notify.default.d": "Demander si Orbit n'est pas le navigateur par défaut",
+      "notify.update": "Mise à jour installée", "notify.update.d": "Prévenir après une mise à jour automatique",
+      "notify.sleep": "Onglets mis en veille", "notify.sleep.d": "Quand Orbit libère de la mémoire",
+      "notify.tips": "Astuces", "notify.tips.d": "De temps en temps, un raccourci utile",
       language: "Langue", "language.d": "Par défaut, Orbit suit la langue de Windows",
       "lang.auto": "Automatique (système)", restart: "Redémarrer pour appliquer",
       font: "Police", "font.d": "Utilisée dans toute l'interface", "font.add": "Ajouter une police…",
       "font.system": "Police du système",
       spaceColors: "Couleurs de l'espace", custom: "Personnalisées",
       scheme: "Thème", "scheme.dark": "Sombre", "scheme.light": "Clair", "scheme.system": "Système",
-      intensity: "Intensité des couleurs", radius: "Arrondi des coins",
+      intensity: "Intensité du fond", radius: "Arrondi des coins",
       glass: "Verre liquide", "glass.d": "Reflets et transparence sur les onglets et les barres",
-      nebula: "Nébuleuse animée", "nebula.d": "Nuage de couleur qui dérive lentement en arrière-plan",
-      grain: "Étoiles et grain", "grain.d": "Texture fine sur l'arrière-plan",
+      nebula: "Mouvement du fond", "nebula.d": "Les rubans de couleur dérivent lentement (en pause quand la fenêtre est inactive)",
+      grain: "Grain", "grain.d": "Texture fine sur l'arrière-plan",
       animations: "Animations", "animations.d": "Transitions et effets de mouvement",
       compact: "Mode compact", "compact.d": "Barre latérale cachée, visible au bord de l'écran (Ctrl+Alt+C)",
       sidebarRight: "Barre latérale à droite", sidebarWidth: "Largeur de la barre latérale",
       gap: "Marge autour de la page",
       commandbar: "Barre de commande", "commandbar.d": "Ctrl+T ouvre une recherche flottante au lieu d'un onglet vide",
       glance: "Glance", "glance.d": "Alt+clic sur un lien pour l'ouvrir en aperçu",
-      unload: "Décharger les onglets inactifs", "unload.d": "Libère la mémoire des onglets inutilisés",
+      unload: "Mise en veille des onglets",
       "unload.never": "Jamais",
       advanced: "Paramètres avancés", import: "Importer depuis un autre navigateur",
       "about.tagline": "Un navigateur calme, rapide et beau.",
@@ -95,22 +135,37 @@ var OrbitSettings = {
     en: {
       title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
+      memory: "Memory", ai: "AI", notify: "Notifications",
+      "unload.adaptive": "Adaptive", "unload.d": "A sleeping tab uses almost nothing and reloads on click",
+      budget: "Memory limit", "budget.d": "Above it, the oldest tabs go to sleep", "budget.off": "None",
+      eco: "Eco mode", "eco.d": "2 processes instead of 4 (next start), still background, smaller image cache",
+      memoryPage: "Memory per tab (orbit://memory)",
+      adblock: "Ad blocker", "adblock.d": "uBlock Origin Lite: blocks ads and trackers at no memory cost",
+      mediaPlayer: "Sidebar media player", "mediaPlayer.d": "Control music or video playing in another tab",
+      aiProvider: "Panel assistant", "aiProvider.d": "Opens beside the page with Ctrl+Shift+U",
+      aiPanel: "Open the assistant panel",
+      aiSearch: "Ask AI from the address bar", "aiSearch.d": "Type @claude, @gpt, @perplexity or @mistral followed by your question",
+      "notify.pin": "Pin to taskbar", "notify.pin.d": "Offered once at the start",
+      "notify.default": "Default browser", "notify.default.d": "Ask when Orbit is not the default browser",
+      "notify.update": "Update installed", "notify.update.d": "Tell me after an automatic update",
+      "notify.sleep": "Tabs put to sleep", "notify.sleep.d": "When Orbit frees memory",
+      "notify.tips": "Tips", "notify.tips.d": "Now and then, a useful shortcut",
       language: "Language", "language.d": "By default Orbit follows the Windows language",
       "lang.auto": "Automatic (system)", restart: "Restart to apply",
       font: "Font", "font.d": "Used across the whole interface", "font.add": "Add a font…",
       "font.system": "System font",
       spaceColors: "Space colors", custom: "Custom",
       scheme: "Theme", "scheme.dark": "Dark", "scheme.light": "Light", "scheme.system": "System",
-      intensity: "Color intensity", radius: "Corner radius",
+      intensity: "Background intensity", radius: "Corner radius",
       glass: "Liquid glass", "glass.d": "Highlights and translucency on tabs and bars",
-      nebula: "Animated nebula", "nebula.d": "A color cloud slowly drifting in the background",
-      grain: "Stars and grain", "grain.d": "Fine texture on the background",
+      nebula: "Background motion", "nebula.d": "Color ribbons drift slowly (paused when the window is inactive)",
+      grain: "Grain", "grain.d": "Fine texture on the background",
       animations: "Animations", "animations.d": "Transitions and motion effects",
       compact: "Compact mode", "compact.d": "Sidebar hidden, shown at the screen edge (Ctrl+Alt+C)",
       sidebarRight: "Sidebar on the right", sidebarWidth: "Sidebar width", gap: "Space around the page",
       commandbar: "Command bar", "commandbar.d": "Ctrl+T opens a floating search instead of an empty tab",
       glance: "Glance", "glance.d": "Alt+click a link to preview it",
-      unload: "Unload idle tabs", "unload.d": "Frees the memory of tabs you don't use",
+      unload: "Put idle tabs to sleep",
       "unload.never": "Never",
       advanced: "Advanced settings", import: "Import from another browser",
       "about.tagline": "A calm, fast and beautiful browser.",
@@ -141,7 +196,7 @@ var OrbitSettings = {
           nav),
         h("div", { class: "orbit-settings-main" },
           h("div", { class: "orbit-settings-top" },
-            h("div", { class: "orbit-settings-h" }),
+            h("div", { class: "orbit-settings-h orbit-key" }),
             h("button", { class: "orbit-icon-button", title: "Esc", onclick: () => this.close() }, Orbit.icon("x"))),
           body)
       )
@@ -212,6 +267,24 @@ var OrbitSettings = {
       case "link":
         return h("button", { class: "orbit-setting orbit-setting-link", onclick: () => { this.close(); item.action(); } },
           h("div", { class: "orbit-setting-label" }, this.t(item.label)), Orbit.icon(item.icon ?? "chevron-right"));
+      case "choice-str":
+        return this.row(this.segmented(item.options, Orbit.pref(item.pref, ""), v => p.setStringPref(item.pref, v)), item.label);
+      case "info":
+        return this.row(null, item.label);
+      case "eco":
+        return this.row(this.switch(Orbit.pref("orbit.memory.eco", false), on => OrbitMemory.setEco(on)), "eco");
+      case "addon": {
+        const row = this.row(this.switch(true, async on => {
+          const addon = await AddonManager.getAddonByID(item.id);
+          if (addon) await (on ? addon.enable() : addon.disable());
+        }), item.label);
+        // Hide the row when the add-on is missing; reflect its real state.
+        AddonManager.getAddonByID(item.id).then(a => {
+          if (!a) row.remove();
+          else if (a.userDisabled) row.lastChild.click();
+        });
+        return row;
+      }
       case "spacecolors":
         return this.renderSpaceColors();
       case "language":

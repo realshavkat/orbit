@@ -1,0 +1,60 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+/* Orbit look for the Picture-in-Picture window. */
+@font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
+
+:root {
+  --orbit-accent: #7c86ff;
+  --border-radius-small: 7px;
+}
+body, #controls, .panel, #timestamp, button {
+  font-family: "Outfit", system-ui, sans-serif !important;
+}
+.player-holder { border-radius: 10px; overflow: hidden; }
+.control-button { border-radius: 7px !important; cursor: pointer; }
+.control-button:hover:enabled { background-color: rgba(255, 255, 255, .18) !important; }
+#playpause {
+  background-color: rgba(255, 255, 255, .14) !important;
+  border-radius: 50% !important;
+}
+#scrubber, #audio-scrubber, #playback-rate-slider { accent-color: var(--orbit-accent); }
+#controls-bottom-gradient {
+  background: linear-gradient(transparent, rgba(3, 3, 5, .82)) !important;
+}
+.panel, #playbackRateSettings, #settings {
+  background: #121216 !important;
+  color: #ececf1 !important;
+  border: 1px solid rgba(255, 255, 255, .08) !important;
+  border-radius: 10px !important;
+}
+.playback-rate-preset[aria-pressed="true"] { background: var(--orbit-accent) !important; color: #06070f !important; }
+
+/* Orbit size presets, top center (the corners hold native buttons). */
+#orbit-pip-sizes {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: rgba(3, 3, 5, .6);
+  backdrop-filter: blur(8px);
+  z-index: 2;
+}
+#orbit-pip-sizes button {
+  appearance: none;
+  border: none;
+  min-width: 26px;
+  height: 22px;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(236, 236, 241, .75);
+  font: 600 11px "Outfit", sans-serif;
+  cursor: pointer;
+}
+#orbit-pip-sizes button:hover { color: #fff; background: rgba(255, 255, 255, .12); }
+#orbit-pip-sizes button[active] { background: var(--orbit-accent); color: #06070f; }

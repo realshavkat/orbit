@@ -10,8 +10,20 @@ pref("orbit.view.sidebar-width", 240);
 pref("orbit.urlbar.replace-newtab", true);
 pref("orbit.glance.enabled", true);
 pref("orbit.spaces.data", "");
-// Discard (unload) background tabs idle for this many minutes. 0 = never.
-pref("orbit.tabs.unload-after-minutes", 20);
+// Sleep (unload) background tabs idle for this many minutes. 0 = never,
+// -1 = adaptive (15 min, 3 min while Windows reports low memory).
+pref("orbit.tabs.unload-after-minutes", -1);
+// Above this total (MB), the oldest idle tabs sleep. 0 = no limit.
+pref("orbit.memory.budget-mb", 0);
+pref("orbit.memory.eco", false);
+pref("orbit.media.sidebar-player", true);
+pref("orbit.user.name", "");
+// Notifications Orbit may show (each can be turned off in Settings).
+pref("orbit.notify.pin", true);
+pref("orbit.notify.default", true);
+pref("orbit.notify.update", true);
+pref("orbit.notify.sleep", true);
+pref("orbit.notify.tips", false);
 
 // ---- Layout: native vertical tabs, always visible sidebar -----------------
 pref("sidebar.revamp", true);
@@ -31,6 +43,7 @@ pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 pref("browser.startup.page", 3);
 pref("browser.aboutwelcome.enabled", false);
 pref("browser.startup.homepage_override.mstone", "ignore");
+pref("browser.startup.homepage", "resource://orbit/home.html");
 pref("trailhead.firstrun.didSeeAboutWelcome", true);
 pref("browser.tabs.closeWindowWithLastTab", false);
 
@@ -48,9 +61,19 @@ pref("browser.sessionstore.max_tabs_undo", 10);
 pref("image.mem.decode_bytes_at_a_time", 65536);
 pref("image.mem.shared.unmap.min_expiration_ms", 30000);
 pref("media.memory_cache_max_size", 32768);
+// One process per site only where needed; a single process for isolated sites.
+pref("fission.webContentIsolationStrategy", 2);
+pref("dom.ipc.processCount.webIsolated", 1);
+pref("image.mem.surfacecache.max_size_kb", 262144);
+pref("browser.cache.memory.capacity", 32768);
+pref("browser.sessionhistory.max_entries", 25);
 // No built-in AI / ML features (they keep models and inference processes).
 pref("browser.ml.enable", false);
-pref("browser.ml.chat.enabled", false);
+// The assistant panel is a plain web view of the chosen chatbot (no local model).
+pref("browser.ml.chat.enabled", true);
+pref("browser.ml.chat.provider", "https://claude.ai/new");
+pref("browser.ml.chat.shortcuts", false);
+pref("browser.ml.chat.page", false);
 pref("browser.ml.linkPreview.enabled", false);
 pref("browser.tabs.groups.smart.enabled", false);
 pref("extensions.ml.enabled", false);
@@ -74,7 +97,10 @@ pref("browser.newtabpage.activity-stream.showSponsoredTopSites", false);
 pref("browser.newtabpage.activity-stream.feeds.telemetry", false);
 pref("browser.newtabpage.activity-stream.telemetry", false);
 pref("browser.ping-centre.telemetry", false);
+// Orbit asks itself, once, through its own dismissable notifications.
 pref("browser.shell.checkDefaultBrowser", false);
+pref("browser.startup.upgradeDialog.enabled", false);
+pref("browser.shell.setDefaultBrowserUserChoice", true);
 pref("browser.preferences.moreFromMozilla", false);
 pref("browser.messaging-system.whatsNewPanel.enabled", false);
 pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons", false);
@@ -82,6 +108,12 @@ pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false
 pref("privacy.trackingprotection.enabled", true);
 pref("privacy.trackingprotection.socialtracking.enabled", true);
 pref("privacy.globalprivacycontrol.enabled", true);
+
+// ---- Picture-in-Picture --------------------------------------------------------
+pref("media.videocontrols.picture-in-picture.playback-speed.enabled", true);
+pref("media.videocontrols.picture-in-picture.enable-when-switching-tabs.enabled", true);
+pref("media.videocontrols.picture-in-picture.display-text-tracks.enabled", true);
+pref("media.videocontrols.picture-in-picture.keyboard-controls.enabled", true);
 
 // ---- Look ------------------------------------------------------------------
 pref("browser.theme.dark-private-windows", true);

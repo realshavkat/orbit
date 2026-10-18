@@ -7,7 +7,7 @@ var OrbitWelcome = {
   S: {
     fr: {
       skip: "Passer", next: "Continuer", back: "Retour", start: "Commencer",
-      "hello.t": "Bienvenue dans Orbit", "hello.s": "Un navigateur calme, rapide et beau.",
+      "hello.t": "Bienvenue dans Orbit", "hello.s": "Un navigateur calme, rapide et beau.", name: "Ton prénom (facultatif)",
       "style.t": "Choisis ton style", "style.s": "Tu pourras tout changer plus tard dans les paramètres.",
       dark: "Sombre", light: "Clair", system: "Système",
       "layout.t": "Ta disposition", "layout.s": "Où veux-tu tes onglets ?",
@@ -20,7 +20,7 @@ var OrbitWelcome = {
     },
     en: {
       skip: "Skip", next: "Continue", back: "Back", start: "Get started",
-      "hello.t": "Welcome to Orbit", "hello.s": "A calm, fast and beautiful browser.",
+      "hello.t": "Welcome to Orbit", "hello.s": "A calm, fast and beautiful browser.", name: "Your first name (optional)",
       "style.t": "Pick your style", "style.s": "You can change everything later in Settings.",
       dark: "Dark", light: "Light", system: "System",
       "layout.t": "Your layout", "layout.s": "Where do you want your tabs?",
@@ -112,7 +112,11 @@ var OrbitWelcome = {
           h("div", { class: "orbit-welcome-logo" },
             h("div", { class: "orbit-welcome-ring" }),
             h("img", { src: `${Orbit.BASE}orbit-logo.svg`, alt: "" })),
-          title, sub);
+          title, sub,
+          h("input", {
+            class: "orbit-welcome-name", maxlength: 40, placeholder: this.t("name"), value: Orbit.pref("orbit.user.name", ""),
+            oninput: e => p.setStringPref("orbit.user.name", e.target.value.trim()),
+          }));
       case "style": {
         const scheme = () => Orbit.pref("browser.theme.toolbar-theme", 0);
         const swatches = h("div", { class: "orbit-welcome-swatches" },

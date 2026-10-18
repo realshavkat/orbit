@@ -8,7 +8,7 @@
 // each tab remembers its space through SessionStore custom values.
 var OrbitSpaces = {
   THEMES: [
-    { id: "cosmos", c1: "#6a4cff", c2: "#2a1a5e" },
+    { id: "cosmos", c1: "#5b6cff", c2: "#3a2bd0" },
     { id: "ember", c1: "#d0714f", c2: "#4b3833" },
     { id: "nebula", c1: "#7c5cff", c2: "#e0459b" },
     { id: "ocean", c1: "#2f7bff", c2: "#14c2b0" },
@@ -109,6 +109,16 @@ var OrbitSpaces = {
     return gBrowser.tabs.filter(t => !t.pinned && !t.closing && this.spaceOf(t) == id);
   },
 
+  // Clear button: closes the space's tabs except the selected ones (the
+  // current tab, or every Ctrl+clicked tab). Double-click closes them all.
+  clearTabs(all = false) {
+    const tabs = this.tabsIn(this.activeId).filter(t => all || !(t.selected || t.multiselected));
+    if (!tabs.length) return;
+    // Closing everything leaves the space on its home page.
+    if (all) gBrowser.selectedTab = this.openTab();
+    gBrowser.removeTabs(tabs, { animate: true });
+  },
+
   handleEvent(e) {
     const tab = e.target;
     switch (e.type) {
@@ -152,7 +162,7 @@ var OrbitSpaces = {
   },
 
   openTab() {
-    const tab = gBrowser.addTrustedTab("about:blank", { inBackground: false });
+    const tab = gBrowser.addTrustedTab(OrbitTabs.homeURL(), { inBackground: false });
     this.setTabSpace(tab, this.activeId);
     return tab;
   },
@@ -247,6 +257,13 @@ var OrbitSpaces = {
       h("div", { id: "orbit-space-title", ondblclick: () => this.edit(space) },
         icon(space.icon, "orbit-icon orbit-space-title-icon"),
         h("span", { class: "orbit-space-name" }, space.name),
+        h("button", {
+          id: "orbit-space-clear", class: "orbit-icon-button",
+          title: Orbit.lang() == "fr" ? "Fermer les onglets non sélectionnés (double-clic : tout fermer)"
+            : "Close unselected tabs (double-click: close all)",
+          onclick: e => e.detail < 2 && this.clearTabs(),
+          ondblclick: e => { e.stopPropagation(); this.clearTabs(true); },
+        }, icon("brush-cleaning")),
         h("button", { class: "orbit-icon-button", title: t("space.edit"), onclick: () => this.edit(space) },
           icon("pencil"))
       )

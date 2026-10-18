@@ -18,6 +18,8 @@ var OrbitLayout = {
     );
     this.sidebar.append(Orbit.h("xul:hbox", { id: "orbit-sidebar-footer", align: "center" }));
     document.body.append(Orbit.h("div", { id: "orbit-urlbar-backdrop" }));
+    // Liquid background + grain (see orbit.css): two cheap fixed layers.
+    document.body.prepend(Orbit.h("div", { id: "orbit-liquid" }), Orbit.h("div", { id: "orbit-grain" }));
 
     // Keep CSS vars in sync with real sizes.
     new ResizeObserver(([e]) =>
@@ -177,7 +179,7 @@ var OrbitLayout = {
     flag("orbit-no-grain", "orbit.effects.grain");
     flag("orbit-no-motion", "orbit.effects.animations");
     root.toggleAttribute("orbit-sidebar-end", !Orbit.pref("sidebar.position_start", true));
-    root.style.setProperty("--orbit-mix", `${Orbit.pref("orbit.theme.intensity", 34)}%`);
+    root.style.setProperty("--orbit-intensity", Orbit.pref("orbit.theme.intensity", 34) / 100);
     root.style.setProperty("--orbit-radius", `${Orbit.pref("orbit.theme.radius", 7)}px`);
     root.style.setProperty("--orbit-gap", `${Orbit.pref("orbit.view.gap", 8)}px`);
     this.setWidth(Orbit.pref("orbit.view.sidebar-width", 240));
@@ -237,6 +239,10 @@ var OrbitLayout = {
       this.toggleCompact();
     } else if (e.altKey && !e.ctrlKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
       OrbitSpaces.switchToIndex(+e.code.slice(5) - 1);
+    } else if (e.ctrlKey && e.shiftKey && !e.altKey && e.code == "Space") {
+      OrbitTabs.openCommandBar("% ");
+    } else if (e.ctrlKey && e.shiftKey && !e.altKey && e.code == "KeyU") {
+      OrbitAI.toggleAssistant();
     } else if (e.ctrlKey && e.altKey && (e.code == "ArrowLeft" || e.code == "ArrowRight")) {
       OrbitSpaces.cycle(e.code == "ArrowRight" ? 1 : -1);
     } else {

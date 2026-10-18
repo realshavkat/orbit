@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="dark light">
+<title>Orbit</title>
+<link rel="icon" href="orbit-logo.svg">
+<link rel="stylesheet" href="home.css">
+<script src="home.js" defer></script>
+</head>
+<body>
+  <div class="liquid" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <main>
+    <div class="date" id="date"></div>
+    <h1><span id="hello">Bonsoir</span><span id="comma">, </span><span class="key" id="name"></span>.</h1>
+    <form id="search" role="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>
+      <input id="q" name="q" autocomplete="off" autofocus aria-label="Rechercher" placeholder="Rechercher ou demander à l'IA">
+    </form>
+    <div class="chips" id="ai"></div>
+    <div class="tiles" id="tiles"></div>
+  </main>
+</body>
+</html>

@@ -16,10 +16,11 @@
 @font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
 @font-face { font-family: "Space Grotesk"; src: url("chrome://orbit/content/fonts/SpaceGrotesk.ttf"); font-weight: 300 700; }
 @font-face { font-family: "DM Sans"; src: url("chrome://orbit/content/fonts/DMSans.ttf"); font-weight: 100 1000; }
+@font-face { font-family: "Syne"; src: url("chrome://orbit/content/fonts/Syne.ttf"); font-weight: 400 800; }
 
 /* Animatable theme colors: the gradient morphs when switching spaces. */
-@property --orbit-c1 { syntax: "<color>"; inherits: true; initial-value: #6a4cff; }
-@property --orbit-c2 { syntax: "<color>"; inherits: true; initial-value: #2a1a5e; }
+@property --orbit-c1 { syntax: "<color>"; inherits: true; initial-value: #5b6cff; }
+@property --orbit-c2 { syntax: "<color>"; inherits: true; initial-value: #3a2bd0; }
 
 /* ==========================================================================
    Tokens
@@ -35,8 +36,8 @@
   --orbit-spring: cubic-bezier(.34, 1.35, .64, 1);
 
   /* dark (default) */
-  --orbit-base: #09090c;
-  --orbit-card: #111115;
+  --orbit-base: #030305;
+  --orbit-card: #0b0b0e;
   --orbit-mix: 34%;
   --orbit-fg: #ededf2;
   --orbit-fg-dim: rgb(237 237 242 / .55);
@@ -44,14 +45,14 @@
   --orbit-active: rgb(255 255 255 / .1);
   --orbit-tile: rgb(255 255 255 / .05);
   --orbit-surface: rgb(20 19 26 / .96);
-  --orbit-panel: #17161d;
+  --orbit-panel: #121216;
   --orbit-field: rgb(255 255 255 / .06);
   --orbit-border: rgb(255 255 255 / .08);
   --orbit-shadow: 0 0 0 1px rgb(0 0 0 / .25), 0 6px 24px rgb(0 0 0 / .28);
 
   --orbit-bg-1: color-mix(in oklch, var(--orbit-c1) var(--orbit-mix), var(--orbit-base));
   --orbit-bg-2: color-mix(in oklch, var(--orbit-c2) var(--orbit-mix), var(--orbit-base));
-  --orbit-accent: color-mix(in oklch, var(--orbit-c1) 80%, white);
+  --orbit-accent: color-mix(in oklch, var(--orbit-c1) 72%, white);
 
   /* Liquid glass: soft top light, faint rim, darker bottom edge. */
   --orbit-glass: linear-gradient(180deg, rgb(255 255 255 / .11), rgb(255 255 255 / .035) 60%, rgb(255 255 255 / .05));
@@ -90,7 +91,7 @@
 
 @media (prefers-color-scheme: light) {
   :root {
-    --orbit-base: #f1f0f5;
+    --orbit-base: #f1f1f6;
     --orbit-card: #ffffff;
     --orbit-mix: 18%;
     --orbit-fg: #1b1a22;
@@ -108,56 +109,62 @@
 }
 
 /* ==========================================================================
-   Window background: deep space. Space gradient + liquid nebula + stars + grain
+   Window background: near-black with slow liquid ribbons in the space colors.
+   Two masked layers (shape rasterized once, then only transformed on the
+   compositor) plus an optional film grain.
    ========================================================================== */
 :root:not([customizing]) {
-  background:
-    radial-gradient(80% 100% at 100% 0%, var(--orbit-bg-1), transparent 70%),
-    radial-gradient(70% 90% at 0% 100%, var(--orbit-bg-2), transparent 75%),
-    var(--orbit-base) !important;
+  background: var(--orbit-base) !important;
   color: var(--orbit-fg);
 }
-
-/* Liquid nebula: blobs that slowly drift and morph (transform only). */
-:root:not([customizing]) #browser::after {
-  content: "";
+#orbit-liquid, #orbit-grain {
   position: fixed;
-  inset: -25%;
-  z-index: -1;
   pointer-events: none;
-  background:
-    radial-gradient(30% 26% at 25% 30%, color-mix(in oklch, var(--orbit-c1) 42%, transparent), transparent 70%),
-    radial-gradient(26% 32% at 72% 72%, color-mix(in oklch, var(--orbit-c2) 60%, transparent), transparent 70%),
-    radial-gradient(18% 20% at 60% 25%, color-mix(in oklch, var(--orbit-c1) 22%, transparent), transparent 70%);
-  animation: orbit-nebula 42s ease-in-out infinite alternate;
-  opacity: .7;
+  z-index: -1;
 }
-/* Stars and film grain, painted once (no animation cost). */
-:root:not([customizing]) #browser::before {
+#orbit-liquid { inset: -12%; opacity: var(--orbit-intensity, .34); }
+#orbit-liquid::before, #orbit-liquid::after {
   content: "";
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: .55;
-  background-image:
-    radial-gradient(1px 1px at 23px 41px, rgb(255 255 255 / .55), transparent),
-    radial-gradient(1px 1px at 137px 89px, rgb(255 255 255 / .4), transparent),
-    radial-gradient(1.5px 1.5px at 211px 167px, rgb(200 190 255 / .6), transparent),
-    radial-gradient(1px 1px at 71px 213px, rgb(255 255 255 / .35), transparent),
-    radial-gradient(1px 1px at 289px 31px, rgb(255 255 255 / .45), transparent),
-    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-  background-size: 310px 260px, 310px 260px, 310px 260px, 310px 260px, 310px 260px, 180px 180px;
+  mask-size: cover;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  will-change: transform;
+  animation: orbit-liquid 34s ease-in-out infinite alternate;
 }
-:root:-moz-window-inactive #browser::after { animation-play-state: paused; }
-@keyframes orbit-nebula {
+#orbit-liquid::before {
+  background: linear-gradient(135deg, color-mix(in oklch, var(--orbit-c1) 70%, white), var(--orbit-c1) 45%, var(--orbit-c2));
+  mask-image: url("chrome://orbit/content/liquid-a.svg");
+}
+#orbit-liquid::after {
+  background: linear-gradient(225deg, color-mix(in oklch, var(--orbit-c1) 60%, white), var(--orbit-c2) 55%);
+  mask-image: url("chrome://orbit/content/liquid-b.svg");
+  animation-duration: 42s;
+  animation-direction: alternate-reverse;
+}
+@keyframes orbit-liquid {
   0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
-  33%  { transform: translate(5%, -3%) rotate(6deg) scale(1.08, .96); }
-  66%  { transform: translate(-3%, 4%) rotate(-4deg) scale(.96, 1.06); }
-  100% { transform: translate(-6%, -2%) rotate(3deg) scale(1.04); }
+  50%  { transform: translate(3%, -2.5%) rotate(3deg) scale(1.05); }
+  100% { transform: translate(-2.5%, 2%) rotate(-2deg) scale(.98); }
 }
+:root:is(:-moz-window-inactive, [orbit-no-nebula], [orbit-no-motion]) #orbit-liquid :is(*, ::before, ::after),
+:root:is(:-moz-window-inactive, [orbit-no-nebula], [orbit-no-motion]) #orbit-liquid::before,
+:root:is(:-moz-window-inactive, [orbit-no-nebula], [orbit-no-motion]) #orbit-liquid::after {
+  animation-play-state: paused;
+}
+#orbit-grain {
+  inset: 0;
+  opacity: .16;
+  mix-blend-mode: overlay;
+  background: url("chrome://orbit/content/grain.svg") repeat;
+  background-size: 200px 200px;
+}
+:root[orbit-no-grain] #orbit-grain { display: none; }
+:root[customizing] :is(#orbit-liquid, #orbit-grain) { display: none; }
 @media (prefers-color-scheme: light) {
-  :root:not([customizing]) #browser::before { opacity: .25; }
+  #orbit-liquid { opacity: calc(var(--orbit-intensity, .34) * .7); }
+  #orbit-grain { opacity: .1; mix-blend-mode: multiply; }
 }
 
 :root:not([customizing]) :is(body, #navigator-toolbox, #nav-bar, #browser,
@@ -187,9 +194,13 @@
     align-items: center;
   }
 
+  /* Address bar centered between the nav buttons and the right-hand group. */
   & #urlbar-container {
-    max-width: 900px !important;
-    margin-inline: 8px !important;
+    flex: 1 1 auto !important;
+    max-width: 760px !important;
+    margin-inline: auto !important;
+    padding-inline: 24px !important;
+    box-sizing: content-box;
     --urlbar-container-height: 40px !important;
     --urlbar-height: 32px !important;
   }
@@ -388,7 +399,23 @@
 sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 #tabbrowser-tabs:not([expanded]) #orbit-sidebar-header { display: none; }
 
-/* "+ New Tab" row on top of the list. */
+#orbit-space-title #orbit-space-clear { margin-inline-start: auto; opacity: .7; }
+#orbit-space-title #orbit-space-clear + .orbit-icon-button { margin-inline-start: 0; }
+/* Ctrl+click selected tabs: kept by the clear button. */
+#tabbrowser-tabs .tabbrowser-tab[multiselected] > .tab-stack > .tab-background {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-accent) 55%, transparent) !important;
+  background-color: color-mix(in srgb, var(--orbit-accent) 12%, transparent) !important;
+}
+
+/* "+ New Tab" row on top of the list, with its shortcut. */
+#tabs-newtab-button::after {
+  content: "Ctrl T";
+  margin-inline-start: auto;
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--orbit-fg-dim);
+  opacity: .65;
+}
 #tabbrowser-arrowscrollbox-periphery { order: -1; }
 #tabs-newtab-button {
   width: 100% !important;
@@ -703,7 +730,7 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #browser::after, .tab-background::after { animation: none !important; }
+  #orbit-liquid::before, #orbit-liquid::after, .tab-background::after { animation: none !important; }
 }
 
 /* The nav-bar is its own stacking context (will-change): lift the whole
@@ -755,8 +782,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 /* ==========================================================================
    Effect switches (Settings)
    ========================================================================== */
-:root[orbit-no-nebula] #browser::after { display: none !important; }
-:root[orbit-no-grain] #browser::before { display: none !important; }
 :root[orbit-no-glass] {
   & #vertical-tabs .tabbrowser-tab .tab-background,
   & #orbit-space-indicator,
@@ -1243,24 +1268,34 @@ panel {
   justify-content: center;
   overflow: hidden;
   color: #f1f0f7;
-  background: #07060b;
+  background: #030305;
   animation: orbit-fade-in .5s ease-out;
   &[closing] { animation: orbit-welcome-out .45s cubic-bezier(.4, 0, .2, 1) forwards; }
 }
 @keyframes orbit-welcome-out { to { opacity: 0; transform: scale(1.04); filter: blur(6px); } }
 .orbit-welcome-sky {
   position: absolute;
-  inset: -20%;
+  inset: -12%;
   pointer-events: none;
-  background:
-    radial-gradient(30% 28% at 30% 35%, rgb(106 76 255 / .35), transparent 70%),
-    radial-gradient(28% 32% at 72% 70%, rgb(60 30 140 / .45), transparent 70%),
-    radial-gradient(1px 1px at 40px 60px, white, transparent),
-    radial-gradient(1px 1px at 160px 120px, rgb(255 255 255 / .6), transparent),
-    radial-gradient(1.5px 1.5px at 260px 40px, rgb(200 190 255 / .8), transparent),
-    radial-gradient(1px 1px at 90px 220px, rgb(255 255 255 / .5), transparent);
-  background-size: auto, auto, 300px 260px, 300px 260px, 300px 260px, 300px 260px;
-  animation: orbit-nebula 30s ease-in-out infinite alternate;
+  opacity: .62;
+}
+.orbit-welcome-sky::before, .orbit-welcome-sky::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  mask-size: cover;
+  mask-position: center;
+  mask-repeat: no-repeat;
+  animation: orbit-liquid 26s ease-in-out infinite alternate;
+}
+.orbit-welcome-sky::before {
+  background: linear-gradient(135deg, #8f9bff, #5b6cff 45%, #3a2bd0);
+  mask-image: url("chrome://orbit/content/liquid-a.svg");
+}
+.orbit-welcome-sky::after {
+  background: linear-gradient(225deg, #9aa4ff, #2c28b8 55%);
+  mask-image: url("chrome://orbit/content/liquid-b.svg");
+  animation-direction: alternate-reverse;
 }
 .orbit-welcome-skip {
   position: absolute;
@@ -1627,3 +1662,286 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
 #orbit-sidebar-header { padding-inline: 8px 2px !important; }
 #pinned-tabs-container .tabbrowser-tab[pinned] .tab-background { margin: 0 !important; }
 #orbit-sidebar-footer .orbit-icon-button { width: 32px; }
+
+/* Key words: Syne, accent colored (beats the global UI font rule). */
+:root .orbit-key.orbit-key {
+  font-family: "Syne", var(--orbit-font), sans-serif !important;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--orbit-accent);
+}
+
+/* ==========================================================================
+   Sheets (orbit://memoire), toasts, sidebar media player
+   ========================================================================== */
+.orbit-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / .45);
+  animation: orbit-fade-in .2s ease-out;
+  &[closing] { animation: orbit-fade-out .18s ease-in forwards; }
+  &[closing] .orbit-sheet-card { animation: orbit-pop-out .18s ease-in forwards; }
+}
+.orbit-sheet-card {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 40px));
+  max-height: calc(100vh - 60px);
+  border-radius: var(--orbit-radius-lg);
+  overflow: hidden;
+  color: var(--orbit-fg);
+  font-size: 13px;
+  background: var(--orbit-panel);
+  box-shadow: 0 0 0 1px var(--orbit-border), 0 30px 90px rgb(0 0 0 / .5);
+  animation: orbit-pop-in .32s var(--orbit-spring);
+}
+.orbit-sheet-kicker { font-size: 10.5px; font-weight: 600; letter-spacing: .14em; color: var(--orbit-fg-dim); }
+.orbit-mem-body { overflow-y: auto; padding: 4px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.orbit-mem-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; }
+.orbit-mem-total { font-size: 28px; font-weight: 600; letter-spacing: -.03em; margin-bottom: 4px; }
+.orbit-mem-bar {
+  display: flex;
+  gap: 3px;
+  height: 10px;
+  & span { border-radius: 3px; transition: flex .4s var(--orbit-ease); }
+}
+.orbit-mem-legend {
+  display: flex;
+  gap: 18px;
+  font-size: 12px;
+  color: var(--orbit-fg-dim);
+  & span { display: inline-flex; align-items: center; gap: 6px; }
+  & i { width: 8px; height: 8px; border-radius: 2px; }
+}
+.orbit-mem-controls {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  & .orbit-setting { background: var(--orbit-field); border-radius: var(--orbit-radius); padding: 14px; margin: 0; }
+}
+.orbit-mem-table { display: flex; flex-direction: column; }
+.orbit-mem-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 90px 80px 130px;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  border-top: 1px solid var(--orbit-border);
+  &[asleep] { color: var(--orbit-fg-dim); }
+  & > span:last-child { justify-self: end; font-size: 12px; color: var(--orbit-fg-dim); }
+  & .orbit-button { height: 26px; }
+}
+.orbit-mem-th { min-height: 30px; border-top: none; font-size: 10.5px; font-weight: 600; letter-spacing: .12em; color: var(--orbit-fg-dim); }
+.orbit-mem-name {
+  appearance: none;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 0;
+  cursor: pointer;
+  text-align: start;
+  & img { width: 16px; height: 16px; flex-shrink: 0; }
+  & span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  &:hover span { color: var(--orbit-accent); }
+}
+.orbit-mem-on { color: var(--orbit-accent); }
+@media (max-width: 720px) {
+  .orbit-mem-controls { grid-template-columns: 1fr; }
+  .orbit-mem-row { grid-template-columns: minmax(0, 1fr) 70px 64px; & > span:last-child { display: none; } }
+}
+
+#orbit-toasts {
+  position: fixed;
+  top: calc(var(--orbit-toolbox-height) + 12px);
+  inset-inline-end: 16px;
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+}
+.orbit-toast {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 10px;
+  color: #ececf1;
+  background: #111114;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / .08), 0 20px 60px rgb(0 0 0 / .55);
+  animation: orbit-toast-in .36s var(--orbit-spring);
+  &[closing] { animation: orbit-pop-out .2s ease-in forwards; }
+  &[compact] { cursor: pointer; }
+}
+@keyframes orbit-toast-in { from { opacity: 0; transform: translateX(16px) scale(.97); } }
+.orbit-toast-main { display: flex; gap: 14px; align-items: flex-start; }
+.orbit-toast[compact] .orbit-toast-main { align-items: center; }
+.orbit-toast-icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  color: #7c86ff;
+  background: rgb(124 134 255 / .14);
+  & .orbit-icon { width: 20px; height: 20px; }
+}
+.orbit-toast[data-tone="dark"] .orbit-toast-icon { color: #ececf1; background: #000; box-shadow: 0 0 0 1px rgb(255 255 255 / .1); }
+.orbit-toast[data-tone="ok"] .orbit-toast-icon { color: #7ee2a8; background: rgb(126 226 168 / .12); }
+.orbit-toast[data-tone="warm"] .orbit-toast-icon { color: #ff9a76; background: rgb(255 154 118 / .12); }
+.orbit-toast-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  & b { font-size: 14.5px; font-weight: 600; }
+  & span { margin-top: 3px; font-size: 13px; line-height: 1.45; color: rgb(236 236 241 / .6); }
+}
+.orbit-toast[compact] .orbit-toast-text span { margin-top: 1px; }
+.orbit-toast-link {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: #aeb6ff;
+  cursor: pointer;
+  &:hover { color: #d6dbff; }
+}
+.orbit-toast-close {
+  appearance: none;
+  border: none;
+  background: none;
+  padding: 2px;
+  margin: -2px -2px 0 0;
+  color: rgb(236 236 241 / .4);
+  cursor: pointer;
+  & .orbit-icon { width: 14px; height: 14px; }
+  &:hover { color: #ececf1; }
+}
+.orbit-toast-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.orbit-toast-b1, .orbit-toast-b2 {
+  appearance: none;
+  border: none;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter .15s, background-color .15s, transform .2s var(--orbit-spring);
+  &:active { transform: scale(.96); }
+}
+.orbit-toast-b1 { font-weight: 600; color: #06070f; background: #7c86ff; &:hover { filter: brightness(1.08); } }
+.orbit-toast-b2 { font-weight: 500; color: #ececf1; background: rgb(255 255 255 / .07); &:hover { background: rgb(255 255 255 / .11); } }
+.orbit-toast-never {
+  appearance: none;
+  border: none;
+  background: none;
+  margin-inline-start: auto;
+  padding: 0;
+  font: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  color: rgb(236 236 241 / .5);
+  cursor: pointer;
+  &:hover { color: #ececf1; }
+}
+
+#orbit-media {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 8px 0;
+  padding: 6px;
+  border-radius: var(--orbit-radius);
+  background: var(--orbit-tile);
+  animation: orbit-pop-in .3s var(--orbit-spring);
+  &[hidden] { display: none; }
+  & .orbit-icon-button { width: 26px; height: 26px; }
+}
+.orbit-media-art {
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--orbit-hover);
+}
+.orbit-media-text {
+  appearance: none;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  text-align: start;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  & span { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  & span:first-child { font-size: 12.5px; font-weight: 500; }
+  & span:last-child { font-size: 11px; color: var(--orbit-fg-dim); }
+}
+sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
+
+/* First-run name field. */
+.orbit-welcome-name {
+  margin-top: 22px;
+  width: 260px;
+  height: 40px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--orbit-radius);
+  outline: none;
+  text-align: center;
+  font: inherit;
+  font-size: 14px;
+  color: var(--orbit-fg);
+  background: var(--orbit-field);
+  box-shadow: inset 0 0 0 1px var(--orbit-border);
+  &:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-accent) 60%, transparent); }
+}
+
+/* Reader view: a visible "Lecture" pill in the address bar. */
+#reader-mode-button:not([hidden]) {
+  width: auto !important;
+  padding: 0 8px !important;
+  border-radius: var(--orbit-radius) !important;
+  background: var(--orbit-hover) !important;
+  &::after {
+    content: "Lecture";
+    font-size: 11.5px;
+    font-weight: 500;
+    margin-inline-start: 5px;
+  }
+  &[readeractive]::after { color: var(--orbit-accent); }
+}
+:root:not([lang|="fr"]) #reader-mode-button:not([hidden])::after { content: "Reader"; }
+.orbit-mem-controls {
+  grid-template-columns: 1fr 1.25fr 1fr;
+  & .orbit-segmented { flex-wrap: nowrap; }
+  & .orbit-segmented button { white-space: nowrap; padding-inline: 7px; }
+}
+.orbit-media-art[icon] {
+  box-sizing: border-box;
+  padding: 9px;
+  object-fit: contain;
+  -moz-context-properties: stroke;
+  stroke: var(--orbit-fg-dim);
+}

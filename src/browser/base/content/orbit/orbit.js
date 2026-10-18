@@ -37,11 +37,16 @@ var Orbit = {
       : document.createElementNS(this.XHTML, tag);
     for (const [k, v] of Object.entries(attrs)) {
       if (v == null || v === false) continue;
-      if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+      if (typeof v == "function") el.addEventListener(k.slice(2), v);
       else el.setAttribute(k, v === true ? "" : v);
     }
     el.append(...children.filter(c => c != null));
     return el;
+  },
+
+  // Services.search moved to a module in recent Gecko.
+  get search() {
+    return ChromeUtils.importESModule("moz-src:///toolkit/components/search/SearchService.sys.mjs").SearchService;
   },
 
   icon(name, cls = "orbit-icon") {
@@ -49,7 +54,7 @@ var Orbit = {
   },
 
   init() {
-    for (const f of ["orbit-layout.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js"]) {
+    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js"]) {
       Services.scriptloader.loadSubScript(this.BASE + f, window);
     }
     OrbitLayout.init();
@@ -59,6 +64,11 @@ var Orbit = {
       OrbitTabs.init();
       OrbitGlance.init();
       OrbitMenu.init();
+      OrbitAI.init();
+      OrbitPiP.init();
+      OrbitMedia.init();
+      OrbitMemory.init();
+      OrbitNotify.init();
       OrbitWelcome.maybeShow();
       document.documentElement.setAttribute("orbit-ready", "true");
     };
@@ -71,6 +81,28 @@ var Orbit = {
       };
       Services.obs.addObserver(obs, "browser-delayed-startup-finished");
     }
+  },
+};
+
+// Advanced Picture-in-Picture: inject Orbit's script into every PiP window.
+// The observer is app-wide, so only the first browser window registers it.
+var OrbitPiP = {
+  PLAYER: "chrome://global/content/pictureinpicture/player.xhtml",
+  init() {
+    if (Services.wm.getEnumerator("navigator:browser").getNext() != window) return;
+    const onOpen = win => {
+      win.addEventListener("load", () => {
+        if (win.location.href != this.PLAYER) return;
+        try {
+          Services.scriptloader.loadSubScript(Orbit.BASE + "orbit-pip.js", win);
+        } catch (e) {
+          console.error("Orbit: PiP enhancements failed", e);
+        }
+      }, { once: true });
+    };
+    const obs = (subject, topic) => topic == "domwindowopened" && onOpen(subject);
+    Services.ww.registerNotification(obs);
+    window.addEventListener("unload", () => Services.ww.unregisterNotification(obs), { once: true });
   },
 };
 
