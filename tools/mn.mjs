@@ -9,7 +9,7 @@ import { connect } from "node:net";
 import { writeFileSync, readFileSync } from "node:fs";
 
 const [cmd, arg] = process.argv.slice(2);
-const sock = connect(2828, "127.0.0.1");
+const sock = connect(+(process.env.MN_PORT || 2829), "127.0.0.1");
 let buf = "", id = 0;
 const pending = new Map();
 let hello;

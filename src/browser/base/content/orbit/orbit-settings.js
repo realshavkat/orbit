@@ -50,8 +50,7 @@ var OrbitSettings = {
       items: [
         { kind: "toggle", pref: "orbit.urlbar.replace-newtab", label: "commandbar" },
         { kind: "toggle", pref: "orbit.glance.enabled", label: "glance" },
-        { kind: "addon", id: "uBOLiteRedux@raymondhill.net", label: "adblock" },
-        { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
+                { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
         { kind: "link", label: "advanced", icon: "external-link", action: () => openPreferences() },
         { kind: "link", label: "import", icon: "upload", action: () => MigrationUtils.showMigrationWizard(window, {}) },
       ],
@@ -77,10 +76,24 @@ var OrbitSettings = {
       ],
     },
     {
+      id: "privacy", icon: "shield",
+      items: [
+        { kind: "addon", id: "orbit-blocker@orbit.app", label: "blocker" },
+        { kind: "strict", label: "strict" },
+        { kind: "toggle", pref: "privacy.query_stripping.enabled", label: "stripping" },
+        { kind: "toggle", pref: "dom.security.https_only_mode", label: "https", def: false },
+        { kind: "toggle", pref: "privacy.fingerprintingProtection", label: "fingerprint", def: false },
+        { kind: "choice", pref: "network.trr.mode", label: "doh", options: [[0, "doh.off"], [2, "doh.on"], [3, "doh.max"]] },
+        { kind: "vpn" },
+        { kind: "link", label: "privacyAdvanced", icon: "external-link", action: () => openPreferences("privacy") },
+      ],
+    },
+    {
       id: "notify", icon: "bell",
       items: ["pin", "default", "update", "sleep", "tips"].map(k =>
         ({ kind: "toggle", pref: `orbit.notify.${k}`, label: `notify.${k}`, def: k != "tips" })),
     },
+    { id: "shortcuts", icon: "command", items: [{ kind: "shortcuts" }] },
     { id: "about", icon: "info", items: [{ kind: "about" }] },
   ],
 
@@ -92,7 +105,14 @@ var OrbitSettings = {
     fr: {
       title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
-      memory: "Mémoire", ai: "IA", notify: "Notifications",
+      memory: "Mémoire", ai: "Intelligence artificielle", notify: "Notifications", privacy: "Vie privée", shortcuts: "Raccourcis",
+      blocker: "Orbit Blocker", "blocker.d": "Bloque pubs, pisteurs, logiciels espions, bannières de cookies et l'accès des sites à ton réseau local",
+      strict: "Protection renforcée contre le pistage", "strict.d": "Bloque aussi les cookies tiers et le contenu de pistage dans toutes les fenêtres",
+      stripping: "Nettoyer les liens", "stripping.d": "Retire les paramètres de pistage des adresses (utm, fbclid…)",
+      https: "HTTPS partout", "https.d": "Toujours une connexion chiffrée, avertissement sinon",
+      fingerprint: "Anti-empreinte numérique", "fingerprint.d": "Brouille les informations qui permettent de te reconnaître",
+      doh: "DNS sécurisé", "doh.d": "Chiffre les requêtes DNS (Cloudflare)", "doh.off": "Désactivé", "doh.on": "Activé", "doh.max": "Strict",
+      privacyAdvanced: "Tous les réglages de vie privée",
       "unload.adaptive": "Adaptatif", "unload.d": "Un onglet en veille ne consomme presque rien et se recharge au clic",
       budget: "Plafond mémoire", "budget.d": "Au-delà, les onglets les plus anciens passent en veille", "budget.off": "Aucun",
       eco: "Mode éco", "eco.d": "2 processus au lieu de 4 (au prochain démarrage), fond figé, cache d'images réduit",
@@ -135,7 +155,14 @@ var OrbitSettings = {
     en: {
       title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
-      memory: "Memory", ai: "AI", notify: "Notifications",
+      memory: "Memory", ai: "Artificial intelligence", notify: "Notifications", privacy: "Privacy", shortcuts: "Shortcuts",
+      blocker: "Orbit Blocker", "blocker.d": "Blocks ads, trackers, spyware, cookie banners and sites probing your local network",
+      strict: "Strict tracking protection", "strict.d": "Also blocks third-party cookies and tracking content everywhere",
+      stripping: "Clean links", "stripping.d": "Removes tracking parameters from addresses (utm, fbclid…)",
+      https: "HTTPS everywhere", "https.d": "Always an encrypted connection, warns otherwise",
+      fingerprint: "Anti-fingerprinting", "fingerprint.d": "Blurs the details that can identify you",
+      doh: "Secure DNS", "doh.d": "Encrypts DNS lookups (Cloudflare)", "doh.off": "Off", "doh.on": "On", "doh.max": "Strict",
+      privacyAdvanced: "All privacy settings",
       "unload.adaptive": "Adaptive", "unload.d": "A sleeping tab uses almost nothing and reloads on click",
       budget: "Memory limit", "budget.d": "Above it, the oldest tabs go to sleep", "budget.off": "None",
       eco: "Eco mode", "eco.d": "2 processes instead of 4 (next start), still background, smaller image cache",
@@ -182,29 +209,54 @@ var OrbitSettings = {
     else this.open();
   },
 
+  // Section titles: plain words + one key word in Syne (design).
+  TITLES: {
+    fr: { general: ["Réglages", "généraux"], look: ["Ton", "style"], effects: ["Les", "effets"], layout: ["Ta", "disposition"],
+      ai: ["Ton", "IA"], browsing: ["Ta", "navigation"], privacy: ["Ta", "vie privée"], memory: ["Ta", "mémoire"],
+      notify: ["Tes", "notifications"], shortcuts: ["Tes", "raccourcis"], about: ["À propos d'", "Orbit"] },
+    en: { general: ["General", "settings"], look: ["Your", "style"], effects: ["The", "effects"], layout: ["Your", "layout"],
+      ai: ["Your", "AI"], browsing: ["Your", "browsing"], privacy: ["Your", "privacy"], memory: ["Your", "memory"],
+      notify: ["Your", "notifications"], shortcuts: ["Your", "shortcuts"], about: ["About", "Orbit"] },
+  },
+
   open(sectionId = this._last ?? "general") {
     this.close(true);
     const h = Orbit.h.bind(Orbit);
+    const fr = Orbit.lang() == "fr";
     const nav = h("div", { class: "orbit-settings-nav" });
     const body = h("div", { class: "orbit-settings-body" });
+    const title = h("div", { class: "orbit-settings-h" });
+    const search = h("input", {
+      class: "orbit-settings-search-input", type: "search", placeholder: fr ? "Rechercher un réglage" : "Search settings",
+      oninput: () => this.filter(search.value),
+    });
+    const reset = h("button", { class: "orbit-settings-reset", onclick: () => this.resetSection(this._last) }, fr ? "Réinitialiser" : "Reset");
     const sheet = h("div", { id: "orbit-settings", onmousedown: e => e.target == sheet && this.close() },
       h("div", { class: "orbit-settings-card" },
         h("div", { class: "orbit-settings-side" },
           h("div", { class: "orbit-settings-brand" },
-            h("img", { class: "orbit-settings-logo", src: `${Orbit.BASE}orbit-logo.svg`, alt: "" }),
-            h("span", {}, "Orbit")),
+            h("span", { class: "orbit-settings-logo-box" }, h("img", { class: "orbit-settings-logo", src: `${Orbit.BASE}orbit-logo.svg`, alt: "" })),
+            h("span", {}, this.t("title"))),
+          h("label", { class: "orbit-settings-search" }, Orbit.icon("search"), search),
           nav),
         h("div", { class: "orbit-settings-main" },
           h("div", { class: "orbit-settings-top" },
-            h("div", { class: "orbit-settings-h orbit-key" }),
+            title,
+            h("span", { class: "orbit-settings-note" }, fr ? "Tout est appliqué tout de suite · " : "Applied instantly · ", reset),
             h("button", { class: "orbit-icon-button", title: "Esc", onclick: () => this.close() }, Orbit.icon("x"))),
           body)
       )
     );
+    const setTitle = id => {
+      const [plain, key] = (this.TITLES[Orbit.lang()] ?? this.TITLES.en)[id] ?? [this.t(id), ""];
+      title.replaceChildren(plain.endsWith("'") ? plain : `${plain} `, h("span", { class: "orbit-key" }, key));
+    };
     this.show = id => {
       this._last = id;
+      search.value = "";
+      reset.hidden = !this.SECTIONS.find(s => s.id == id).items.some(i => i.pref);
       for (const b of nav.children) b.toggleAttribute("active", b.dataset.id == id);
-      sheet.querySelector(".orbit-settings-h").textContent = this.t(id);
+      setTitle(id);
       const section = this.SECTIONS.find(s => s.id == id);
       body.replaceChildren(...section.items.map(item => this.render(item)).filter(Boolean));
       body.scrollTop = 0;
@@ -213,18 +265,46 @@ var OrbitSettings = {
           { duration: 260, easing: "cubic-bezier(.2,.9,.25,1)" });
       }
     };
+    // Search: every section's rows whose text matches, grouped by section.
+    this.filter = q => {
+      const norm = x => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const needle = norm(q.trim());
+      if (!needle) return this.show(this._last);
+      for (const b of nav.children) b.removeAttribute("active");
+      title.replaceChildren(fr ? "Résultats pour " : "Results for ", h("span", { class: "orbit-key" }, q.trim()));
+      reset.hidden = true;
+      const out = [];
+      for (const section of this.SECTIONS) {
+        if (section.id == "about") continue;
+        const rows = section.items.map(item => this.render(item)).filter(el => el && norm(el.textContent).includes(needle));
+        if (rows.length) out.push(h("div", { class: "orbit-sheet-kicker orbit-settings-group" }, this.t(section.id).toUpperCase()), ...rows);
+      }
+      body.replaceChildren(...(out.length ? out : [h("div", { class: "orbit-setting-desc orbit-settings-empty" },
+        fr ? "Aucun réglage ne correspond." : "No setting matches.")]));
+    };
     for (const s of this.SECTIONS) {
+      if (s.id == "about") nav.append(h("div", { class: "orbit-settings-spacer" }));
       nav.append(h("button", { class: "orbit-settings-tab", "data-id": s.id, onclick: () => this.show(s.id) },
         Orbit.icon(s.icon), h("span", {}, this.t(s.id))));
     }
     document.body.append(sheet);
     this.show(sectionId);
+    if (sectionId == "general") search.focus();
     this._onKey = e => {
       if (e.key != "Escape") return;
       e.preventDefault();
+      if (search.value) return this.filter((search.value = ""));
       if (!this.closeMenus()) this.close();
     };
     window.addEventListener("keydown", this._onKey, true);
+  },
+
+  // Back to Orbit's defaults for every pref the section shows.
+  resetSection(id) {
+    for (const item of this.SECTIONS.find(s => s.id == id)?.items ?? []) {
+      if (item.pref) Services.prefs.clearUserPref(item.pref);
+    }
+    this.show(id);
   },
 
   close(instant = false) {
@@ -271,6 +351,13 @@ var OrbitSettings = {
         return this.row(this.segmented(item.options, Orbit.pref(item.pref, ""), v => p.setStringPref(item.pref, v)), item.label);
       case "info":
         return this.row(null, item.label);
+      case "strict":
+        return this.row(this.switch(Orbit.pref("browser.contentblocking.category", "standard") == "strict",
+          on => p.setStringPref("browser.contentblocking.category", on ? "strict" : "standard")), "strict");
+      case "vpn":
+        return this.renderVPN();
+      case "shortcuts":
+        return this.renderShortcuts();
       case "eco":
         return this.row(this.switch(Orbit.pref("orbit.memory.eco", false), on => OrbitMemory.setEco(on)), "eco");
       case "addon": {
@@ -295,6 +382,62 @@ var OrbitSettings = {
         return this.renderAbout();
     }
     return null;
+  },
+
+  renderVPN() {
+    const h = Orbit.h.bind(Orbit);
+    const p = Services.prefs;
+    const fr = Orbit.lang() == "fr";
+    const input = h("input", {
+      class: "orbit-input", placeholder: "socks5://127.0.0.1:9050", spellcheck: "false",
+      value: Orbit.pref("orbit.vpn.server", ""),
+      onchange: () => {
+        const v = input.value.trim();
+        const ok = !v || OrbitVPN.parse(v);
+        input.toggleAttribute("invalid", !ok);
+        if (ok) p.setStringPref("orbit.vpn.server", v);
+      },
+    });
+    const custom = h("div", { class: "orbit-vpn-custom" }, input,
+      h("div", { class: "orbit-setting-desc" }, fr
+        ? "Ton propre serveur SOCKS5 ou HTTPS : un VPS, Tor (socks5://127.0.0.1:9050) ou le proxy d'une appli VPN."
+        : "Your own SOCKS5 or HTTPS server: a VPS, Tor (socks5://127.0.0.1:9050) or a VPN app's proxy."));
+    const sync = () => (custom.hidden = Orbit.pref("orbit.vpn.mode", "custom") != "custom");
+    sync();
+    return h("div", { class: "orbit-setting orbit-setting-col" },
+      h("div", { class: "orbit-vpn-head" },
+        h("div", { class: "orbit-setting-text" },
+          h("div", { class: "orbit-setting-label" }, "Orbit VPN"),
+          h("div", { class: "orbit-setting-desc" }, fr
+            ? "Masque ton adresse IP. Les DNS passent par le tunnel et WebRTC ne peut pas révéler ta vraie IP."
+            : "Hides your IP address. DNS goes through the tunnel and WebRTC cannot reveal your real IP.")),
+        this.switch(Orbit.pref("orbit.vpn.enabled", false), on => OrbitVPN.apply(on))),
+      this.segmented([["custom", fr ? "Mon serveur" : "My server"], ["mozilla", fr ? "VPN gratuit de Mozilla" : "Mozilla's free VPN"]],
+        Orbit.pref("orbit.vpn.mode", "custom"), v => { p.setStringPref("orbit.vpn.mode", v); sync(); }),
+      custom);
+  },
+
+  SHORTCUTS: [
+    ["Ctrl T", "Nouvel onglet / barre de commande", "New tab / command bar"],
+    ["Ctrl Maj Espace", "Rechercher un onglet", "Search tabs"],
+    ["Ctrl Maj U", "Assistant IA", "AI assistant"],
+    ["Alt clic", "Aperçu d'un lien (Glance)", "Preview a link (Glance)"],
+    ["Ctrl Alt C", "Mode compact", "Compact mode"],
+    ["Alt 1 – 9", "Aller à l'espace 1 à 9", "Go to space 1 to 9"],
+    ["Ctrl Alt ← →", "Espace précédent / suivant", "Previous / next space"],
+    ["Ctrl Maj D", "Dupliquer l'onglet", "Duplicate tab"],
+    ["Ctrl Maj T", "Rouvrir l'onglet fermé", "Reopen closed tab"],
+    ["Ctrl ,", "Paramètres", "Settings"],
+    ["Ctrl Maj ]", "Picture-in-Picture", "Picture-in-Picture"],
+  ],
+
+  renderShortcuts() {
+    const h = Orbit.h.bind(Orbit);
+    const fr = Orbit.lang() == "fr";
+    return h("div", { class: "orbit-shortcuts" }, ...this.SHORTCUTS.map(([keys, frLabel, enLabel]) =>
+      h("div", { class: "orbit-setting" },
+        h("div", { class: "orbit-setting-label" }, fr ? frLabel : enLabel),
+        h("span", { class: "orbit-keys" }, ...(fr ? keys : keys.replace("Maj", "Shift")).split(" ").map(k => h("kbd", {}, k))))));
   },
 
   // ---- widgets ------------------------------------------------------------------
@@ -371,7 +514,7 @@ var OrbitSettings = {
       }
     };
     for (const [v, label] of options) {
-      seg.append(h("button", { "data-v": v, onclick: () => { current = v; sync(); onChange(v); } }, label));
+      seg.append(h("button", { "data-v": String(v), onclick: () => { current = v; sync(); onChange(v); } }, label));
     }
     requestAnimationFrame(sync);
     return seg;

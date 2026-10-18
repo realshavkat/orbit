@@ -13,7 +13,7 @@ var OrbitWelcome = {
       "layout.t": "Ta disposition", "layout.s": "Où veux-tu tes onglets ?",
       left: "À gauche", right: "À droite", compact: "Compact",
       "import.t": "Retrouve tes affaires", "import.s": "Marque-pages, mots de passe et historique.",
-      import: "Importer depuis un autre navigateur", "default": "Définir Orbit par défaut",
+      import: "Importer depuis un autre navigateur", blocker: "Bloque pubs et pisteurs. Tu peux le couper ici ou plus tard.", "default": "Définir Orbit par défaut",
       "done.t": "Tout est prêt", "done.s": "Quelques raccourcis pour bien démarrer :",
       k1: "Nouvel onglet / barre de commande", k2: "Aperçu d'un lien (Glance)",
       k3: "Mode compact", k4: "Paramètres", go: "Commencer à naviguer",
@@ -26,7 +26,7 @@ var OrbitWelcome = {
       "layout.t": "Your layout", "layout.s": "Where do you want your tabs?",
       left: "Left", right: "Right", compact: "Compact",
       "import.t": "Bring your stuff", "import.s": "Bookmarks, passwords and history.",
-      import: "Import from another browser", "default": "Make Orbit the default browser",
+      import: "Import from another browser", blocker: "Blocks ads and trackers. Turn it off here or later.", "default": "Make Orbit the default browser",
       "done.t": "You're all set", "done.s": "A few shortcuts to get going:",
       k1: "New tab / command bar", k2: "Preview a link (Glance)",
       k3: "Compact mode", k4: "Settings", go: "Start browsing",
@@ -162,7 +162,13 @@ var OrbitWelcome = {
               } catch (err) {
                 console.error(err);
               }
-            } }, Orbit.icon("star"), h("span", {}, this.t("default")), Orbit.icon("check", "orbit-icon orbit-done"))));
+            } }, Orbit.icon("star"), h("span", {}, this.t("default")), Orbit.icon("check", "orbit-icon orbit-done"))),
+          h("div", { class: "orbit-welcome-blocker" },
+            h("div", {}, h("b", {}, "Orbit Blocker"), h("span", {}, this.t("blocker"))),
+            OrbitSettings.switch(true, async on => {
+              const addon = await AddonManager.getAddonByID("orbit-blocker@orbit.app");
+              if (addon) await (on ? addon.enable() : addon.disable());
+            })));
       }
       case "done":
         return h("div", {}, title, sub,

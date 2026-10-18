@@ -9,57 +9,96 @@ var OrbitTabs = {
     this.initUnloader();
     this.initOrbitScheme();
     this.initHome();
+    this.initDrag();
+  },
+
+  // ---- Tab drag and drop ------------------------------------------------------
+  // While a tab is dragged: the background pauses (smooth 60 fps), drop zones
+  // say what they do, and the space buttons accept the tab.
+  TAB_DROP_TYPE: "application/x-moz-tabbrowser-tab",
+
+  initDrag() {
+    const tc = gBrowser.tabContainer;
+    // "New tab" sits above the list in its own row. Moving it in the DOM (not
+    // with CSS order) keeps Firefox's drag geometry right, so drags stay smooth.
+    const newTab = document.getElementById("tabs-newtab-button");
+    const header = document.getElementById("orbit-sidebar-header");
+    if (newTab && header) header.after(newTab);
+    const root = document.documentElement;
+    const fr = Orbit.lang() == "fr";
+    const text = document.getElementById("pinned-drop-indicator-text");
+    if (text) {
+      text.removeAttribute("data-l10n-id");
+      text.textContent = fr ? "Lâchez ici pour l'ajouter aux favoris" : "Drop here to add to Essentials";
+    }
+    // Only freshly opened tabs slide in; a tab moved by drag must not replay it.
+    tc.addEventListener("TabOpen", e => {
+      e.target.setAttribute("orbit-new", "true");
+      setTimeout(() => e.target.removeAttribute("orbit-new"), 400);
+    });
+    tc.addEventListener("dragstart", e => {
+      const tab = e.target.closest?.(".tabbrowser-tab");
+      if (tab) root.setAttribute("orbit-dragging", tab.pinned ? "pinned" : "tab");
+    });
+    new MutationObserver(() => {
+      if (!tc.hasAttribute("movingtab")) setTimeout(() => !tc.hasAttribute("movingtab") && root.removeAttribute("orbit-dragging"), 50);
+    }).observe(tc, { attributes: true, attributeFilter: ["movingtab"] });
+    window.addEventListener("dragend", () => root.removeAttribute("orbit-dragging"), true);
+    window.addEventListener("drop", () => root.removeAttribute("orbit-dragging"), true);
+  },
+
+  // Space buttons in the footer: drop a tab on one to move it there.
+  dropTarget(el, onTab) {
+    const has = e => e.dataTransfer?.types.includes(this.TAB_DROP_TYPE);
+    el.addEventListener("dragover", e => {
+      if (!has(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      el.setAttribute("drop-over", "true");
+    });
+    el.addEventListener("dragleave", () => el.removeAttribute("drop-over"));
+    el.addEventListener("drop", e => {
+      el.removeAttribute("drop-over");
+      if (!has(e)) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const tab = e.dataTransfer.mozGetDataAt(this.TAB_DROP_TYPE, 0);
+      if (tab?.ownerGlobal == window) onTab(tab);
+    });
   },
 
   // ---- Home page ----------------------------------------------------------------
-  // resource://orbit/home.html is a static, unprivileged page: the name, search
-  // URL and shortcuts travel in its hash. It becomes the browser home page.
+  // orbit://home (resource://orbit/home.html) is a static, unprivileged page;
+  // the OrbitHome actor hands it the greeting, search engine and shortcuts.
   HOME: "resource://orbit/home.html",
   isHome(spec) {
     return spec?.startsWith(this.HOME);
   },
 
   homeURL() {
-    const engine = Orbit.search.hasSuccessfullyInitialized ? Orbit.search.defaultEngine : null;
-    const s = engine?.getSubmission("{q}").uri.spec.replace("%7Bq%7D", "{q}") ?? "";
-    const params = new URLSearchParams({ name: Orbit.pref("orbit.user.name", ""), lang: Orbit.lang(), s, t: this._tiles ?? "" });
-    return `${this.HOME}#${params}`;
-  },
-
-  async refreshHome() {
-    try {
-      const db = await PlacesUtils.promiseDBConnection();
-      const rows = await db.executeCached(
-        `SELECT url, title FROM moz_places WHERE hidden = 0 AND frecency > 0 AND url LIKE 'http%'
-         ORDER BY frecency DESC LIMIT 30`);
-      const seen = new Set();
-      const tiles = [];
-      for (const r of rows) {
-        const url = r.getResultByName("url");
-        const host = new URL(url).hostname.replace(/^www\./, "");
-        if (seen.has(host)) continue;
-        seen.add(host);
-        tiles.push(`${(r.getResultByName("title") || host).split(/ [-|–·] /)[0].replace(/[|\n]/g, " ")}|${new URL(url).origin}`);
-        if (tiles.length == 6) break;
-      }
-      this._tiles = tiles.join("\n");
-    } catch (e) {
-      console.error("Orbit: home shortcuts", e);
-    }
-    Services.prefs.setStringPref("browser.startup.homepage", this.homeURL());
-    // Any "new tab" Gecko opens by itself (last tab closed...) shows the home page.
-    AboutNewTab.newTabURL = this.homeURL();
+    return this.HOME;
   },
 
   initHome() {
-    this.refreshHome();
-    const obs = () => this.refreshHome();
-    Services.prefs.addObserver("orbit.user.name", obs);
-    Services.obs.addObserver(obs, "browser-search-engine-modified");
-    window.addEventListener("unload", () => {
-      Services.prefs.removeObserver("orbit.user.name", obs);
-      Services.obs.removeObserver(obs, "browser-search-engine-modified");
-    }, { once: true });
+    try {
+      ChromeUtils.registerWindowActor("OrbitHome", {
+        parent: { esModuleURI: "resource://orbit/actors/OrbitHomeParent.sys.mjs" },
+        child: {
+          esModuleURI: "resource://orbit/actors/OrbitHomeChild.sys.mjs",
+          events: { "OrbitHome:Ready": { wantUntrusted: true }, "OrbitHome:AddTile": { wantUntrusted: true },
+            "OrbitHome:RemoveTile": { wantUntrusted: true } },
+        },
+        matches: [`${this.HOME}*`],
+        messageManagerGroups: ["browsers"],
+        // The parent only answers Orbit's own home page (it checks the URL).
+        safeForUntrustedWebProcess: true,
+      });
+    } catch {}
+    Services.prefs.setStringPref("browser.startup.homepage", this.HOME);
+    // Any "new tab" Gecko opens by itself (last tab closed...) shows the home page,
+    // and it counts as an empty page: blank address bar, focus in it.
+    AboutNewTab.newTabURL = this.HOME;
+    if (!gInitialPages.includes(this.HOME)) gInitialPages.push(this.HOME);
   },
 
   // ---- orbit:// ---------------------------------------------------------------
@@ -89,7 +128,7 @@ var OrbitTabs = {
 
   displayOrbitURL() {
     const spec = gBrowser.currentURI?.spec ?? "";
-    if (this.isHome(spec) && !gURLBar.focused) gURLBar.value = "";
+    if (this.isHome(spec) && !gURLBar.focused) gURLBar.value = "orbit://home";
     if (gURLBar.focused || !spec.startsWith("about:") || /^about:(blank|newtab|home)$/.test(spec)) return;
     const page = spec.slice(6).replace(/^addons/, "extensions");
     gURLBar.value = `orbit://${page}`;

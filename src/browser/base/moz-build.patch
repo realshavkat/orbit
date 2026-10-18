@@ -1,5 +1,5 @@
 diff --git a/browser/base/moz.build b/browser/base/moz.build
-index 3ca8d96f56..40100b64f6 100644
+index 3ca8d96f56..d1919a7375 100644
 --- a/browser/base/moz.build
 +++ b/browser/base/moz.build
 @@ -90,3 +90,9 @@ GENERATED_FILES["license.html"].inputs = [
@@ -10,5 +10,5 @@ index 3ca8d96f56..40100b64f6 100644
 +# Orbit: Orbit-branded language packs (app scope, see tools/langpack.py).
 +FINAL_TARGET_FILES.extensions += [
 +    "langpacks/langpack-fr@firefox.mozilla.org.xpi",
-+    "langpacks/uBOLiteRedux@raymondhill.net.xpi",
++    "langpacks/orbit-blocker@orbit.app.xpi",
 +]

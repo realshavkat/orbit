@@ -32,18 +32,20 @@ var OrbitLayout = {
       e.stopPropagation();
       const startX = e.screenX;
       const startW = Orbit.pref("orbit.view.sidebar-width", 240);
+      const dir = Orbit.pref("sidebar.position_start", true) ? 1 : -1;
       root.setAttribute("orbit-resizing", "true");
-      const move = ev => this.setWidth(startW + ev.screenX - startX);
+      const move = ev => this.setWidth(startW + dir * (ev.screenX - startX));
       const up = ev => {
         window.removeEventListener("mousemove", move, true);
         window.removeEventListener("mouseup", up, true);
         root.removeAttribute("orbit-resizing");
-        Services.prefs.setIntPref("orbit.view.sidebar-width", this.clampWidth(startW + ev.screenX - startX));
+        Services.prefs.setIntPref("orbit.view.sidebar-width", this.clampWidth(startW + dir * (ev.screenX - startX)));
       };
       window.addEventListener("mousemove", move, true);
       window.addEventListener("mouseup", up, true);
     }, true);
 
+    window.addEventListener("resize", () => this.setWidth(Orbit.pref("orbit.view.sidebar-width", 240)));
     this.applyPrefs();
     for (const branch of ["orbit.", "sidebar.position_start"]) Services.prefs.addObserver(branch, this);
     window.addEventListener("unload", () => {
@@ -80,8 +82,10 @@ var OrbitLayout = {
     customElements.whenDefined("sidebar-main").then(() => sm.updateComplete?.then(hideTools));
   },
 
+  // Never wider than a third of the window, so the page keeps its room.
   clampWidth(w) {
-    return Math.round(Math.min(480, Math.max(180, w)));
+    const max = Math.max(180, Math.min(420, window.innerWidth * 0.32));
+    return Math.round(Math.min(max, Math.max(180, w)));
   },
 
   setWidth(w) {

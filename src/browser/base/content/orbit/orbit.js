@@ -54,9 +54,10 @@ var Orbit = {
   },
 
   init() {
-    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js"]) {
+    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js", "orbit-edit.js", "orbit-vpn.js", "orbit-extras.js"]) {
       Services.scriptloader.loadSubScript(this.BASE + f, window);
     }
+    document.documentElement.setAttribute("orbit-lang", this.lang());
     OrbitLayout.init();
     const ready = () => {
       OrbitLayout.onReady();
@@ -64,6 +65,9 @@ var Orbit = {
       OrbitTabs.init();
       OrbitGlance.init();
       OrbitMenu.init();
+      OrbitEdit.init();
+      OrbitVPN.init();
+      OrbitExtras.init();
       OrbitAI.init();
       OrbitPiP.init();
       OrbitMedia.init();
@@ -112,6 +116,7 @@ var ORBIT_STRINGS = {
     "space.new": "Nouvel espace",
     "space.rename": "Renommer",
     "space.edit": "Modifier l'espace",
+    "space.collapse": "Cliquer pour replier les favoris",
     "space.delete": "Supprimer l'espace",
     "space.delete.confirm": "Supprimer cet espace et fermer ses onglets ?",
     "space.name": "Nom de l'espace",
@@ -133,6 +138,7 @@ var ORBIT_STRINGS = {
     "space.new": "New space",
     "space.rename": "Rename",
     "space.edit": "Edit space",
+    "space.collapse": "Click to fold the essentials",
     "space.delete": "Delete space",
     "space.delete.confirm": "Delete this space and close its tabs?",
     "space.name": "Space name",

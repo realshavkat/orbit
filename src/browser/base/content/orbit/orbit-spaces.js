@@ -109,6 +109,11 @@ var OrbitSpaces = {
     return gBrowser.tabs.filter(t => !t.pinned && !t.closing && this.spaceOf(t) == id);
   },
 
+  // Clicking the space name folds the essentials (Zen).
+  toggleEssentials() {
+    document.documentElement.toggleAttribute("orbit-essentials-folded");
+  },
+
   // Clear button: closes the space's tabs except the selected ones (the
   // current tab, or every Ctrl+clicked tab). Double-click closes them all.
   clearTabs(all = false) {
@@ -250,22 +255,22 @@ var OrbitSpaces = {
 
   render() {
     const { h, icon, t } = this.helpers();
+    const fr = Orbit.lang() == "fr";
     const space = this.active;
 
     const header = document.getElementById("orbit-sidebar-header");
     header.replaceChildren(
       h("div", { id: "orbit-space-title", ondblclick: () => this.edit(space) },
-        icon(space.icon, "orbit-icon orbit-space-title-icon"),
-        h("span", { class: "orbit-space-name" }, space.name),
+        h("span", { class: "orbit-space-name", title: t("space.collapse"), onclick: () => this.toggleEssentials() }, space.name),
+        h("button", { id: "orbit-space-edit", class: "orbit-icon-button", title: t("space.edit"), onclick: () => this.edit(space) },
+          icon("pencil")),
         h("button", {
           id: "orbit-space-clear", class: "orbit-icon-button",
           title: Orbit.lang() == "fr" ? "Fermer les onglets non sélectionnés (double-clic : tout fermer)"
             : "Close unselected tabs (double-click: close all)",
           onclick: e => e.detail < 2 && this.clearTabs(),
           ondblclick: e => { e.stopPropagation(); this.clearTabs(true); },
-        }, icon("brush-cleaning")),
-        h("button", { class: "orbit-icon-button", title: t("space.edit"), onclick: () => this.edit(space) },
-          icon("pencil"))
+        }, icon("brush-cleaning"))
       )
     );
 
@@ -276,6 +281,7 @@ var OrbitSpaces = {
         class: "orbit-icon-button", id: "orbit-compact-button", title: `${t("compact.toggle")} (Ctrl+Alt+C)`,
         onclick: () => OrbitLayout.toggleCompact(),
       }, icon("panel-left")),
+      h("div", { id: "orbit-drop-hint" }, fr ? "Lâchez sur un espace pour y déplacer l'onglet" : "Drop on a space to move the tab there"),
       h("div", { id: "orbit-space-switcher" },
         this.indicator,
         ...this.spaces.map((s, i) =>
@@ -290,7 +296,17 @@ var OrbitSpaces = {
       h("button", { class: "orbit-icon-button", title: t("space.new"), onclick: () => this.edit(null) }, icon("plus")),
       h("button", { class: "orbit-icon-button", title: `${t("settings")} (Ctrl+,)`, onclick: () => OrbitSettings.toggle() }, icon("settings-2"))
     );
+    footer.querySelectorAll(".orbit-space-button").forEach((btn, i) => {
+      const id = this.spaces[i].id;
+      OrbitTabs.dropTarget(btn, tab => {
+        if (tab.pinned) gBrowser.unpinTab(tab);
+        this.moveTabs([tab], id);
+      });
+    });
     requestAnimationFrame(() => this.moveIndicator());
+    // Keep the pill under the active space when the sidebar is resized.
+    this._indicatorObserver ??= new ResizeObserver(() => this.moveIndicator());
+    this._indicatorObserver.observe(footer);
   },
 
   // Glide the gradient pill under the active space button.

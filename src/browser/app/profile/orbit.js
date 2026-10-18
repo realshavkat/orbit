@@ -108,6 +108,15 @@ pref("browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features", false
 pref("privacy.trackingprotection.enabled", true);
 pref("privacy.trackingprotection.socialtracking.enabled", true);
 pref("privacy.globalprivacycontrol.enabled", true);
+// Orbit Blocker's companions: clean links, HTTPS first, no bounce tracking.
+pref("privacy.query_stripping.enabled", true);
+pref("privacy.query_stripping.enabled.pbmode", true);
+pref("dom.security.https_first", true);
+pref("privacy.bounceTrackingProtection.mode", 1);
+// Orbit VPN (see orbit-vpn.js): off until a server is set.
+pref("orbit.vpn.enabled", false);
+pref("orbit.vpn.mode", "custom");
+pref("orbit.vpn.server", "");
 
 // ---- Picture-in-Picture --------------------------------------------------------
 pref("media.videocontrols.picture-in-picture.playback-speed.enabled", true);

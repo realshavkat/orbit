@@ -56,6 +56,8 @@ pref("general.config.sandbox_enabled", false);
 // App-level defaults load after firefox.js, like the #include in the real build.
 mkdirSync(join(runtime, "browser/defaults/preferences"), { recursive: true });
 copyFileSync(join(root, "src/browser/app/profile/orbit.js"), join(runtime, "browser/defaults/preferences/orbit-prefs.js"));
+// Dev Marionette port (2829) so a real Orbit build can keep 2828.
+writeFileSync(join(runtime, "browser/defaults/preferences/orbit-dev.js"), 'pref("marionette.port", 2829);\n');
 rmSync(join(runtime, "defaults/pref/orbit-prefs.js"), { force: true });
 writeFileSync(
   join(devDir, "orbit.manifest"),
