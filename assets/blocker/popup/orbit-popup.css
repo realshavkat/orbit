@@ -1,0 +1,69 @@
+/* Orbit Blocker popup: Orbit's look over uBO Lite's popup. GPL-3.0 like the add-on. */
+@font-face { font-family: "Outfit"; src: url("../fonts/Outfit.ttf"); font-weight: 100 900; }
+
+:root {
+  --ob-bg: #111114;
+  --ob-fg: #ececf1;
+  --ob-dim: rgb(236 236 241 / .55);
+  --ob-field: rgb(255 255 255 / .06);
+  --ob-line: rgb(255 255 255 / .08);
+  --ob-accent: #7c86ff;
+  --ob-ok: #7ee2a8;
+  --ob-off: #ff9a76;
+}
+@media (prefers-color-scheme: light) {
+  :root { --ob-bg: #ffffff; --ob-fg: #1b1a22; --ob-dim: rgb(27 26 34 / .55); --ob-field: rgb(0 0 0 / .04); --ob-line: rgb(0 0 0 / .08); --ob-accent: #4f5be0; }
+}
+html, body {
+  background: var(--ob-bg) !important;
+  color: var(--ob-fg) !important;
+  font-family: "Outfit", system-ui, sans-serif !important;
+}
+body { width: 320px; margin: 0; }
+main { padding: 0 !important; display: flex !important; flex-direction: column; gap: 0 !important; }
+
+/* Header */
+#ob-head { display: flex; align-items: center; gap: 12px; padding: 16px 16px 12px; }
+#ob-head img { width: 34px; height: 34px; }
+#ob-head b { display: block; font-size: 15px; font-weight: 600; }
+#ob-head small { display: block; font-size: 12px; color: var(--ob-dim); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#hostname { display: none !important; }
+
+/* Simple mode: one big switch */
+#ob-simple { margin: 0 12px 12px; padding: 14px; border-radius: 10px; background: var(--ob-field); display: flex; align-items: center; gap: 14px; }
+#ob-simple .ob-text { flex: 1; }
+#ob-simple .ob-text b { display: block; font-size: 14px; font-weight: 600; }
+#ob-simple .ob-text span { font-size: 12.5px; color: var(--ob-dim); line-height: 1.4; }
+#ob-simple[data-on="false"] .ob-text b { color: var(--ob-off); }
+#ob-simple[data-on="true"] .ob-text b { color: var(--ob-ok); }
+.ob-switch { appearance: none; border: none; flex-shrink: 0; width: 44px; height: 26px; border-radius: 13px; position: relative; cursor: pointer;
+  background: rgb(255 255 255 / .16); transition: background-color .2s; }
+.ob-switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff;
+  transition: transform .25s cubic-bezier(.34, 1.35, .64, 1); }
+.ob-switch[aria-checked="true"] { background: var(--ob-accent); }
+.ob-switch[aria-checked="true"]::after { transform: translateX(18px); }
+
+/* Quick actions (both modes) */
+#ob-actions { display: flex; gap: 6px; padding: 0 12px 12px; }
+#ob-actions button { flex: 1; appearance: none; border: none; height: 34px; border-radius: 7px; cursor: pointer;
+  font: 500 12.5px "Outfit", sans-serif; color: var(--ob-fg); background: var(--ob-field); }
+#ob-actions button:hover { background: color-mix(in srgb, var(--ob-accent) 18%, transparent); }
+
+/* Advanced mode: uBO Lite's own controls, restyled */
+body:not(.ob-advanced) :is(.filteringModeSlider, #filteringModeText, .toolMenu, .toolRibbon) { display: none !important; }
+body.ob-advanced #ob-simple { display: none; }
+.filteringModeSlider { margin: 4px 16px 6px !important; }
+.filteringModeSlider .filteringModeButton > div { background-color: var(--ob-accent) !important; border-color: var(--ob-accent) !important; }
+#filteringModeText { padding: 0 16px 10px !important; font-size: 12.5px !important; color: var(--ob-dim) !important; }
+#filteringModeText > span:first-of-type { color: var(--ob-fg); font-weight: 600; }
+.toolMenu { margin: 0 12px 10px !important; padding: 6px !important; border-radius: 10px !important; background: var(--ob-field) !important; border: none !important; }
+.toolMenu > label { font-size: 10.5px !important; font-weight: 600 !important; letter-spacing: .12em; color: var(--ob-dim) !important; padding: 4px 8px !important; text-transform: uppercase; }
+.toolMenu .tool { border-radius: 7px !important; padding: 7px 8px !important; font-size: 13px !important; }
+.toolMenu .tool:hover { background: var(--ob-line) !important; }
+.toolRibbon { border-top: 1px solid var(--ob-line) !important; padding: 6px 12px !important; }
+.toolRibbon .tool { color: var(--ob-dim) !important; border-radius: 7px !important; }
+
+/* Footer: mode switch */
+#ob-foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 14px; border-top: 1px solid var(--ob-line);
+  font-size: 12px; color: var(--ob-dim); }
+#ob-foot button { appearance: none; border: none; background: none; padding: 0; font: 500 12px "Outfit", sans-serif; color: var(--ob-accent); cursor: pointer; }

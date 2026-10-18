@@ -153,7 +153,7 @@ var OrbitWelcome = {
           h("div", { class: "orbit-welcome-actions" },
             h("button", { class: "orbit-welcome-action", onclick: e => {
               done(e.currentTarget);
-              MigrationUtils.showMigrationWizard(window, {});
+              OrbitImport.open();
             } }, Orbit.icon("upload"), h("span", {}, this.t("import")), Orbit.icon("check", "orbit-icon orbit-done")),
             h("button", { class: "orbit-welcome-action", onclick: e => {
               done(e.currentTarget);

@@ -44,6 +44,15 @@ var OrbitExtras = {
       const name = tab.getAttribute(this.RENAME_KEY);
       return name ? gBrowser.setTabLabelForAuthPrompts(tab, name) : origTitle(tab);
     };
+    // Lazily restored tabs never fire SSTabRestoring: read names directly too.
+    const restoreAll = () => {
+      for (const tab of gBrowser.tabs) {
+        const name = SessionStore.getCustomTabValue(tab, this.RENAME_KEY);
+        if (name && tab.getAttribute(this.RENAME_KEY) != name) this.setName(tab, name);
+      }
+    };
+    window.addEventListener("SSWindowRestored", restoreAll);
+    setTimeout(restoreAll, 0);
     tc.addEventListener("SSTabRestoring", e => {
       const name = SessionStore.getCustomTabValue(e.target, this.RENAME_KEY);
       if (name) this.setName(e.target, name);

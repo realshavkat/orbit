@@ -2,12 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit VPN: one switch that routes all browsing through an encrypted
-// tunnel. Two providers:
-//  - "mozilla": the free VPN built into Gecko (IP Protection, Mozilla's
-//    servers, needs a Mozilla account; Orbit only shows its panel),
-//  - "custom": your own SOCKS5 or HTTPS proxy (a VPS, Tor, a VPN app's proxy).
-// While on, DNS goes through the tunnel and WebRTC cannot leak the real IP.
+// Orbit VPN: one switch that routes all browsing through a tunnel you
+// choose: Tor, a VPN app's local proxy, or your own SOCKS5/HTTPS server.
+// While on, DNS goes through the tunnel and WebRTC cannot leak the real IP;
+// if the server stops answering nothing goes out (no fallback to direct).
 var OrbitVPN = {
   WIDGET: "orbit-vpn-button",
   // Prefs set while the custom tunnel is on, restored when it goes off.
@@ -26,11 +24,20 @@ var OrbitVPN = {
       offD: fr ? "Connexion directe." : "Direct connection.",
       noServer: fr ? "Ajoute d'abord un serveur dans Paramètres › Vie privée." : "Add a server first in Settings › Privacy.",
       bad: fr ? "Adresse invalide. Exemple : socks5://127.0.0.1:9050" : "Invalid address. Example: socks5://127.0.0.1:9050",
-      mozilla: fr ? "Ouvre le panneau du VPN de Mozilla pour te connecter." : "Opening Mozilla's VPN panel to sign in.",
     }[k];
   },
 
+  // One-click servers for the simple mode.
+  PRESETS: [
+    ["tor-browser", "socks5://127.0.0.1:9150"],
+    ["tor", "socks5://127.0.0.1:9050"],
+  ],
+
   init() {
+    // Gecko's own (Mozilla-account) VPN is not part of Orbit.
+    if (Orbit.pref("orbit.vpn.mode", "custom") != "custom") Services.prefs.setStringPref("orbit.vpn.mode", "custom");
+    Services.prefs.clearUserPref("browser.ipProtection.enabled");
+    if (CustomizableUI.getPlacementOfWidget("ipprotection-button")) CustomizableUI.removeWidgetFromArea("ipprotection-button");
     this.migrate();
     // App-wide widget: the first window creates it, later ones get "exists".
     try {
@@ -40,7 +47,7 @@ var OrbitVPN = {
         defaultArea: CustomizableUI.AREA_NAVBAR,
         label: "Orbit VPN",
         tooltiptext: "Orbit VPN",
-        onCommand: e => e.target.ownerGlobal.OrbitVPN.toggle(),
+        onCommand: e => e.target.ownerGlobal.OrbitVPN.togglePanel(e.target),
       });
     } catch {}
     this.paint();
@@ -51,8 +58,7 @@ var OrbitVPN = {
 
   // Only the first window applies saved state (prefs are global).
   migrate() {
-    if (Orbit.pref("orbit.vpn.enabled", false) && Orbit.pref("orbit.vpn.mode", "custom") == "custom" &&
-        Orbit.pref("network.proxy.type", 5) != 1) {
+    if (Orbit.pref("orbit.vpn.enabled", false) && Orbit.pref("network.proxy.type", 5) != 1) {
       this.apply(true, { quiet: true });
     }
   },
@@ -62,6 +68,155 @@ var OrbitVPN = {
     const on = Orbit.pref("orbit.vpn.enabled", false);
     node.toggleAttribute("orbit-on", on);
     node.setAttribute("tooltiptext", on ? this.t("on") : this.t("off"));
+  },
+
+  // ---- panel (toolbar button) ------------------------------------------------------
+  P(k) {
+    const fr = Orbit.lang() == "fr";
+    return {
+      on: fr ? "Protégé" : "Protected", off: fr ? "Non protégé" : "Not protected",
+      onD: fr ? "Ton adresse IP est masquée" : "Your IP address is hidden",
+      offD: fr ? "Les sites voient ton adresse IP" : "Sites can see your IP address",
+      via: fr ? "Via" : "Via", noServer: fr ? "Aucun serveur" : "No server",
+      check: fr ? "Vérifier mon IP" : "Check my IP", checking: fr ? "Vérification…" : "Checking…",
+      ip: fr ? "IP visible par les sites : " : "IP seen by sites: ", ipFail: fr ? "Impossible de joindre le service de vérification." : "Could not reach the check service.",
+      advanced: fr ? "Mode avancé" : "Advanced mode", simple: fr ? "Mode simple" : "Simple mode",
+      choose: fr ? "Choisis un serveur pour commencer :" : "Pick a server to start:",
+      "tor-browser": fr ? "Tor Browser ouvert" : "Tor Browser running", tor: fr ? "Service Tor" : "Tor service",
+      own: fr ? "Mon serveur…" : "My server…",
+      torD: fr ? "Tor est gratuit : lance Tor Browser (ou le service Tor) puis active Orbit VPN." : "Tor is free: start Tor Browser (or the Tor service), then turn Orbit VPN on.",
+      server: fr ? "SERVEUR" : "SERVER",
+      serverD: fr ? "SOCKS5 ou HTTPS : un VPS, Tor (socks5://127.0.0.1:9050) ou le proxy d'une appli VPN." : "SOCKS5 or HTTPS: a VPS, Tor (socks5://127.0.0.1:9050) or a VPN app's proxy.",
+      dns: fr ? "DNS dans le tunnel" : "DNS through the tunnel", webrtc: fr ? "Bloquer les fuites WebRTC" : "Block WebRTC leaks",
+      bypass: fr ? "EXCEPTIONS" : "EXCEPTIONS", bypassD: fr ? "Sites qui ne passent pas par le VPN, séparés par des virgules." : "Sites that skip the VPN, comma separated.",
+      kill: fr ? "Si le serveur ne répond plus, rien ne passe : aucune fuite de ton IP." : "If the server stops answering, nothing goes through: your IP never leaks.",
+    }[k];
+  },
+
+  togglePanel(anchor) {
+    if (document.getElementById("orbit-vpn-panel")) return this.closePanel();
+    this.openPanel(anchor);
+  },
+
+  openPanel(anchor) {
+    const h = Orbit.h.bind(Orbit);
+    const S = OrbitSettings;
+    const p = Services.prefs;
+    const panel = h("div", { id: "orbit-vpn-panel", class: "orbit-panel", role: "dialog", "aria-label": "Orbit VPN" });
+    const render = () => {
+      const on = Orbit.pref("orbit.vpn.enabled", false);
+      const server = this.parse(Orbit.pref("orbit.vpn.server", ""));
+      const adv = Orbit.pref("orbit.vpn.advanced", false);
+      const ipLine = h("div", { class: "orbit-vpn-ip" });
+      const children = [
+        h("div", { class: "orbit-vpn-hero", on },
+          h("div", { class: "orbit-vpn-shield" }, Orbit.icon(on ? "shield-check" : "shield")),
+          h("div", { class: "orbit-vpn-state" },
+            h("b", {}, on ? this.P("on") : this.P("off")),
+            h("span", {}, on ? this.P("onD") : this.P("offD"))),
+          S.switch(on, v => { this.apply(v); setTimeout(render, 50); })),
+        h("div", { class: "orbit-vpn-row" },
+          h("span", {}, `${this.P("via")} `, h("b", {}, server ? this.label(Orbit.pref("orbit.vpn.server", "")) : this.P("noServer"))),
+          h("button", { class: "orbit-toast-link", onclick: () => this.checkIP(ipLine) }, this.P("check"))),
+        ipLine,
+      ];
+      // Simple mode with no server yet: one-click choices.
+      if (!server && !adv) {
+        children.push(h("div", { class: "orbit-vpn-adv" },
+          h("div", { class: "orbit-setting-desc" }, this.P("choose")),
+          h("div", { class: "orbit-vpn-presets" },
+            ...this.PRESETS.map(([key, url]) => h("button", { class: "orbit-edit-chip", onclick: () => {
+              p.setStringPref("orbit.vpn.server", url);
+              render();
+            } }, this.P(key))),
+            h("button", { class: "orbit-edit-chip", onclick: () => { p.setBoolPref("orbit.vpn.advanced", true); render(); } }, this.P("own"))),
+          h("div", { class: "orbit-setting-desc" }, this.P("torD"))));
+      }
+      if (adv) {
+        const input = h("input", {
+          class: "orbit-input", placeholder: "socks5://127.0.0.1:9050", spellcheck: "false", value: Orbit.pref("orbit.vpn.server", ""),
+          onchange: () => {
+            const v = input.value.trim();
+            const ok = !v || this.parse(v);
+            input.toggleAttribute("invalid", !ok);
+            if (!ok) return;
+            p.setStringPref("orbit.vpn.server", v);
+            if (Orbit.pref("orbit.vpn.enabled", false)) this.apply(true, { quiet: true });
+            render();
+          },
+        });
+        const bypass = h("input", {
+          class: "orbit-input", spellcheck: "false", value: Orbit.pref("orbit.vpn.bypass", "localhost, 127.0.0.1"),
+          onchange: () => {
+            p.setStringPref("orbit.vpn.bypass", bypass.value.trim());
+            if (Orbit.pref("orbit.vpn.enabled", false)) this.apply(true, { quiet: true });
+          },
+        });
+        const reapply = () => Orbit.pref("orbit.vpn.enabled", false) && this.apply(true, { quiet: true });
+        children.push(h("div", { class: "orbit-vpn-adv" },
+          ...[
+            h("div", { class: "orbit-sheet-kicker" }, this.P("server")), input,
+            h("div", { class: "orbit-vpn-presets" }, ...this.PRESETS.map(([key, url]) => h("button", { class: "orbit-edit-chip", onclick: () => {
+              p.setStringPref("orbit.vpn.server", url);
+              if (Orbit.pref("orbit.vpn.enabled", false)) this.apply(true, { quiet: true });
+              render();
+            } }, this.P(key)))),
+            h("div", { class: "orbit-setting-desc" }, this.P("serverD")),
+            h("label", { class: "orbit-vpn-toggle" }, h("span", {}, this.P("dns")),
+              S.switch(Orbit.pref("orbit.vpn.dns", true), v => { p.setBoolPref("orbit.vpn.dns", v); reapply(); })),
+            h("label", { class: "orbit-vpn-toggle" }, h("span", {}, this.P("webrtc")),
+              S.switch(Orbit.pref("orbit.vpn.webrtc", true), v => { p.setBoolPref("orbit.vpn.webrtc", v); reapply(); })),
+            h("div", { class: "orbit-sheet-kicker" }, this.P("bypass")), bypass,
+            h("div", { class: "orbit-setting-desc" }, this.P("bypassD")),
+            h("div", { class: "orbit-vpn-note" }, Orbit.icon("shield"), h("span", {}, this.P("kill"))),
+          ]));
+      }
+      children.push(h("div", { class: "orbit-vpn-foot" },
+        h("span", {}, "Orbit VPN"),
+        h("button", { class: "orbit-toast-link", onclick: () => { p.setBoolPref("orbit.vpn.advanced", !adv); render(); } },
+          adv ? this.P("simple") : this.P("advanced"))));
+      panel.replaceChildren(...children);
+    };
+    render();
+    document.body.append(panel);
+    const r = anchor.getBoundingClientRect();
+    panel.style.top = `${Math.round(r.bottom + 6)}px`;
+    panel.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
+    anchor.setAttribute("open", "true");
+    this._anchor = anchor;
+    this._outside = e => !panel.contains(e.target) && !anchor.contains(e.target) && this.closePanel();
+    this._key = e => e.key == "Escape" && this.closePanel();
+    window.addEventListener("mousedown", this._outside, true);
+    window.addEventListener("keydown", this._key, true);
+  },
+
+  closePanel() {
+    window.removeEventListener("mousedown", this._outside, true);
+    window.removeEventListener("keydown", this._key, true);
+    this._anchor?.removeAttribute("open");
+    const panel = document.getElementById("orbit-vpn-panel");
+    if (!panel) return;
+    panel.setAttribute("closing", "true");
+    setTimeout(() => panel.remove(), 140);
+  },
+
+  label(url) {
+    const preset = this.PRESETS.find(([, u]) => u == url);
+    if (preset) return this.P(preset[0]);
+    const s = this.parse(url);
+    return s ? `${s.host}:${s.port}` : url;
+  },
+
+  // Asks a public "what is my IP" service, through the tunnel when it is on.
+  async checkIP(line) {
+    line.textContent = this.P("checking");
+    try {
+      const res = await fetch("https://api.ipify.org?format=json", { cache: "no-store", credentials: "omit" });
+      const { ip } = await res.json();
+      line.textContent = this.P("ip") + String(ip).slice(0, 45);
+    } catch {
+      line.textContent = this.P("ipFail");
+    }
   },
 
   // "socks5://host:port" | "http(s)://host:port" -> { kind, host, port } or null.
@@ -77,19 +232,11 @@ var OrbitVPN = {
 
   apply(on, { quiet = false } = {}) {
     const p = Services.prefs;
-    const mode = Orbit.pref("orbit.vpn.mode", "custom");
-    if (mode == "mozilla") {
-      p.setBoolPref("browser.ipProtection.enabled", true);
-      p.setBoolPref("orbit.vpn.enabled", false);
-      if (!quiet) OrbitNotify.show({ kind: "vpn", icon: "shield", title: this.t("name"), text: this.t("mozilla"), timeout: 5000 });
-      setTimeout(() => document.getElementById("ipprotection-button")?.click(), 300);
-      return;
-    }
     if (on) {
       const server = this.parse(Orbit.pref("orbit.vpn.server", ""));
       if (!server) {
         if (!quiet) OrbitNotify.show({ kind: "vpn", icon: "shield", tone: "warm", title: this.t("name"), text: this.t("noServer"), timeout: 6000 });
-        OrbitSettings.open("privacy");
+        Services.prefs.setBoolPref("orbit.vpn.advanced", true);
         return;
       }
       // Remember the user's own proxy settings once, to restore them later.
@@ -99,7 +246,8 @@ var OrbitVPN = {
         p.setStringPref("orbit.vpn.saved", JSON.stringify(saved));
       }
       p.setIntPref("network.proxy.type", 1);
-      p.setStringPref("network.proxy.no_proxies_on", "");
+      // Only the sites listed in "bypass" skip the tunnel (local addresses by default).
+      p.setStringPref("network.proxy.no_proxies_on", Orbit.pref("orbit.vpn.bypass", "localhost, 127.0.0.1"));
       if (server.kind == "http") {
         for (const k of ["http", "ssl"]) {
           p.setStringPref(`network.proxy.${k}`, server.host);
@@ -110,14 +258,15 @@ var OrbitVPN = {
         p.setStringPref("network.proxy.socks", server.host);
         p.setIntPref("network.proxy.socks_port", server.port);
         p.setIntPref("network.proxy.socks_version", server.kind == "socks4" ? 4 : 5);
-        // DNS lookups go through the tunnel too.
-        p.setBoolPref("network.proxy.socks_remote_dns", true);
+        // DNS lookups go through the tunnel too (unless turned off in advanced mode).
+        p.setBoolPref("network.proxy.socks_remote_dns", Orbit.pref("orbit.vpn.dns", true));
         p.setStringPref("network.proxy.http", "");
         p.setStringPref("network.proxy.ssl", "");
       }
       // No WebRTC leak of the real address.
-      p.setBoolPref("media.peerconnection.ice.proxy_only_if_behind_proxy", true);
-      p.setBoolPref("media.peerconnection.ice.default_address_only", true);
+      const webrtc = Orbit.pref("orbit.vpn.webrtc", true);
+      p.setBoolPref("media.peerconnection.ice.proxy_only_if_behind_proxy", webrtc);
+      p.setBoolPref("media.peerconnection.ice.default_address_only", webrtc);
       p.setBoolPref("orbit.vpn.enabled", true);
       if (!quiet) OrbitNotify.show({ kind: "vpn", icon: "shield", tone: "ok", title: this.t("on"), text: this.t("onD").replace("{h}", server.host), timeout: 4000 });
     } else {

@@ -14,6 +14,7 @@ var OrbitSettings = {
       id: "general", icon: "settings-2",
       items: [
         { kind: "language" },
+        { kind: "updates" },
         { kind: "font" },
         { kind: "choice", pref: "browser.theme.toolbar-theme", label: "scheme",
           options: [[0, "scheme.dark"], [1, "scheme.light"], [2, "scheme.system"]] },
@@ -34,6 +35,8 @@ var OrbitSettings = {
         { kind: "toggle", pref: "orbit.effects.nebula", label: "nebula" },
         { kind: "toggle", pref: "orbit.effects.grain", label: "grain" },
         { kind: "toggle", pref: "orbit.effects.animations", label: "animations" },
+        { kind: "mods" },
+        { kind: "link", label: "themes", icon: "palette", action: () => BrowserAddonUI.openAddonsMgr("addons://list/theme") },
       ],
     },
     {
@@ -52,7 +55,7 @@ var OrbitSettings = {
         { kind: "toggle", pref: "orbit.glance.enabled", label: "glance" },
                 { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
         { kind: "link", label: "advanced", icon: "external-link", action: () => openPreferences() },
-        { kind: "link", label: "import", icon: "upload", action: () => MigrationUtils.showMigrationWizard(window, {}) },
+        { kind: "link", label: "import", icon: "upload", action: () => OrbitImport.open() },
       ],
     },
     {
@@ -105,6 +108,8 @@ var OrbitSettings = {
     fr: {
       title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
+      themes: "Thèmes Firefox", "themes.d": "Installe un thème depuis addons.mozilla.org : Orbit prend ses couleurs",
+      updates: "Mises à jour", "updates.d": "Automatiques : installées au redémarrage. Me demander : une fenêtre présente les nouveautés au lancement",
       memory: "Mémoire", ai: "Intelligence artificielle", notify: "Notifications", privacy: "Vie privée", shortcuts: "Raccourcis",
       blocker: "Orbit Blocker", "blocker.d": "Bloque pubs, pisteurs, logiciels espions, bannières de cookies et l'accès des sites à ton réseau local",
       strict: "Protection renforcée contre le pistage", "strict.d": "Bloque aussi les cookies tiers et le contenu de pistage dans toutes les fenêtres",
@@ -155,6 +160,8 @@ var OrbitSettings = {
     en: {
       title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
+      themes: "Firefox themes", "themes.d": "Install a theme from addons.mozilla.org: Orbit takes its colors",
+      updates: "Updates", "updates.d": "Automatic: installed on restart. Ask me: a window shows what's new at launch",
       memory: "Memory", ai: "Artificial intelligence", notify: "Notifications", privacy: "Privacy", shortcuts: "Shortcuts",
       blocker: "Orbit Blocker", "blocker.d": "Blocks ads, trackers, spyware, cookie banners and sites probing your local network",
       strict: "Strict tracking protection", "strict.d": "Also blocks third-party cookies and tracking content everywhere",
@@ -351,6 +358,15 @@ var OrbitSettings = {
         return this.row(this.segmented(item.options, Orbit.pref(item.pref, ""), v => p.setStringPref(item.pref, v)), item.label);
       case "info":
         return this.row(null, item.label);
+      case "updates": {
+        const fr = Orbit.lang() == "fr";
+        const seg = this.segmented([["auto", fr ? "Automatiques" : "Automatic"], ["ask", fr ? "Me demander" : "Ask me"]], "auto",
+          v => OrbitUpdates.setAuto(v == "auto"));
+        OrbitUpdates.isAuto().then(auto => !auto && seg.querySelector('[data-v="ask"]')?.click());
+        return this.row(seg, "updates");
+      }
+      case "mods":
+        return this.renderMods();
       case "strict":
         return this.row(this.switch(Orbit.pref("browser.contentblocking.category", "standard") == "strict",
           on => p.setStringPref("browser.contentblocking.category", on ? "strict" : "standard")), "strict");
@@ -384,6 +400,30 @@ var OrbitSettings = {
     return null;
   },
 
+  renderMods() {
+    const h = Orbit.h.bind(Orbit);
+    const fr = Orbit.lang() == "fr";
+    const list = h("div", { class: "orbit-mods-list" });
+    const fill = async () => {
+      const names = await OrbitMods.list();
+      const off = OrbitMods.disabled();
+      list.replaceChildren(...(names.length ? names.map(n => h("div", { class: "orbit-mods-item" },
+        h("span", {}, n), this.switch(!off.has(n), on => OrbitMods.toggle(n, on))))
+        : [h("div", { class: "orbit-setting-desc" }, fr ? "Aucun mod pour l'instant." : "No mods yet.")]));
+    };
+    fill();
+    return h("div", { class: "orbit-setting orbit-setting-col" },
+      h("div", { class: "orbit-setting-text" },
+        h("div", { class: "orbit-setting-label" }, fr ? "Mods" : "Mods"),
+        h("div", { class: "orbit-setting-desc" }, fr
+          ? "Des fichiers .css qui changent l'interface d'Orbit : couleurs, tailles, animations. userChrome.css fonctionne aussi."
+          : ".css files that change Orbit's interface: colors, sizes, animations. userChrome.css works too.")),
+      list,
+      h("div", { class: "orbit-mods-actions" },
+        h("button", { class: "orbit-button", onclick: () => OrbitMods.openFolder() }, Orbit.icon("external-link"), fr ? "Ouvrir le dossier" : "Open folder"),
+        h("button", { class: "orbit-button", onclick: async () => { await OrbitMods.apply(); fill(); } }, Orbit.icon("refresh-cw"), fr ? "Recharger" : "Reload")));
+  },
+
   renderVPN() {
     const h = Orbit.h.bind(Orbit);
     const p = Services.prefs;
@@ -412,8 +452,6 @@ var OrbitSettings = {
             ? "Masque ton adresse IP. Les DNS passent par le tunnel et WebRTC ne peut pas révéler ta vraie IP."
             : "Hides your IP address. DNS goes through the tunnel and WebRTC cannot reveal your real IP.")),
         this.switch(Orbit.pref("orbit.vpn.enabled", false), on => OrbitVPN.apply(on))),
-      this.segmented([["custom", fr ? "Mon serveur" : "My server"], ["mozilla", fr ? "VPN gratuit de Mozilla" : "Mozilla's free VPN"]],
-        Orbit.pref("orbit.vpn.mode", "custom"), v => { p.setStringPref("orbit.vpn.mode", v); sync(); }),
       custom);
   },
 

@@ -1154,7 +1154,7 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 /* ==========================================================================
    App menu (Orbit's own) and native menus / panels in Orbit colors
    ========================================================================== */
-:is(#orbit-menu, .orbit-ctx) {
+:is(#orbit-menu, .orbit-ctx, .orbit-panel) {
   position: fixed;
   z-index: 45;
   min-width: 270px;
@@ -1565,52 +1565,6 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
 /* ==========================================================================
    Bookmark panel (star)
    ========================================================================== */
-#editBookmarkPanel {
-  --panel-width: 340px;
-  & .panel-header { min-height: 40px; }
-  & #editBookmarkPanelContent { padding: 4px 6px !important; gap: 4px; }
-  & label { color: var(--orbit-fg-dim) !important; font-size: 12px !important; margin: 8px 0 4px !important; }
-  & :is(input, html|input, menulist, #editBMPanel_namePicker, #editBMPanel_tagsField) {
-    appearance: none !important;
-    min-height: 34px !important;
-    padding-inline: 10px !important;
-    border-radius: var(--orbit-radius) !important;
-    border: 1px solid var(--orbit-border) !important;
-    background: var(--orbit-field) !important;
-    color: var(--orbit-fg) !important;
-    outline: none !important;
-    box-shadow: none !important;
-    &:focus-within, &:focus { border-color: color-mix(in srgb, var(--orbit-fg) 30%, transparent) !important; }
-  }
-  & #editBMPanel_foldersExpander {
-    border-radius: var(--orbit-radius) !important;
-    border: 1px solid var(--orbit-border) !important;
-    background: var(--orbit-field) !important;
-    outline: none !important;
-  }
-  & checkbox { font-size: 12px; color: var(--orbit-fg-dim); }
-  & .panel-footer {
-    gap: 8px !important;
-    padding: 10px 8px 6px !important;
-    background: none !important;
-    & button {
-      flex: 1;
-      min-height: 32px !important;
-      margin: 0 !important;
-      border: none !important;
-      border-radius: var(--orbit-radius) !important;
-      background: var(--orbit-hover) !important;
-      color: var(--orbit-fg) !important;
-      font-weight: 500 !important;
-      &:hover { background: var(--orbit-active) !important; }
-    }
-    & button[default="true"], & #editBookmarkPanelDoneButton {
-      background: var(--orbit-c1) !important;
-      color: white !important;
-      &:hover { filter: brightness(1.1); }
-    }
-  }
-}
 #star-button-box:hover { background: var(--orbit-hover) !important; border-radius: var(--orbit-radius) !important; }
 
 /* ==========================================================================
@@ -2414,3 +2368,305 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 
 #tabs-newtab-button > .toolbarbutton-text { flex: 1; text-align: start !important; padding-inline-start: 8px !important; }
 #tabbrowser-tabs:not([expanded]) > #tabs-newtab-button > .toolbarbutton-text { display: none; }
+
+/* Orbit VPN panel. */
+.orbit-panel { width: 320px; min-width: 0; padding: 0; overflow: hidden; z-index: 47 !important; }
+.orbit-vpn-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 12px;
+  padding: 14px;
+  border-radius: 10px;
+  background: var(--orbit-field);
+  & .orbit-vpn-state { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  & b { font-size: 15px; font-weight: 600; color: #ff9a76; }
+  & span { font-size: 12.5px; color: var(--orbit-fg-dim); }
+  &[on] b { color: #7ee2a8; }
+}
+.orbit-vpn-shield {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #ff9a76;
+  background: rgb(255 154 118 / .12);
+  transition: color .2s, background-color .2s;
+  & .orbit-icon { width: 22px; height: 22px; }
+  .orbit-vpn-hero[on] & { color: #7ee2a8; background: rgb(126 226 168 / .12); }
+}
+.orbit-vpn-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 0 16px; font-size: 12.5px; color: var(--orbit-fg-dim);
+  & b { color: var(--orbit-fg); font-weight: 500; } }
+.orbit-vpn-ip { padding: 4px 16px 10px; font-size: 12px; color: var(--orbit-fg-dim); min-height: 4px; }
+.orbit-vpn-adv { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--orbit-border);
+  & .orbit-sheet-kicker { margin-top: 4px; } }
+.orbit-vpn-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 13px; }
+.orbit-vpn-note { display: flex; gap: 8px; align-items: flex-start; padding: 10px; border-radius: 7px; font-size: 12px; line-height: 1.4;
+  color: var(--orbit-fg-dim); background: rgb(126 226 168 / .07);
+  & .orbit-icon { width: 14px; height: 14px; flex-shrink: 0; margin-top: 1px; color: #7ee2a8; } }
+.orbit-vpn-foot { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px 12px;
+  border-top: 1px solid var(--orbit-border); font-size: 12px; color: var(--orbit-fg-dim); }
+#orbit-vpn-button[orbit-on] { list-style-image: url("chrome://orbit/content/icons/shield-check.svg"); }
+
+/* ==========================================================================
+   Folders (tab groups): icon, count, nesting, pinned; paused tabs
+   ========================================================================== */
+#vertical-tabs tab-group {
+  margin-inline-start: calc(var(--orbit-folder-depth, 0) * 14px) !important;
+  &[orbit-folder-hidden] { display: none !important; }
+  & .tab-group-label-container {
+    margin-inline-start: calc(var(--orbit-folder-depth, 0) * 14px) !important;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding-inline: 8px !important;
+    border-radius: var(--orbit-radius);
+    &:hover { background: var(--orbit-hover); }
+  }
+  & .orbit-folder-icon { width: 15px; height: 15px; flex-shrink: 0; color: var(--tab-group-color, var(--orbit-accent)); }
+  & .tab-group-label-hover-highlight {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    background: none !important;
+  }
+  & .tab-group-label {
+    flex: 1;
+    min-width: 0;
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    padding: 0 !important;
+    border: none !important;
+    outline: none !important;
+    background: none !important;
+    color: var(--orbit-fg) !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-align: start;
+    &::after {
+      content: attr(data-count);
+      margin-inline-start: auto;
+      font-size: 10.5px;
+      font-weight: 500;
+      color: var(--orbit-fg-dim);
+    }
+  }
+  &[orbit-pinned] .tab-group-label::after { content: "\2022  " attr(data-count); color: var(--orbit-accent); }
+  & > .tabbrowser-tab { padding-inline-start: 22px !important; }
+  &[collapsed] .orbit-folder-icon { opacity: .7; }
+}
+
+/* Sleeping (unloaded) tabs: dimmed, with "EN PAUSE" like the design. */
+#vertical-tabs .tabbrowser-tab[pending]:not([pinned]) {
+  & .tab-label-container { opacity: .55; }
+  & .tab-content::after {
+    content: "EN PAUSE";
+    margin-inline-start: auto;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: .06em;
+    color: var(--orbit-fg-dim);
+  }
+  &:hover .tab-content::after { display: none; }
+}
+:root[orbit-lang="en"] #vertical-tabs .tabbrowser-tab[pending]:not([pinned]) .tab-content::after { content: "ASLEEP"; }
+#tabbrowser-tabs:not([expanded]) .tabbrowser-tab[pending] .tab-content::after { display: none; }
+
+#orbit-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(6, 32px);
+  gap: 2px;
+  padding: 8px;
+  min-width: 0;
+  & .orbit-icon-button { width: 32px; height: 32px; }
+  & .orbit-icon-button[active] { background: color-mix(in srgb, var(--orbit-accent) 22%, transparent); color: var(--orbit-fg); }
+}
+.orbit-vpn-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Space-pinned tabs: a divider under the block, like Zen. */
+#vertical-tabs .tabbrowser-tab[orbit-kept-last] {
+  margin-bottom: 9px !important;
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: -5px;
+    height: 1px;
+    background: var(--orbit-border);
+    pointer-events: none;
+  }
+}
+#vertical-tabs .tabbrowser-tab[orbit-kept]:not([selected]) .tab-label { color: var(--orbit-fg) !important; }
+/* While dragging, the top of the list invites pinning. */
+:root[orbit-dragging="tab"]:not([orbit-has-kept]) #tabbrowser-arrowscrollbox {
+  box-shadow: inset 0 2px 0 color-mix(in srgb, var(--orbit-accent) 70%, transparent);
+  border-radius: var(--orbit-radius) var(--orbit-radius) 0 0;
+}
+
+#vertical-tabs .tabbrowser-tab .tab-label-container { flex: 1 1 0 !important; min-width: 0 !important; }
+
+/* ==========================================================================
+   Bookmark popup: compact Orbit card
+   ========================================================================== */
+#editBookmarkPanel {
+  --panel-width: 340px;
+  --arrowpanel-padding: 0;
+  & .panel-header {
+    justify-content: flex-start !important;
+    padding: 16px 16px 4px !important;
+    & h1, & #editBookmarkPanelTitle { font-size: 15px !important; font-weight: 600 !important; text-align: start !important; margin: 0 !important; }
+  }
+  & #editBookmarkHeaderSeparator { display: none !important; }
+  & .panel-subview-body { padding: 0 !important; }
+}
+#editBookmarkPanelContent {
+  padding: 8px 16px 4px !important;
+  gap: 6px !important;
+  & > label { margin: 8px 0 0 !important; font-size: 10.5px !important; font-weight: 600 !important;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--orbit-fg-dim) !important; }
+  & :is(#editBMPanel_namePicker, #editBMPanel_locationField, #editBMPanel_tagsField, #editBMPanel_keywordField) {
+    width: 100% !important;
+    box-sizing: border-box;
+    height: 36px !important;
+    margin: 0 !important;
+    padding: 0 12px !important;
+    border: none !important;
+    border-radius: var(--orbit-radius) !important;
+    outline: none !important;
+    font: inherit !important;
+    font-size: 13.5px !important;
+    color: var(--orbit-fg) !important;
+    background: var(--orbit-field) !important;
+    box-shadow: inset 0 0 0 1px var(--orbit-border) !important;
+    &:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-accent) 60%, transparent) !important; }
+  }
+  & #editBMPanel_folderMenuList, & #editBMPanel_foldersExpander, & #editBMPanel_tagsSelectorExpander {
+    min-height: 36px !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: var(--orbit-radius) !important;
+    background: var(--orbit-field) !important;
+    box-shadow: inset 0 0 0 1px var(--orbit-border) !important;
+    color: var(--orbit-fg) !important;
+  }
+  & #editBMPanel_folderMenuList { flex: 1; padding-inline: 10px !important; }
+  & #editBMPanel_foldersExpander, & #editBMPanel_tagsSelectorExpander { min-width: 36px !important; width: 36px !important; margin-inline-start: 6px !important; }
+  & #editBMPanel_folderTree { border-radius: var(--orbit-radius) !important; border: 1px solid var(--orbit-border) !important; background: var(--orbit-field) !important; }
+}
+#editBookmarkPanelBottomContent {
+  padding: 4px 16px 0 !important;
+  & checkbox { font-size: 12.5px !important; color: var(--orbit-fg-dim) !important; margin: 6px 0 !important; }
+}
+#editBookmarkPanel .panel-footer {
+  box-sizing: border-box;
+  width: 100% !important;
+  display: flex !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  padding: 12px 16px 16px !important;
+  background: none !important;
+  & .footer-button {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    max-width: calc(50% - 4px) !important;
+    height: 34px !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: var(--orbit-radius) !important;
+    font: inherit !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--orbit-fg) !important;
+    background: var(--orbit-field) !important;
+    cursor: pointer;
+    &:hover { background: var(--orbit-active) !important; }
+  }
+  & #editBookmarkPanelDoneButton { order: 2; font-weight: 600 !important; color: #06070f !important; background: #7c86ff !important;
+    &:hover { filter: brightness(1.08); } }
+}
+
+/* Update window. */
+.orbit-update-card { width: min(520px, calc(100vw - 40px)); padding: 24px; gap: 18px; }
+.orbit-update-head { display: flex; gap: 16px; align-items: center;
+  & img { width: 52px; height: 52px; padding: 10px; box-sizing: border-box; border-radius: 12px; background: #000; box-shadow: 0 0 0 1px rgb(255 255 255 / .1); } }
+.orbit-update-title { font-size: 24px; font-weight: 600; letter-spacing: -.03em; margin: 2px 0; }
+.orbit-update-notes { max-height: 300px; overflow-y: auto; padding: 14px 16px; border-radius: 10px; background: var(--orbit-field);
+  font-size: 13.5px; line-height: 1.5;
+  & h4 { margin: 12px 0 4px; font-size: 14px; font-weight: 600; }
+  & p { margin: 6px 0; color: var(--orbit-fg-dim); }
+  & ul { margin: 6px 0; padding-inline-start: 18px; }
+  & li { margin: 3px 0; } }
+.orbit-update-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ==========================================================================
+   Firefox themes: an add-on theme takes over Orbit's colors
+   ========================================================================== */
+:root[orbit-addon-theme] {
+  --orbit-base: var(--lwt-accent-color, #030305) !important;
+  --orbit-fg: var(--lwt-text-color, #ececf1) !important;
+  --orbit-fg-dim: color-mix(in srgb, var(--lwt-text-color, #ececf1) 60%, transparent) !important;
+  --orbit-card: var(--toolbar-bgcolor, #0b0b0e) !important;
+  --orbit-panel: var(--arrowpanel-background, var(--toolbar-bgcolor, #121216)) !important;
+  --orbit-accent: var(--lwt-tab-line-color, var(--focus-outline-color, #7c86ff)) !important;
+  --orbit-c1: var(--lwt-tab-line-color, var(--focus-outline-color, #7c86ff)) !important;
+  --orbit-active: color-mix(in srgb, var(--lwt-text-color, #fff) 14%, transparent) !important;
+  --orbit-hover: color-mix(in srgb, var(--lwt-text-color, #fff) 7%, transparent) !important;
+  & #orbit-liquid, & #orbit-grain { display: none !important; }
+  &:not([customizing]) {
+    background: var(--lwt-accent-color) var(--lwt-header-image, none) no-repeat right top !important;
+    background-size: auto 100% !important;
+  }
+}
+
+/* Mods list in Settings. */
+.orbit-mods-list { display: flex; flex-direction: column; gap: 4px; }
+.orbit-mods-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0;
+  font-size: 13px; border-top: 1px solid var(--orbit-border); }
+.orbit-mods-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Import window. */
+.orbit-import-card { width: min(560px, calc(100vw - 40px)); padding: 0 24px 22px; gap: 14px; }
+.orbit-import-top { padding: 24px 0 4px !important; align-items: flex-start !important; & > div { flex: 1; } }
+.orbit-import-list { display: flex; flex-direction: column; gap: 8px; }
+.orbit-import-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / .035);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .06);
+  & img { width: 34px; height: 34px; }
+  & b { font-size: 14px; font-weight: 600; }
+  & .orbit-toast-b1 { flex-shrink: 0; }
+  & .orbit-import-done { background: #7ee2a8 !important; }
+}
+.orbit-import-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.orbit-import-chips { display: flex; flex-wrap: wrap; gap: 4px;
+  & span { font-size: 11px; padding: 2px 7px; border-radius: 5px; background: var(--orbit-field); color: var(--orbit-fg-dim); } }
+.orbit-import-more { align-self: flex-start; font-size: 12.5px; }
+
+/* Container tabs: a slim colored bar on the left of the tab, and color dots in menus. */
+#vertical-tabs .tabbrowser-tab[usercontextid] .tab-context-line {
+  position: absolute !important;
+  inset-inline-start: 2px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px !important;
+  height: auto !important;
+  margin: 0 !important;
+  border-radius: 2px;
+  background-color: var(--identity-tab-color) !important;
+}
+#vertical-tabs .tabbrowser-tab[usercontextid] .tab-stack { position: relative; }
+#vertical-tabs .tabbrowser-tab[usercontextid] .tab-background {
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--identity-tab-color) 14%, transparent), transparent 60%) !important;
+}
+.orbit-ctx-container .orbit-icon { color: var(--identity-icon-color, var(--identity-tab-color)); }

@@ -32,9 +32,12 @@ cpSync(join(dist, "orbit.installer.exe"), join(out, installer));
 cpSync(join(dist, "update/browser"), join(root, "updates/browser"), { recursive: true });
 console.log(`Release ${version} ready in dist/release, update manifest copied to updates/browser/.`);
 
+// Patch notes shown in Orbit's update window: notes/<version>.md (Markdown).
+const notesFile = join(root, "notes", `${version}.md`);
+const notesArgs = existsSync(notesFile) ? ["--notes-file", notesFile] : ["--notes", `Orbit ${version}`];
 if (process.argv.includes("--publish")) {
   execFileSync("gh", ["release", "create", version, join(out, "windows.mar"), join(out, installer),
-    "--repo", github.repo, "--title", `Orbit ${version}`, "--notes", `Orbit ${version}`], { stdio: "inherit" });
+    "--repo", github.repo, "--title", `Orbit ${version}`, ...notesArgs], { stdio: "inherit" });
   console.log("Now commit and push updates/browser/ so installed browsers see the update.");
 } else {
   console.log("Next: `node tools/release.mjs --publish`, then commit + push updates/browser/.");

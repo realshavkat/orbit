@@ -69,6 +69,21 @@ var OrbitEdit = {
     window.addEventListener("unload", () => CustomizableUI.removeListener(listener), { once: true });
   },
 
+  // "New container tab" entries, one per container, with its color.
+  containerItems(item) {
+    if (!Orbit.pref("privacy.userContext.enabled", false)) return [];
+    const fr = Orbit.lang() == "fr";
+    return ContextualIdentityService.getPublicIdentities().map(identity => {
+      const name = ContextualIdentityService.getUserContextLabel(identity.userContextId);
+      const el = item("plus", `${fr ? "Onglet" : "Tab"} ${name}`, () => {
+        const tab = gBrowser.addTrustedTab(OrbitTabs.homeURL(), { userContextId: identity.userContextId, inBackground: false });
+        OrbitSpaces.setTabSpace(tab, OrbitSpaces.activeId);
+      });
+      el.classList.add("orbit-ctx-container", `identity-color-${identity.color}`);
+      return el;
+    });
+  },
+
   decorateExtensions(view) {
     const fr = Orbit.lang() == "fr";
     for (const item of view.querySelectorAll(".unified-extensions-item")) {
@@ -97,6 +112,11 @@ var OrbitEdit = {
       item("pencil", this.t("edit"), () => this.enter()),
       h("div", { class: "orbit-menu-sep" }),
       item("plus", this.t("newSpace"), () => OrbitSpaces.edit(null)),
+      item("folder", OrbitFolders.t("newFolder"), () => {
+        const tab = OrbitSpaces.openTab();
+        gBrowser.addTabGroup([tab], { label: OrbitFolders.t("newFolder") });
+      }),
+      ...this.containerItems(item),
       item("panel-left", this.t("compact"), () => OrbitLayout.toggleCompact()),
       item("columns-2", this.t("side"), () => Services.prefs.setBoolPref("sidebar.position_start", !Orbit.pref("sidebar.position_start", true))),
       item("settings-2", this.t("layout"), () => OrbitSettings.open("layout")));
