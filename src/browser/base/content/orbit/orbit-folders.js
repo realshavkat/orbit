@@ -54,7 +54,7 @@ var OrbitFolders = {
       }, 0);
     };
     for (const type of ["TabGroupCreate", "TabGroupUpdate", "TabGrouped", "TabUngrouped", "TabOpen", "TabClose",
-      "TabAttrModified", "SSTabRestored", "TabGroupCollapse", "TabGroupExpand"]) {
+      "SSTabRestored", "TabGroupCollapse", "TabGroupExpand"]) {
       tc.addEventListener(type, schedule);
     }
     tc.addEventListener("TabGroupRemoved", e => {
@@ -85,12 +85,16 @@ var OrbitFolders = {
       const label = group.querySelector(".tab-group-label");
       const box = label?.parentNode;
       if (box) {
-        let img = box.querySelector(".orbit-folder-icon");
-        if (!img) {
-          img = Orbit.icon("folder", "orbit-icon orbit-folder-icon");
-          box.prepend(img);
+        // Design: chevron, then the folder's icon if it has one, else a color dot.
+        let chevron = box.querySelector(".orbit-folder-chevron");
+        if (!chevron) {
+          chevron = Orbit.icon("chevron-down", "orbit-icon orbit-folder-chevron");
+          box.prepend(chevron, Orbit.h("span", { class: "orbit-folder-dot" }), Orbit.icon("folder", "orbit-icon orbit-folder-icon"));
         }
-        img.src = `${Orbit.BASE}icons/${this.ICONS.includes(m.icon) ? m.icon : "folder"}.svg`;
+        const img = box.querySelector(".orbit-folder-icon");
+        img.hidden = !this.ICONS.includes(m.icon);
+        box.querySelector(".orbit-folder-dot").hidden = !img.hidden;
+        if (!img.hidden) img.src = `${Orbit.BASE}icons/${m.icon}.svg`;
         label.dataset.count = String(group.tabs.length);
       }
       group.toggleAttribute("orbit-pinned", !!m.pinned);

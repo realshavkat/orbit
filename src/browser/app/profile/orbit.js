@@ -151,3 +151,65 @@ pref("orbit.fonts.custom", "[]");
 pref("extensions.startupScanScopes", 4);
 // Only the profile and Orbit's own install dir may provide add-ons this way.
 pref("extensions.sideloadScopes", 5);
+
+// ---- Speed: results and pages show up sooner ---------------------------------
+// Address bar results with no artificial delay.
+pref("browser.urlbar.delay", 0);
+// More parallel connections and longer-lived DNS/TLS caches.
+pref("network.http.max-persistent-connections-per-server", 10);
+pref("network.http.speculative-parallel-limit", 10);
+pref("network.dnsCacheEntries", 1000);
+pref("network.dnsCacheExpiration", 3600);
+pref("network.ssl_tokens_cache_capacity", 10240);
+// Paint the page as soon as content arrives.
+pref("content.notify.interval", 100000);
+pref("gfx.webrender.all", true);
+// Restored tabs load only when opened (fast start, little memory).
+pref("browser.sessionstore.restore_on_demand", true);
+pref("browser.sessionstore.restore_pinned_tabs_on_demand", true);
+
+// ---- Security against profile theft --------------------------------------------
+// Windows sign-in before showing or exporting a saved password.
+pref("signon.management.page.os-auth.locked.enabled", true);
+
+pref("orbit.downloads.turbo", true);
+pref("orbit.downloads.connections", 8);
+
+// ---- Security hardening (on by default, keeps every site working) -----------
+// Phishing: show internationalized look-alike domains as punycode.
+pref("network.IDN_show_punycode", true);
+// No JavaScript inside PDF files (a classic exploit path).
+pref("pdfjs.enableScripting", false);
+// Revoked certificates are caught locally (CRLite) without leaking visits.
+pref("security.pki.crlite_mode", 2);
+// Full certificate details on error pages; "Not secure" on HTTP pages.
+pref("browser.xul.error_pages.expert_bad_cert", true);
+pref("security.insecure_connection_text.enabled", true);
+// Other sites only learn the origin you came from, never the full address.
+pref("network.http.referer.XOriginTrimmingPolicy", 2);
+// No login prompts from third-party images (phishing trick).
+pref("network.auth.subresource-http-auth-allow", 1);
+// Fingerprinting protection in every window, no battery or ping tracking.
+pref("privacy.fingerprintingProtection", true);
+pref("dom.battery.enabled", false);
+pref("browser.send_pings", false);
+// Fewer background calls home; downloads are checked locally only.
+pref("network.captive-portal-service.enabled", false);
+pref("network.connectivity-service.enabled", false);
+pref("browser.safebrowsing.downloads.remote.enabled", false);
+pref("browser.tabs.crashReporting.sendReport", false);
+// No TLS early data (replayable requests).
+pref("security.tls.enable_0rtt_data", false);
+pref("network.http.http3.enable_0rtt", false);
+// Encrypted DNS with fallback (Cloudflare through Mozilla's resolver).
+pref("network.trr.mode", 2);
+pref("network.trr.uri", "https://mozilla.cloudflare-dns.com/dns-query");
+// Ask where to save new file types instead of opening them silently.
+pref("browser.download.always_ask_before_handling_new_types", true);
+pref("orbit.security.fortress", false);
+
+// ---- Speed (networking and rendering) ---------------------------------------------
+pref("network.http.pacing.requests.enabled", false);
+pref("network.http.max-connections", 1800);
+pref("network.http.max-persistent-connections-per-proxy", 48);
+pref("gfx.content.skia-font-cache-size", 32);

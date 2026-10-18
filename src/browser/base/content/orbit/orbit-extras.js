@@ -110,6 +110,8 @@ var OrbitExtras = {
   initMenus() {
     const h = Orbit.h.bind(Orbit);
     const tabMenu = document.getElementById("tabContextMenu");
+    // Tidy once every Orbit item exists (other modules add theirs at init).
+    tabMenu?.addEventListener("popupshowing", e => e.target == tabMenu && this.organizeTabMenu(tabMenu), true);
     if (tabMenu) {
       const rename = h("xul:menuitem", { id: "orbit-tab-rename", label: this.t("rename"),
         oncommand: () => this.rename(TabContextMenu.contextTab) });
@@ -146,6 +148,51 @@ var OrbitExtras = {
         glance.hidden = !gContextMenu?.onLink || !/^https?:/.test(gContextMenu.linkURL ?? "") || !OrbitGlance.open;
       });
     }
+  },
+
+  // The tab menu, tidied: frequent actions first, the rest under "More".
+  TAB_MENU: [
+    ["context_openANewTab", "context_duplicateTab", "context_duplicateTabs", "context_reloadTab", "context_reloadSelectedTabs",
+      "context_toggleMuteTab", "context_toggleMuteSelectedTabs", "context_playTab", "context_playSelectedTabs"],
+    ["orbit-tab-rename", "orbit-tab-reset-name", "orbit-tab-copy", "orbit-tab-keep", "context_pinTab", "context_unpinTab",
+      "context_pinSelectedTabs", "context_unpinSelectedTabs", "context_moveTabToNewGroup", "context_moveSplitViewToNewGroup",
+      "context_moveTabToGroup", "context_ungroupTab", "context_ungroupSplitView", "context_moveTabToSplitView",
+      "context_separateSplitView", "context_reverseSplitView", "orbit-move-to-space"],
+    ["context_unloadTab", "orbit-space-unload"],
+    ["context_closeTab", "context_undoCloseTab"],
+  ],
+  TAB_MENU_MORE: ["context_bookmarkTab", "context_bookmarkSelectedTabs", "context_moveTabOptions", "context_reopenInContainer",
+    "context_selectAllTabs", "context_closeDuplicateTabs", "context_closeTabOptions", "orbit-space-unload-others",
+    "context_addNote", "context_editNote", "context_shareSelectedTabs", "context_sendTabToDevice"],
+  TAB_MENU_HIDDEN: ["context_askChat", "context_askChatSummarize", "context_aiSeparator", "context_openAndOrganizeSeparator",
+    "context_tabStateSeparator", "context_tabToolsSeparator", "context_shareSelectedTabsSeparator", "context_sendTabToDeviceSeparator"],
+
+  organizeTabMenu(menu) {
+    if (menu.hasAttribute("orbit-organized")) return;
+    menu.setAttribute("orbit-organized", "true");
+    const h = Orbit.h.bind(Orbit);
+    const fr = Orbit.lang() == "fr";
+    const take = id => document.getElementById(id);
+    // Separators Orbit did not create would sit in odd places now.
+    for (const sep of [...menu.children].filter(c => c.localName == "menuseparator" && !c.id)) sep.remove();
+    // An empty marker keeps the insertion point fixed while items move.
+    const anchor = h("xul:menuseparator", { "orbit-hidden": "true" });
+    menu.prepend(anchor);
+    this.TAB_MENU.forEach((group, i) => {
+      for (const id of group) {
+        const el = take(id);
+        if (el) menu.insertBefore(el, anchor);
+      }
+      if (i < this.TAB_MENU.length - 1) menu.insertBefore(h("xul:menuseparator", { class: "orbit-menu-sep" }), anchor);
+    });
+    const morePopup = h("xul:menupopup", { id: "orbit-tab-more-popup" });
+    for (const id of this.TAB_MENU_MORE) {
+      const el = take(id);
+      if (el) morePopup.append(el);
+    }
+    menu.insertBefore(h("xul:menuseparator", { class: "orbit-menu-sep" }), anchor);
+    menu.insertBefore(h("xul:menu", { id: "orbit-tab-more", label: fr ? "Plus d'options" : "More options" }, morePopup), anchor);
+    for (const id of this.TAB_MENU_HIDDEN) take(id)?.setAttribute("orbit-hidden", "true");
   },
 
   copy(text) {

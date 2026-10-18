@@ -54,7 +54,7 @@ var Orbit = {
   },
 
   init() {
-    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js", "orbit-edit.js", "orbit-vpn.js", "orbit-extras.js", "orbit-folders.js", "orbit-kept.js", "orbit-updates.js", "orbit-mods.js", "orbit-import.js"]) {
+    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js", "orbit-edit.js", "orbit-vpn.js", "orbit-extras.js", "orbit-folders.js", "orbit-kept.js", "orbit-updates.js", "orbit-mods.js", "orbit-import.js", "orbit-downloads.js", "orbit-background.js", "orbit-security.js"]) {
       Services.scriptloader.loadSubScript(this.BASE + f, window);
     }
     document.documentElement.setAttribute("orbit-lang", this.lang());
@@ -72,6 +72,8 @@ var Orbit = {
       OrbitKept.init();
       OrbitUpdates.init();
       OrbitMods.init();
+      OrbitDownloads.init();
+      OrbitBackground.init();
       OrbitAI.init();
       OrbitPiP.init();
       OrbitMedia.init();

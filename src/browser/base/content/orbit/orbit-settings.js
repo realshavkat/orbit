@@ -24,6 +24,7 @@ var OrbitSettings = {
       id: "look", icon: "palette",
       items: [
         { kind: "spacecolors" },
+        { kind: "background" },
         { kind: "range", pref: "orbit.theme.intensity", label: "intensity", min: 0, max: 80, unit: "%" },
         { kind: "range", pref: "orbit.theme.radius", label: "radius", min: 0, max: 14, unit: "px" },
       ],
@@ -54,6 +55,8 @@ var OrbitSettings = {
         { kind: "toggle", pref: "orbit.urlbar.replace-newtab", label: "commandbar" },
         { kind: "toggle", pref: "orbit.glance.enabled", label: "glance" },
                 { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
+        { kind: "toggle", pref: "orbit.downloads.turbo", label: "turbo" },
+        { kind: "choice", pref: "orbit.downloads.connections", label: "turboConn", options: [[4, "4"], [8, "8"], [16, "16"]] },
         { kind: "link", label: "advanced", icon: "external-link", action: () => openPreferences() },
         { kind: "link", label: "import", icon: "upload", action: () => OrbitImport.open() },
       ],
@@ -81,6 +84,8 @@ var OrbitSettings = {
     {
       id: "privacy", icon: "shield",
       items: [
+        { kind: "fortress" },
+        { kind: "vault" },
         { kind: "addon", id: "orbit-blocker@orbit.app", label: "blocker" },
         { kind: "strict", label: "strict" },
         { kind: "toggle", pref: "privacy.query_stripping.enabled", label: "stripping" },
@@ -109,6 +114,8 @@ var OrbitSettings = {
       title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
       themes: "Thèmes Firefox", "themes.d": "Installe un thème depuis addons.mozilla.org : Orbit prend ses couleurs",
+      turbo: "Orbit Turbo", "turbo.d": "Les gros téléchargements utilisent plusieurs connexions : fini les sites bridés par connexion",
+      turboConn: "Connexions par téléchargement",
       updates: "Mises à jour", "updates.d": "Automatiques : installées au redémarrage. Me demander : une fenêtre présente les nouveautés au lancement",
       memory: "Mémoire", ai: "Intelligence artificielle", notify: "Notifications", privacy: "Vie privée", shortcuts: "Raccourcis",
       blocker: "Orbit Blocker", "blocker.d": "Bloque pubs, pisteurs, logiciels espions, bannières de cookies et l'accès des sites à ton réseau local",
@@ -161,6 +168,8 @@ var OrbitSettings = {
       title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
       themes: "Firefox themes", "themes.d": "Install a theme from addons.mozilla.org: Orbit takes its colors",
+      turbo: "Orbit Turbo", "turbo.d": "Big downloads use several connections: no more sites throttling each connection",
+      turboConn: "Connections per download",
       updates: "Updates", "updates.d": "Automatic: installed on restart. Ask me: a window shows what's new at launch",
       memory: "Memory", ai: "Artificial intelligence", notify: "Notifications", privacy: "Privacy", shortcuts: "Shortcuts",
       blocker: "Orbit Blocker", "blocker.d": "Blocks ads, trackers, spyware, cookie banners and sites probing your local network",
@@ -365,8 +374,24 @@ var OrbitSettings = {
         OrbitUpdates.isAuto().then(auto => !auto && seg.querySelector('[data-v="ask"]')?.click());
         return this.row(seg, "updates");
       }
+      case "fortress": {
+        const fr = Orbit.lang() == "fr";
+        const h = Orbit.h.bind(Orbit);
+        return h("div", { class: "orbit-setting orbit-setting-col orbit-fortress", on: OrbitSecurity.on },
+          h("div", { class: "orbit-vpn-head" },
+            h("div", { class: "orbit-setting-text" },
+              h("div", { class: "orbit-setting-label" }, fr ? "Mode forteresse" : "Fortress mode"),
+              h("div", { class: "orbit-setting-desc" }, fr
+                ? "Sécurité maximale : moteur JavaScript sans compilateur JIT, pas de WebGL ni WebRTC, HTTPS obligatoire, anti-pistage strict et anti-empreinte. Certains sites seront plus lents ou moins compatibles."
+                : "Maximum security: JavaScript without JIT compilers, no WebGL or WebRTC, HTTPS only, strict tracking protection and anti-fingerprinting. Some sites get slower or less compatible.")),
+            this.switch(OrbitSecurity.on, v => { OrbitSecurity.set(v); this.show(this._last); })));
+      }
+      case "vault":
+        return this.renderVault();
       case "mods":
         return this.renderMods();
+      case "background":
+        return this.renderBackground();
       case "strict":
         return this.row(this.switch(Orbit.pref("browser.contentblocking.category", "standard") == "strict",
           on => p.setStringPref("browser.contentblocking.category", on ? "strict" : "standard")), "strict");
@@ -398,6 +423,84 @@ var OrbitSettings = {
         return this.renderAbout();
     }
     return null;
+  },
+
+  // Anti-stealer vault. Malware that copies a browser profile gets the saved
+  // passwords unless a primary password encrypts them; Windows sign-in guards
+  // showing and filling them; sessions can be wiped at every close.
+  renderVault() {
+    const h = Orbit.h.bind(Orbit);
+    const p = Services.prefs;
+    const fr = Orbit.lang() == "fr";
+    const token = Cc["@mozilla.org/security/pk11tokendb;1"].getService(Ci.nsIPK11TokenDB).getInternalKeyToken();
+    const locked = token.hasPassword;
+    const status = h("span", { class: "orbit-vault-status", ok: locked },
+      locked ? (fr ? "Mots de passe chiffrés" : "Passwords encrypted") : (fr ? "Mots de passe non protégés" : "Passwords not protected"));
+    const row = (label, desc, on, set) => h("label", { class: "orbit-vpn-toggle orbit-vault-row" },
+      h("span", {}, h("b", {}, label), h("small", {}, desc)), this.switch(on, set));
+    return h("div", { class: "orbit-setting orbit-setting-col orbit-vault" },
+      h("div", { class: "orbit-vpn-head" },
+        h("div", { class: "orbit-setting-text" },
+          h("div", { class: "orbit-setting-label" }, fr ? "Coffre-fort anti-vol" : "Anti-theft vault"),
+          h("div", { class: "orbit-setting-desc" }, fr
+            ? "Si un logiciel malveillant copie ton profil, il ne peut rien lire sans ton mot de passe principal."
+            : "If malware copies your profile, it cannot read anything without your primary password.")),
+        status),
+      h("button", { class: locked ? "orbit-button" : "orbit-button primary", onclick: () => {
+        window.openDialog("chrome://mozapps/content/preferences/changemp.xhtml", "", "centerscreen,chrome,modal,titlebar");
+        this.show(this._last);
+      } }, Orbit.icon("shield"), locked ? (fr ? "Changer le mot de passe principal" : "Change primary password")
+        : (fr ? "Créer un mot de passe principal" : "Create a primary password")),
+      row(fr ? "Windows Hello pour voir les mots de passe" : "Windows Hello to view passwords",
+        fr ? "Ton code PIN ou ton visage avant d'afficher ou d'exporter un mot de passe" : "Your PIN or face before showing or exporting a password",
+        Orbit.pref("signon.management.page.os-auth.locked.enabled", true),
+        on => p.setBoolPref("signon.management.page.os-auth.locked.enabled", on)),
+      row(fr ? "Effacer cookies et sessions à la fermeture" : "Clear cookies and sessions on close",
+        fr ? "Un vol de cookies ne sert à rien. Tu devras te reconnecter à tes sites." : "Stolen cookies become useless. You will sign in to sites again.",
+        Orbit.pref("privacy.clearOnShutdown_v2.cookiesAndStorage", false) && Orbit.pref("privacy.sanitize.sanitizeOnShutdown", false),
+        on => {
+          p.setBoolPref("privacy.sanitize.sanitizeOnShutdown", on);
+          p.setBoolPref("privacy.clearOnShutdown_v2.cookiesAndStorage", on);
+        }));
+  },
+
+  renderBackground() {
+    const h = Orbit.h.bind(Orbit);
+    const p = Services.prefs;
+    const fr = Orbit.lang() == "fr";
+    const type = Orbit.pref("orbit.background.type", "liquid");
+    const extra = h("div", { class: "orbit-bg-extra" });
+    const fillExtra = t => {
+      const kids = [];
+      if (t == "image" || t == "video") {
+        kids.push(h("button", { class: "orbit-button", onclick: async () => {
+          if (await OrbitBackground.choose()) this.show(this._last);
+        } }, Orbit.icon("upload"), fr ? "Choisir un fichier…" : "Choose a file…"));
+      }
+      if (t == "color") {
+        kids.push(h("input", { type: "color", class: "orbit-bg-color", value: Orbit.pref("orbit.background.color", "#0b0b14"),
+          oninput: e => p.setStringPref("orbit.background.color", e.target.value) }));
+      }
+      if (t != "liquid") {
+        kids.push(h("span", { class: "orbit-setting-desc" }, fr ? "Assombrir" : "Dim"),
+          this.slider({ min: 0, max: 85, unit: " %", value: Orbit.pref("orbit.background.dim", 35),
+            onInput: v => p.setIntPref("orbit.background.dim", v) }));
+      }
+      extra.replaceChildren(...kids);
+    };
+    fillExtra(type);
+    return h("div", { class: "orbit-setting orbit-setting-col" },
+      h("div", { class: "orbit-vpn-head" },
+        h("div", { class: "orbit-setting-text" },
+          h("div", { class: "orbit-setting-label" }, fr ? "Fond" : "Background"),
+          h("div", { class: "orbit-setting-desc" }, fr ? "Le fond liquide d'Orbit, ta photo, une vidéo en boucle ou une couleur"
+            : "Orbit's liquid background, your picture, a looping video or a color")),
+        this.segmented([["liquid", fr ? "Liquide" : "Liquid"], ["image", "Image"], ["video", fr ? "Vidéo" : "Video"], ["color", fr ? "Couleur" : "Color"]],
+          type, v => {
+            fillExtra(v);
+            if (v == "liquid" || v == "color" || Orbit.pref("orbit.background.file", "")) p.setStringPref("orbit.background.type", v);
+          })),
+      extra);
   },
 
   renderMods() {

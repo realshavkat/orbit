@@ -117,9 +117,11 @@ var OrbitSpaces = {
   // Clear button: closes the space's tabs except the selected ones (the
   // current tab, or every Ctrl+clicked tab). Double-click closes them all.
   clearTabs(all = false) {
-    // Pinned folders and space-pinned tabs survive a single click, like Zen.
+    // Pinned folders and space-pinned tabs survive a single click, like Zen;
+    // a double-click closes everything, the space's pinned rows included.
     const tabs = this.tabsIn(this.activeId).filter(t => all ||
-      (!OrbitFolders.isPinnedTab(t) && !OrbitKept.isKept(t) && !(t.selected || t.multiselected)));
+      (!OrbitFolders.isPinnedTab(t) && !(t.selected || t.multiselected)));
+    if (all) tabs.push(...gBrowser.tabs.filter(t => t.getAttribute(OrbitKept.KEY) == this.activeId));
     if (!tabs.length) return;
     // Closing everything leaves the space on its home page.
     if (all) gBrowser.selectedTab = this.openTab();
@@ -183,6 +185,7 @@ var OrbitSpaces = {
       if (inSpace && tab.hidden) gBrowser.showTab(tab);
       else if (!inSpace && !tab.hidden) gBrowser.hideTab(tab, "orbit-spaces");
     }
+    globalThis.OrbitKept?.sync();
   },
 
   // ---- switching ----------------------------------------------------------

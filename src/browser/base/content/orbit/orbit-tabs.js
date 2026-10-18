@@ -2,11 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Tabs: command bar instead of empty new tabs, and idle tab unloading.
+// Tabs: command bar instead of empty new tabs (idle sleep lives in OrbitMemory).
 var OrbitTabs = {
   init() {
     this.initCommandBar();
-    this.initUnloader();
     this.initOrbitScheme();
     this.initHome();
     this.initDrag();
@@ -212,16 +211,5 @@ var OrbitTabs = {
       if (this._placeholder != null) gURLBar.inputField.placeholder = this._placeholder;
       if (!gURLBar.focused) gURLBar.handleRevert?.();
     }, 0);
-  },
-
-  // ---- Idle tab unloading ------------------------------------------------------
-  initUnloader() {
-    this._unloadTimer = setInterval(() => this.unloadIdleTabs(), 60_000);
-    window.addEventListener("unload", () => clearInterval(this._unloadTimer), { once: true });
-  },
-
-  unloadIdleTabs() {
-    const minutes = OrbitMemory.idleMinutes();
-    if (minutes > 0) OrbitMemory.sleepIdle(minutes * 60_000);
   },
 };

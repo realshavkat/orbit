@@ -2,50 +2,42 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Space-pinned tabs (Zen's pinned list): the first tabs of a space, right
-// under the essentials. Drag a tab to the top of the list to pin it, drag it
-// below to unpin. Closing a pinned tab only puts it to sleep: it stays listed.
+// Space-pinned tabs (Zen's pinned list). They are Gecko pinned tabs shown as
+// rows under the essentials, above the space name, and only in their own
+// space. Pin one from its menu or by dragging it to the top of the list;
+// drag it back into the list to unpin. Closing one only puts it to sleep.
 var OrbitKept = {
-  KEY: "orbit-kept",
+  KEY: "orbit-kept", // attribute and session value: the id of the tab's space
 
   t(k) {
     const fr = Orbit.lang() == "fr";
     return {
       keep: fr ? "Épingler dans l'espace" : "Pin in space",
       unkeep: fr ? "Retirer des épinglés" : "Unpin from space",
-      hint: fr ? "Glisse un onglet tout en haut pour l'épingler dans l'espace" : "Drag a tab to the top to pin it in this space",
     }[k];
   },
 
   init() {
     const tc = gBrowser.tabContainer;
-    tc.addEventListener("SSTabRestoring", e => {
-      if (SessionStore.getCustomTabValue(e.target, this.KEY)) e.target.setAttribute(this.KEY, "true");
-      this.sync();
-    });
     // Only a drag by the user changes membership, never a programmatic move.
     tc.addEventListener("dragstart", () => (this._drag = true));
     window.addEventListener("dragend", () => setTimeout(() => (this._drag = false), 200), true);
     tc.addEventListener("TabMove", e => this._drag && this.onMove(e.target));
-    // A tab opened from a pinned one lands below the pinned block, not inside it.
-    tc.addEventListener("TabOpen", e => setTimeout(() => {
-      const tab = e.target;
-      if (tab.pinned || this.isKept(tab) || !tab.isConnected) return;
-      const list = OrbitSpaces.tabsIn(OrbitSpaces.spaceOf(tab));
-      const lastKept = list.findLast(t => this.isKept(t));
-      if (lastKept && gBrowser.tabs.indexOf(tab) < gBrowser.tabs.indexOf(lastKept)) {
-        this._moving = true;
-        gBrowser.moveTabAfter(tab, lastKept);
-        this._moving = false;
-      }
-    }, 0));
-    for (const type of ["TabOpen", "TabClose", "TabShow", "TabHide", "TabPinned", "TabUnpinned"]) {
+    // Dragged out of the pinned area: back to a normal tab of its space.
+    tc.addEventListener("TabUnpinned", e => {
+      const space = e.target.getAttribute(this.KEY);
+      if (!space) return;
+      this.forget(e.target);
+      if (OrbitSpaces.byId(space)) OrbitSpaces.setTabSpace(e.target, space);
+      this.sync();
+    });
+    for (const type of ["TabOpen", "TabClose", "TabPinned", "TabSelect"]) {
       tc.addEventListener(type, () => setTimeout(() => this.sync(), 0));
     }
-    // Closing a pinned-in-space tab unloads it instead.
+    // Closing a space-pinned tab unloads it instead.
     const origRemove = gBrowser.removeTab.bind(gBrowser);
     gBrowser.removeTab = (tab, options = {}) => {
-      if (tab?.hasAttribute(this.KEY) && !this._closing && !tab.pinned) {
+      if (tab?.hasAttribute(this.KEY) && !this._closing) {
         this.sleep(tab);
         return;
       }
@@ -55,65 +47,78 @@ var OrbitKept = {
     // Lazily restored tabs never fire SSTabRestoring: read the value directly.
     const restoreAll = () => {
       for (const tab of gBrowser.tabs) {
-        if (SessionStore.getCustomTabValue(tab, this.KEY)) tab.setAttribute(this.KEY, "true");
+        const space = SessionStore.getCustomTabValue(tab, this.KEY);
+        if (space && tab.pinned) tab.setAttribute(this.KEY, space);
       }
       this.sync();
     };
     window.addEventListener("SSWindowRestored", restoreAll);
+    tc.addEventListener("SSTabRestoring", restoreAll);
     restoreAll();
   },
 
   isKept(tab) {
-    return tab?.hasAttribute(this.KEY);
+    return !!tab?.hasAttribute(this.KEY);
+  },
+
+  forget(tab) {
+    tab.removeAttribute(this.KEY);
+    tab.removeAttribute("orbit-elsewhere");
+    SessionStore.deleteCustomTabValue(tab, this.KEY);
   },
 
   set(tab, kept) {
-    if (!tab || tab.pinned) return;
+    if (!tab) return;
     if (kept) {
-      tab.setAttribute(this.KEY, "true");
-      SessionStore.setCustomTabValue(tab, this.KEY, "1");
-      // Kept tabs lead the space's list.
-      const first = OrbitSpaces.tabsIn(OrbitSpaces.spaceOf(tab)).find(t => t != tab && !this.isKept(t));
-      if (first && gBrowser.tabs.indexOf(tab) > gBrowser.tabs.indexOf(first)) gBrowser.moveTabBefore(tab, first);
-    } else {
-      tab.removeAttribute(this.KEY);
-      SessionStore.deleteCustomTabValue(tab, this.KEY);
+      const space = OrbitSpaces.spaceOf(tab) || OrbitSpaces.activeId;
+      tab.setAttribute(this.KEY, space);
+      SessionStore.setCustomTabValue(tab, this.KEY, space);
+      if (!tab.pinned) gBrowser.pinTab(tab);
+      this.pop(tab);
+    } else if (tab.pinned) {
+      gBrowser.unpinTab(tab); // TabUnpinned does the rest
     }
     this.sync();
   },
 
+  // A small "landed" animation on the pinned tab.
+  pop(tab) {
+    tab.removeAttribute("orbit-just-pinned");
+    void tab.offsetWidth;
+    tab.setAttribute("orbit-just-pinned", "true");
+    setTimeout(() => tab.removeAttribute("orbit-just-pinned"), 600);
+  },
+
   sleep(tab) {
     if (tab.selected) {
-      const next = gBrowser._findTabToBlurTo(tab);
-      if (next) gBrowser.selectedTab = next;
-      else gBrowser.selectedTab = OrbitSpaces.openTab();
+      const next = OrbitSpaces.tabsIn(OrbitSpaces.activeId).findLast(t => !t.closing) ?? OrbitSpaces.openTab();
+      gBrowser.selectedTab = next;
     }
     gBrowser.discardBrowser(tab);
   },
 
-  // After a drag: inside the pinned block (or at the very top) = pinned.
+  // Dropped at the very top of a space's list: pin it in the space.
   onMove(tab) {
     if (tab.pinned || this._moving) return;
-    const list = OrbitSpaces.tabsIn(OrbitSpaces.spaceOf(tab)).filter(t => !t.group || t == tab);
-    const i = list.indexOf(tab);
-    const before = list[i - 1];
-    // Top of the list, or right under another pinned tab.
-    const kept = i == 0 || this.isKept(before);
-    this._moving = true;
-    if (kept != this.isKept(tab)) this.set(tab, kept);
-    this._moving = false;
+    const list = OrbitSpaces.tabsIn(OrbitSpaces.spaceOf(tab));
+    if (list.indexOf(tab) == 0 && list.length > 1) {
+      this._moving = true;
+      this.set(tab, true);
+      this._moving = false;
+    }
   },
 
-  // Marks the last pinned tab of the visible space so CSS draws the divider.
+  // Only the current space's pinned rows show.
   sync() {
-    const visible = gBrowser.visibleTabs.filter(t => !t.pinned);
-    let last = null;
-    for (const t of visible) {
-      t.removeAttribute("orbit-kept-last");
-      if (this.isKept(t)) last = t;
+    const active = OrbitSpaces.activeId;
+    let any = false;
+    for (const tab of gBrowser.tabs) {
+      if (!tab.pinned) continue;
+      const space = tab.getAttribute(this.KEY);
+      tab.toggleAttribute("orbit-elsewhere", !!space && space != active);
+      if (space == active) any = true;
     }
-    last?.setAttribute("orbit-kept-last", "true");
-    document.documentElement.toggleAttribute("orbit-has-kept", !!last);
+    document.documentElement.toggleAttribute("orbit-has-kept", any);
   },
 
   addMenu() {
@@ -127,12 +132,12 @@ var OrbitKept = {
     menu.addEventListener("popupshowing", e => {
       if (e.target != menu) return;
       const tab = TabContextMenu.contextTab;
-      item.hidden = !tab || tab.pinned;
+      item.hidden = !tab || (tab.pinned && !this.isKept(tab));
       item.setAttribute("label", this.isKept(tab) ? this.t("unkeep") : this.t("keep"));
     });
   },
 
-  // "Close all" from the clear button really closes pinned-in-space tabs too.
+  // "Close all" from the clear button really closes them.
   closeForReal(tabs) {
     this._closing = true;
     try {

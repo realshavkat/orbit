@@ -82,9 +82,9 @@ var OrbitLayout = {
     customElements.whenDefined("sidebar-main").then(() => sm.updateComplete?.then(hideTools));
   },
 
-  // Never wider than a third of the window, so the page keeps its room.
+  // Never wider than 45% of the window, so the page keeps its room.
   clampWidth(w) {
-    const max = Math.max(180, Math.min(420, window.innerWidth * 0.32));
+    const max = Math.max(180, Math.min(600, window.innerWidth * 0.45));
     return Math.round(Math.min(max, Math.max(180, w)));
   },
 

@@ -69,8 +69,10 @@ var OrbitMemory = {
     return { total, ui: info.memory, tabs };
   },
 
+  // Runs every minute: idle sleep (unless set to "never"), then the memory budget.
   async enforceBudget() {
-    this.sleepIdle(this.idleMinutes() * 60_000);
+    const minutes = this.idleMinutes();
+    if (minutes > 0) this.sleepIdle(minutes * 60_000);
     const budgetMb = Orbit.pref("orbit.memory.budget-mb", 0);
     if (budgetMb <= 0) return;
     let { total, tabs } = await this.measure();
