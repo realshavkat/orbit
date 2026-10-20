@@ -3721,3 +3721,72 @@ menupopup > :is(menuitem, menu)[orbit-icon] .menu-icon {
   }
 }
 #downloadsPanel[hasdownloads] #emptyDownloads, #emptyDownloads[hidden] { display: none !important; }
+
+/* ==========================================================================
+   Folders v3: icon tile in the folder color, name, contents preview (the
+   tabs' icons when closed, a count when open), chevron at the end; open
+   folders hold their tabs on a thin guide line under the tile.
+   ========================================================================== */
+#vertical-tabs tab-group {
+  --orbit-folder-c: var(--tab-group-color, var(--orbit-accent));
+  & .tab-group-label-hover-highlight { gap: 10px !important; padding-inline: 6px 8px !important; color: var(--orbit-fg) !important; }
+  & .tab-group-label { font-weight: 500 !important; letter-spacing: -.005em; &::after { content: none !important; } }
+  &[collapsed] .tab-group-label-container { opacity: 1 !important; }
+  &[collapsed] .tab-group-label { color: var(--orbit-fg-dim) !important; }
+  &[collapsed] .tab-group-label-hover-highlight:hover .tab-group-label { color: var(--orbit-fg) !important; }
+  & .orbit-folder-dot, & .orbit-folder-icon { display: none !important; }
+}
+.orbit-folder-tile {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--orbit-folder-c) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-folder-c) 30%, transparent);
+  & .orbit-icon { width: 13px; height: 13px; -moz-context-properties: stroke; stroke: var(--orbit-folder-c); color: var(--orbit-folder-c); }
+}
+tab-group[collapsed] .orbit-folder-tile { background: color-mix(in srgb, var(--orbit-folder-c) 12%, transparent); }
+.orbit-folder-meta { display: flex; align-items: center; flex-shrink: 0; margin-inline-start: auto; }
+.orbit-folder-face {
+  width: 16px;
+  height: 16px;
+  margin-inline-start: -5px;
+  padding: 1px;
+  border-radius: 5px;
+  background: var(--orbit-panel);
+  box-shadow: 0 0 0 1.5px var(--orbit-base);
+  &:first-child { margin-inline-start: 0; }
+}
+.orbit-folder-count {
+  min-width: 18px;
+  height: 18px;
+  margin-inline-start: 6px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--orbit-fg-dim);
+  background: var(--orbit-field);
+}
+tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
+#vertical-tabs tab-group .orbit-folder-chevron {
+  width: 12px !important;
+  height: 12px !important;
+  margin-inline-start: 4px;
+  opacity: .5;
+  transition: transform .2s var(--orbit-ease), opacity .15s !important;
+}
+#vertical-tabs tab-group[collapsed] .orbit-folder-chevron { transform: rotate(-90deg) !important; }
+#vertical-tabs tab-group .tab-group-label-hover-highlight:hover .orbit-folder-chevron { opacity: .9; }
+/* Tabs inside: a thin neutral line under the tile, then the tab. */
+#vertical-tabs #tabbrowser-arrowscrollbox tab-group > .tabbrowser-tab:not([pinned]) .tab-content {
+  padding-inline-start: calc(32px + var(--orbit-folder-depth, 0) * 14px) !important;
+  background: linear-gradient(color-mix(in srgb, var(--orbit-fg) 14%, transparent), color-mix(in srgb, var(--orbit-fg) 14%, transparent))
+    no-repeat calc(16.5px + var(--orbit-folder-depth, 0) * 14px) 0 / 1px 100% !important;
+}

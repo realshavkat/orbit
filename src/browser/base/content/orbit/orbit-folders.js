@@ -57,7 +57,7 @@ var OrbitFolders = {
       }, 0);
     };
     for (const type of ["TabGroupCreate", "TabGroupUpdate", "TabGrouped", "TabUngrouped", "TabOpen", "TabClose",
-      "SSTabRestored", "TabGroupCollapse", "TabGroupExpand"]) {
+      "SSTabRestored", "TabGroupCollapse", "TabGroupExpand", "TabAttrModified"]) {
       tc.addEventListener(type, schedule);
     }
     tc.addEventListener("TabGroupRemoved", e => {
@@ -99,17 +99,20 @@ var OrbitFolders = {
       const label = group.querySelector(".tab-group-label");
       const box = label?.parentNode;
       if (box) {
-        // Design: chevron, then the folder's icon if it has one, else a color dot.
-        let chevron = box.querySelector(".orbit-folder-chevron");
-        if (!chevron) {
-          chevron = Orbit.icon("chevron-down", "orbit-icon orbit-folder-chevron");
-          box.prepend(chevron, Orbit.h("span", { class: "orbit-folder-dot" }), Orbit.icon("folder", "orbit-icon orbit-folder-icon"));
+        // Row: icon tile, name, tag, contents (favicons when closed, count when
+        // open), chevron at the end.
+        // Rows decorated by older versions in this session.
+        box.querySelectorAll(".orbit-folder-dot, .orbit-folder-icon, :scope > .orbit-folder-chevron:first-child").forEach(el => el.remove());
+        if (!box.querySelector(".orbit-folder-tile")) {
+          box.prepend(Orbit.h("span", { class: "orbit-folder-tile" }, Orbit.h("img", { class: "orbit-icon", alt: "" })));
+          box.append(Orbit.h("span", { class: "orbit-folder-meta" }), Orbit.icon("chevron-down", "orbit-icon orbit-folder-chevron"));
         }
-        const img = box.querySelector(".orbit-folder-icon");
-        img.hidden = !this.ICONS.includes(m.icon);
-        box.querySelector(".orbit-folder-dot").hidden = !img.hidden;
-        if (!img.hidden) img.src = `${Orbit.BASE}icons/${m.icon}.svg`;
-        label.dataset.count = String(group.tabs.length);
+        const name = this.ICONS.includes(m.icon) && m.icon != "folder" ? m.icon : group.collapsed ? "folder" : "folder-open";
+        box.querySelector(".orbit-folder-tile img").src = `${Orbit.BASE}icons/${name}.svg`;
+        const metaEl = box.querySelector(".orbit-folder-meta");
+        const faces = group.collapsed ? group.tabs.slice(0, 3).map(t => t.getAttribute("image")).filter(Boolean) : [];
+        metaEl.replaceChildren(...faces.map(src => Orbit.h("img", { class: "orbit-folder-face", src, alt: "" })),
+          Orbit.h("span", { class: "orbit-folder-count" }, String(group.tabs.length)));
       }
       group.toggleAttribute("orbit-pinned", !!m.pinned);
       this.paintTag(group, m.tag);
