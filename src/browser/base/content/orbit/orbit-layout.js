@@ -201,6 +201,15 @@ var OrbitLayout = {
     this.root.removeAttribute("orbit-peek");
   },
 
+  // Focus mode: only the page, no sidebar or toolbar (Ctrl+Shift+F again to leave).
+  toggleFocus() {
+    const on = this.root.toggleAttribute("orbit-focus");
+    if (on) {
+      OrbitNotify.show({ kind: "focus", icon: "eye", tone: "dark", title: Orbit.tr("Focus mode", "Mode concentration"), timeout: 3000,
+        text: Orbit.tr("Ctrl+Shift+F to leave.", "Ctrl+Maj+F pour en sortir.") });
+    }
+  },
+
   toggleCompact() {
     Services.prefs.setBoolPref("orbit.view.compact", !this.root.hasAttribute("orbit-compact"));
   },
@@ -243,6 +252,8 @@ var OrbitLayout = {
       OrbitSettings.toggle();
     } else if (e.ctrlKey && e.altKey && !e.shiftKey && e.code == "KeyC") {
       this.toggleCompact();
+    } else if (e.ctrlKey && e.shiftKey && !e.altKey && e.code == "KeyF") {
+      this.toggleFocus();
     } else if (e.altKey && !e.ctrlKey && !e.shiftKey && /^Digit[1-9]$/.test(e.code)) {
       OrbitSpaces.switchToIndex(+e.code.slice(5) - 1);
     } else if (e.ctrlKey && e.shiftKey && !e.altKey && e.code == "Space") {

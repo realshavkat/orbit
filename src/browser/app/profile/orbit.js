@@ -37,6 +37,8 @@ pref("sidebar.verticalTabs.dragToPinPromo.dismissed", true);
 pref("browser.toolbars.bookmarks.visibility", "never");
 pref("browser.tabs.splitView.enabled", true);
 pref("browser.tabs.groups.enabled", true);
+// Notes on tabs (native feature, off by default upstream).
+pref("browser.tabs.notes.enabled", true);
 pref("browser.tabs.hoverPreview.enabled", false);
 pref("browser.compactmode.show", true);
 pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);

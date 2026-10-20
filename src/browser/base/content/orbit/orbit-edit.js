@@ -13,14 +13,14 @@ var OrbitEdit = {
     "screenshot-button", "fullscreen-button", "zoom-controls", "print-button", "new-window-button",
     "privatebrowsing-button", "find-button", "panic-button", "developer-button", "save-page-button",
     "open-file-button", "preferences-button", "alltabs-button", "new-tab-button", "edit-controls",
-    "unified-extensions-button", "orbit-ai-button", "orbit-ref-button", "orbit-vpn-button"],
+    "unified-extensions-button", "orbit-ai-button", "orbit-ref-button", "orbit-picker-button", "orbit-vpn-button"],
   // Lucide icon per known button (palette nodes are detached: no computed icon).
   ICONS: { "home-button": "house", "history-panelmenu": "history", "bookmarks-menu-button": "bookmark", "downloads-button": "download",
     "library-button": "book-open", "screenshot-button": "camera", "fullscreen-button": "maximize-2", "zoom-controls": "zoom-in",
     "print-button": "printer", "new-window-button": "app-window", "privatebrowsing-button": "eye-off", "find-button": "search",
     "panic-button": "flame", "developer-button": "code-xml", "save-page-button": "download", "open-file-button": "upload",
     "preferences-button": "settings-2", "alltabs-button": "layers", "new-tab-button": "plus", "edit-controls": "copy",
-    "unified-extensions-button": "puzzle", "orbit-ai-button": "bot", "orbit-ref-button": "picture-in-picture-2",
+    "unified-extensions-button": "puzzle", "orbit-ai-button": "bot", "orbit-ref-button": "picture-in-picture-2", "orbit-picker-button": "pipette",
     "orbit-vpn-button": "shield", "urlbar-container": "search", "back-button": "arrow-left", "forward-button": "arrow-right",
     "stop-reload-button": "rotate-cw", "sidebar-button": "panel-left" },
   FIXED: new Set(["urlbar-container", "sidebar-button", "back-button", "forward-button", "stop-reload-button"]),
@@ -80,6 +80,7 @@ var OrbitEdit = {
       } catch {}
     };
     make("orbit-ai-button", this.t("ai"), win => win.OrbitAI.toggleAssistant());
+    make("orbit-picker-button", Orbit.tr("Color picker", "Pipette à couleurs"), win => win.OrbitPicker.start());
     make("orbit-ref-button", this.t("ref"), win =>
       win.OrbitExtras.reference(win.gBrowser.currentURI.spec, win.gBrowser.selectedTab.label, win.gBrowser.selectedTab.getAttribute("image")));
   },

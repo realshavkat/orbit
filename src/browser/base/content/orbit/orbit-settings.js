@@ -107,6 +107,9 @@ var OrbitSettings = {
       items: [
         { kind: "fortress" },
         { kind: "vault" },
+        { kind: "link", label: "lockNow", icon: "lock", action: () => OrbitLock.lockAll() },
+        { kind: "choice", pref: "orbit.lock.idle-minutes", label: "lockIdle", options: [[0, "lockIdle.off"], [5, "lockIdle.5"], [15, "lockIdle.15"], [60, "lockIdle.60"]] },
+        { kind: "toggle", pref: "orbit.lock.on-start", label: "lockStart", def: false },
         { kind: "addon", id: "orbit-blocker@orbit.app", label: "blocker" },
         { kind: "strict", label: "strict" },
         { kind: "toggle", pref: "privacy.query_stripping.enabled", label: "stripping" },
@@ -123,6 +126,14 @@ var OrbitSettings = {
       id: "notify", icon: "bell",
       items: ["pin", "default", "update", "sleep", "tips"].map(k =>
         ({ kind: "toggle", pref: `orbit.notify.${k}`, label: `notify.${k}`, def: k != "tips" })),
+    },
+    {
+      id: "sessions", icon: "history",
+      items: [
+        { kind: "sessions" },
+        { kind: "link", label: "exportSettings", icon: "upload", action: () => OrbitSessions.exportSettings() },
+        { kind: "link", label: "importSettings", icon: "download", action: () => OrbitSessions.importSettings() },
+      ],
     },
     { id: "shortcuts", icon: "command", items: [{ kind: "shortcuts" }] },
     { id: "about", icon: "info", items: [{ kind: "about" }] },
@@ -153,6 +164,12 @@ var OrbitSettings = {
       stripping: "Nettoyer les liens", "stripping.d": "Retire les paramètres de pistage des adresses (utm, fbclid…)",
       https: "HTTPS partout", "https.d": "Toujours une connexion chiffrée, avertissement sinon",
       fingerprint: "Anti-empreinte numérique", "fingerprint.d": "Brouille les informations qui permettent de te reconnaître",
+      sessions: "Sessions", sessionSave: "Enregistrer cette fenêtre", "sessionSave.d": "Ses onglets, espaces et favoris, restaurés dans une nouvelle fenêtre",
+      exportSettings: "Exporter les réglages d'Orbit", importSettings: "Importer des réglages d'Orbit",
+      lockNow: "Verrouiller Orbit maintenant (Ctrl+Alt+L)",
+      lockIdle: "Verrouiller après une inactivité", "lockIdle.d": "Windows (code PIN, visage ou mot de passe) déverrouille Orbit",
+      "lockIdle.off": "Jamais", "lockIdle.5": "5 min", "lockIdle.15": "15 min", "lockIdle.60": "1 h",
+      lockStart: "Verrouiller au démarrage", "lockStart.d": "Orbit s'ouvre verrouillé",
       doh: "DNS sécurisé", "doh.d": "Chiffre les requêtes DNS (Cloudflare)", "doh.off": "Désactivé", "doh.on": "Activé", "doh.max": "Strict",
       privacyAdvanced: "Tous les réglages de vie privée",
       "unload.adaptive": "Adaptatif", "unload.d": "Un onglet en veille ne consomme presque rien et se recharge au clic",
@@ -223,6 +240,12 @@ var OrbitSettings = {
       stripping: "Clean links", "stripping.d": "Removes tracking parameters from addresses (utm, fbclid…)",
       https: "HTTPS everywhere", "https.d": "Always an encrypted connection, warns otherwise",
       fingerprint: "Anti-fingerprinting", "fingerprint.d": "Blurs the details that can identify you",
+      sessions: "Sessions", sessionSave: "Save this window", "sessionSave.d": "Its tabs, spaces and essentials, restored in a new window",
+      exportSettings: "Export Orbit's settings", importSettings: "Import Orbit settings",
+      lockNow: "Lock Orbit now (Ctrl+Alt+L)",
+      lockIdle: "Lock after inactivity", "lockIdle.d": "Windows (PIN, face or password) unlocks Orbit",
+      "lockIdle.off": "Never", "lockIdle.5": "5 min", "lockIdle.15": "15 min", "lockIdle.60": "1 h",
+      lockStart: "Lock at startup", "lockStart.d": "Orbit opens locked",
       doh: "Secure DNS", "doh.d": "Encrypts DNS lookups (Cloudflare)", "doh.off": "Off", "doh.on": "On", "doh.max": "Strict",
       privacyAdvanced: "All privacy settings",
       "unload.adaptive": "Adaptive", "unload.d": "A sleeping tab uses almost nothing and reloads on click",
@@ -285,7 +308,7 @@ var OrbitSettings = {
     ["personal", ["general", "look", "effects", "mods", "layout"]],
     ["web", ["browsing", "downloads", "ai"]],
     ["protection", ["privacy", "memory"]],
-    ["system", ["notify", "shortcuts"]],
+    ["system", ["sessions", "notify", "shortcuts"]],
   ],
 
   DESC() {
@@ -303,6 +326,8 @@ var OrbitSettings = {
       memory: Orbit.tr("Performance presets and sleeping tabs.", "Préréglages de performances et mise en veille des onglets."),
       notify: Orbit.tr("What Orbit may tell you about.", "Ce qu'Orbit peut te signaler."),
       shortcuts: Orbit.tr("Keyboard shortcuts.", "Les raccourcis clavier."),
+      sessions: Orbit.tr("Save your tabs under a name and bring them back later. Move your settings to another PC.",
+        "Enregistre tes onglets sous un nom et retrouve-les plus tard. Emporte tes réglages sur un autre PC."),
       mods: Orbit.tr("Change anything in Orbit's look.", "Change tout le style d'Orbit."),
       about: "",
     };
@@ -478,6 +503,8 @@ var OrbitSettings = {
               h("div", { class: "orbit-setting-desc" }, Orbit.tr("Maximum security: JavaScript without JIT compilers, no WebGL or WebRTC, HTTPS only, strict tracking protection and anti-fingerprinting. Some sites get slower or less compatible.", "Sécurité maximale : moteur JavaScript sans compilateur JIT, pas de WebGL ni WebRTC, HTTPS obligatoire, anti-pistage strict et anti-empreinte. Certains sites seront plus lents ou moins compatibles."))),
             this.switch(OrbitSecurity.on, v => { OrbitSecurity.set(v); this.show(this._last); })));
       }
+      case "sessions":
+        return this.renderSessions();
       case "vault":
         return this.renderVault();
       case "mods":
@@ -788,8 +815,32 @@ var OrbitSettings = {
     ["Ctrl Maj D", "Dupliquer l'onglet", "Duplicate tab"],
     ["Ctrl Maj T", "Rouvrir l'onglet fermé", "Reopen closed tab"],
     ["Ctrl ,", "Paramètres", "Settings"],
+    ["Ctrl K", "Palette de commandes", "Command palette"],
+    ["Ctrl Maj F", "Mode concentration", "Focus mode"],
+    ["Ctrl Alt L", "Verrouiller Orbit", "Lock Orbit"],
     ["Ctrl Maj ]", "Picture-in-Picture", "Picture-in-Picture"],
   ],
+
+  // Save button, then each saved session with restore and delete.
+  renderSessions() {
+    const h = Orbit.h.bind(Orbit);
+    const list = h("div", { class: "orbit-sessions" });
+    const fill = async () => {
+      const all = await OrbitSessions.list();
+      list.replaceChildren(...all.map(s => h("div", { class: "orbit-setting" },
+        h("div", { class: "orbit-setting-text" },
+          h("div", { class: "orbit-setting-label" }, s.name), h("div", { class: "orbit-setting-desc" }, OrbitSessions.describe(s))),
+        h("div", { class: "orbit-session-actions" },
+          h("button", { class: "orbit-button", onclick: () => { this.close(); OrbitSessions.restore(s.id); } },
+            Orbit.icon("rotate-ccw"), Orbit.tr("Restore", "Restaurer")),
+          h("button", { class: "orbit-icon-button", title: Orbit.tr("Delete", "Supprimer"),
+            onclick: async () => { await OrbitSessions.remove(s.id); fill(); } }, Orbit.icon("trash-2"))))));
+    };
+    fill();
+    const save = h("button", { class: "orbit-button", onclick: () => OrbitPalette.ask(Orbit.tr("Name of the session", "Nom de la session"),
+      async name => { await OrbitSessions.save(name); fill(); }) }, Orbit.icon("download"), Orbit.tr("Save", "Enregistrer"));
+    return h("div", {}, this.row(save, "sessionSave"), list);
+  },
 
   renderShortcuts() {
     const h = Orbit.h.bind(Orbit);

@@ -67,3 +67,36 @@ export function resolveOrbitURL(text) {
   const alias = ORBIT_ALIASES[page];
   return alias ? alias + (alias.startsWith("about:") ? m[2] : "") : `about:${page}${m[2]}`;
 }
+
+// One sRGB pixel (0-255 channels) as the color formats the picker offers.
+export function colorFormats(r, g, b) {
+  const hex = `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase()}`;
+  const [R, G, B] = [r, g, b].map(v => v / 255);
+  const max = Math.max(R, G, B);
+  const min = Math.min(R, G, B);
+  const l = (max + min) / 2;
+  const d = max - min;
+  let hue = 0;
+  let s = 0;
+  if (d) {
+    s = d / (1 - Math.abs(2 * l - 1));
+    hue = max == R ? ((G - B) / d) % 6 : max == G ? (B - R) / d + 2 : (R - G) / d + 4;
+    hue = (hue * 60 + 360) % 360;
+  }
+  // OKLCH from linear sRGB (Björn Ottosson's OKLab matrices).
+  const [lr, lg, lb] = [R, G, B].map(v => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  const L = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
+  const M = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);
+  const S = Math.cbrt(0.0883024619 * lr + 0.2817188376 * lg + 0.6299787005 * lb);
+  const okL = 0.2104542553 * L + 0.793617785 * M - 0.0040720468 * S;
+  const okA = 1.9779984951 * L - 2.428592205 * M + 0.4505937099 * S;
+  const okB = 0.0259040371 * L + 0.7827717662 * M - 0.808675766 * S;
+  const C = Math.hypot(okA, okB);
+  const H = C < 2e-4 ? 0 : ((Math.atan2(okB, okA) * 180) / Math.PI + 360) % 360;
+  return {
+    hex,
+    rgb: `rgb(${r}, ${g}, ${b})`,
+    hsl: `hsl(${Math.round(hue)}, ${Math.round(s * 100)}%, ${Math.round(l * 100)}%)`,
+    oklch: `oklch(${+(okL * 100).toFixed(1)}% ${+C.toFixed(3)} ${+H.toFixed(1)})`,
+  };
+}

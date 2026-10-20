@@ -4,7 +4,7 @@
 
 // node tools/check-orbit.mjs
 import assert from "node:assert/strict";
-import { contentRange, downloadGroup, parseProxy, resolveOrbitURL, zipOffset } from "../src/browser/base/content/orbit/orbit-pure.mjs";
+import { colorFormats, contentRange, downloadGroup, parseProxy, resolveOrbitURL, zipOffset } from "../src/browser/base/content/orbit/orbit-pure.mjs";
 
 assert.deepEqual(parseProxy("socks5://127.0.0.1:9050"), { kind: "socks5", host: "127.0.0.1", port: 9050 });
 assert.deepEqual(parseProxy("https://proxy.example:443"), { kind: "http", host: "proxy.example", port: 443 });
@@ -41,5 +41,10 @@ assert.equal(resolveOrbitURL("orbit://downloads"), "orbit:downloads");
   assert.equal(downloadGroup(new Date(2026, 9, 2, 10, 0).getTime(), now), "month");
   assert.equal(downloadGroup(new Date(2026, 8, 30, 10, 0).getTime(), now), "2026-09");
 }
+
+assert.deepEqual(colorFormats(255, 0, 0), { hex: "#FF0000", rgb: "rgb(255, 0, 0)", hsl: "hsl(0, 100%, 50%)", oklch: "oklch(62.8% 0.258 29.2)" });
+assert.deepEqual(colorFormats(255, 255, 255), { hex: "#FFFFFF", rgb: "rgb(255, 255, 255)", hsl: "hsl(0, 0%, 100%)", oklch: "oklch(100% 0 0)" });
+assert.equal(colorFormats(18, 52, 86).hsl, "hsl(210, 65%, 20%)");
+assert.equal(colorFormats(255, 0, 255).hsl, "hsl(300, 100%, 50%)");
 
 console.log("orbit checks ok");
