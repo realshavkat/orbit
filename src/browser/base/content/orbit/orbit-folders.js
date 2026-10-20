@@ -3,7 +3,8 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 // Folders: Gecko's tab groups with an icon, a tab count, sub-folders and
-// pinning (a pinned folder is shown in every space and kept by "clear").
+// pinning: a folder pinned in a space sits at the top of that space and is
+// kept by "clear" (pinned: true, from older versions, means every space).
 // Extra data per group lives in the orbit.folders pref: { id: {icon, parent, pinned} }.
 var OrbitFolders = {
   PREF: "orbit.folders",
@@ -15,7 +16,7 @@ var OrbitFolders = {
     const fr = Orbit.lang() == "fr";
     return {
       icon: Orbit.tr("Change icon…", "Changer l'icône…"),
-      pin: Orbit.tr("Pin folder", "Épingler le dossier"),
+      pin: Orbit.tr("Pin folder in this space", "Épingler le dossier dans l'espace"),
       unpin: Orbit.tr("Unpin folder", "Désépingler le dossier"),
       sub: Orbit.tr("New sub-folder", "Nouveau sous-dossier"),
       subName: Orbit.tr("Sub-folder", "Sous-dossier"),
@@ -155,7 +156,7 @@ var OrbitFolders = {
 
   togglePin(group) {
     if (!group) return;
-    const pinned = !this.meta[group.id]?.pinned;
+    const pinned = this.meta[group.id]?.pinned ? null : OrbitSpaces.spaceOf(group.tabs[0]) || OrbitSpaces.activeId;
     this.setMeta(group.id, { pinned });
     // Pinned folders sit at the top of the list.
     if (pinned) {
@@ -181,5 +182,10 @@ var OrbitFolders = {
 
   isPinnedTab(tab) {
     return !!tab.group && !!this.meta[tab.group.id]?.pinned;
+  },
+
+  // Older "pinned everywhere" folders.
+  isEverywhere(tab) {
+    return !!tab.group && this.meta[tab.group.id]?.pinned === true;
   },
 };

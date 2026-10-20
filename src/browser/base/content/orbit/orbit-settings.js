@@ -14,15 +14,15 @@ var OrbitSettings = {
       id: "general", icon: "settings-2",
       items: [
         { kind: "language" },
+        { kind: "autostart" },
         { kind: "updates" },
         { kind: "font" },
-        { kind: "choice", pref: "browser.theme.toolbar-theme", label: "scheme",
-          options: [[0, "scheme.dark"], [1, "scheme.light"], [2, "scheme.system"]] },
       ],
     },
     {
       id: "look", icon: "palette",
       items: [
+        { kind: "scheme" },
         { kind: "spacecolors" },
         { kind: "background" },
         { kind: "range", pref: "orbit.theme.intensity", label: "intensity", min: 0, max: 80, unit: "%" },
@@ -55,10 +55,18 @@ var OrbitSettings = {
         { kind: "toggle", pref: "orbit.urlbar.replace-newtab", label: "commandbar" },
         { kind: "toggle", pref: "orbit.glance.enabled", label: "glance" },
                 { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
-        { kind: "toggle", pref: "orbit.downloads.turbo", label: "turbo" },
-        { kind: "choice", pref: "orbit.downloads.connections", label: "turboConn", options: [[4, "4"], [8, "8"], [16, "16"]] },
         { kind: "link", label: "advanced", icon: "external-link", action: () => openPreferences() },
         { kind: "link", label: "import", icon: "upload", action: () => OrbitImport.open() },
+      ],
+    },
+    {
+      id: "downloads", icon: "download",
+      items: [
+        { kind: "toggle", pref: "orbit.downloads.turbo", label: "turbo" },
+        { kind: "range", pref: "orbit.downloads.connections", label: "turboConn", min: 2, max: 32 },
+        { kind: "range", pref: "orbit.downloads.turbo-below-mbps", label: "turboBelow", min: 0, max: 200, unit: () => Orbit.tr(" MB/s", " Mo/s") },
+        { kind: "range", pref: "orbit.downloads.turbo-min-mb", label: "turboMin", min: 1, max: 500, unit: () => Orbit.tr(" MB", " Mo") },
+        { kind: "link", label: "downloadsFolder", icon: "external-link", action: () => openPreferences("general") },
       ],
     },
     {
@@ -120,7 +128,12 @@ var OrbitSettings = {
       installExt: "Installer une extension depuis un fichier (.crx, .xpi, .zip)",
       themes: "Thèmes Firefox", "themes.d": "Installe un thème depuis addons.mozilla.org : Orbit prend ses couleurs",
       turbo: "Orbit Turbo", "turbo.d": "Les gros téléchargements utilisent plusieurs connexions : fini les sites bridés par connexion",
-      turboConn: "Connexions par téléchargement",
+      turboConn: "Connexions par téléchargement", "turboConn.d": "Plus de connexions va plus vite sur les serveurs bridés, au prix d'un peu plus de charge",
+      turboBelow: "Activer sous cette vitesse", "turboBelow.d": "Turbo ne s'active que si le téléchargement normal est plus lent. 0 = toujours",
+      turboMin: "Taille minimale", "turboMin.d": "Les fichiers plus petits se téléchargent normalement",
+      downloads: "Téléchargements", downloadsFolder: "Dossier de téléchargement",
+      autostart: "Lancer Orbit au démarrage de l'ordinateur", "autostart.d": "Orbit s'ouvre quand tu te connectes à Windows",
+      "scheme.d": "Clair, sombre ou comme Windows. S'applique aussi aux sites qui le gèrent",
       updates: "Mises à jour", "updates.d": "Automatiques : installées au redémarrage. Me demander : une fenêtre présente les nouveautés au lancement",
       memory: "Mémoire", ai: "Intelligence artificielle", notify: "Notifications", privacy: "Vie privée", shortcuts: "Raccourcis",
       blocker: "Orbit Blocker", "blocker.d": "Bloque pubs, pisteurs, logiciels espions, bannières de cookies et l'accès des sites à ton réseau local",
@@ -176,7 +189,12 @@ var OrbitSettings = {
       installExt: "Install an extension from a file (.crx, .xpi, .zip)",
       themes: "Firefox themes", "themes.d": "Install a theme from addons.mozilla.org: Orbit takes its colors",
       turbo: "Orbit Turbo", "turbo.d": "Big downloads use several connections: no more sites throttling each connection",
-      turboConn: "Connections per download",
+      turboConn: "Connections per download", "turboConn.d": "More connections are faster on throttled servers, at a slightly higher load",
+      turboBelow: "Turn on below this speed", "turboBelow.d": "Turbo only steps in when the normal download is slower. 0 = always",
+      turboMin: "Minimum size", "turboMin.d": "Smaller files download normally",
+      downloads: "Downloads", downloadsFolder: "Download folder",
+      autostart: "Start Orbit when the computer starts", "autostart.d": "Orbit opens when you sign in to Windows",
+      "scheme.d": "Light, dark or like Windows. Also applies to sites that support it",
       updates: "Updates", "updates.d": "Automatic: installed on restart. Ask me: a window shows what's new at launch",
       memory: "Memory", ai: "Artificial intelligence", notify: "Notifications", privacy: "Privacy", shortcuts: "Shortcuts",
       blocker: "Orbit Blocker", "blocker.d": "Blocks ads, trackers, spyware, cookie banners and sites probing your local network",
@@ -232,14 +250,31 @@ var OrbitSettings = {
     else this.open();
   },
 
-  // Section titles: plain words + one key word in Syne (design).
-  TITLES: {
-    fr: { general: ["Réglages", "généraux"], look: ["Ton", "style"], effects: ["Les", "effets"], layout: ["Ta", "disposition"],
-      ai: ["Ton", "IA"], browsing: ["Ta", "navigation"], privacy: ["Ta", "vie privée"], memory: ["Ta", "mémoire"],
-      notify: ["Tes", "notifications"], shortcuts: ["Tes", "raccourcis"], about: ["À propos d'", "Orbit"] },
-    en: { general: ["General", "settings"], look: ["Your", "style"], effects: ["The", "effects"], layout: ["Your", "layout"],
-      ai: ["Your", "AI"], browsing: ["Your", "browsing"], privacy: ["Your", "privacy"], memory: ["Your", "memory"],
-      notify: ["Your", "notifications"], shortcuts: ["Your", "shortcuts"], about: ["About", "Orbit"] },
+  // Navigation groups and one line under each section title.
+  GROUPS: [
+    ["personal", ["general", "look", "effects", "layout"]],
+    ["web", ["browsing", "downloads", "ai"]],
+    ["protection", ["privacy", "memory"]],
+    ["system", ["notify", "shortcuts"]],
+  ],
+
+  DESC() {
+    return {
+      personal: Orbit.tr("Personalization", "Personnalisation"), web: Orbit.tr("Browsing", "Navigation"),
+      protection: Orbit.tr("Protection", "Protection"), system: Orbit.tr("System", "Système"),
+      general: Orbit.tr("Language, startup, updates and font.", "Langue, démarrage, mises à jour et police."),
+      look: Orbit.tr("Theme, colors and background of Orbit.", "Thème, couleurs et fond d'Orbit."),
+      effects: Orbit.tr("Motion, glass and texture. Mods change anything.", "Mouvement, verre et texture. Les mods changent tout le reste."),
+      layout: Orbit.tr("Where things sit and how much room they take.", "Où sont les éléments et la place qu'ils prennent."),
+      browsing: Orbit.tr("How tabs, links and media behave.", "Le comportement des onglets, des liens et des médias."),
+      downloads: Orbit.tr("Orbit Turbo splits big downloads over several connections when it helps.", "Orbit Turbo découpe les gros téléchargements sur plusieurs connexions quand ça aide."),
+      ai: Orbit.tr("The assistant beside the page and AI search.", "L'assistant à côté de la page et la recherche par IA."),
+      privacy: Orbit.tr("Blocking, encryption and the tunnel. Safe defaults, all adjustable.", "Blocage, chiffrement et tunnel. Des réglages sûrs par défaut, tous modifiables."),
+      memory: Orbit.tr("Performance presets and sleeping tabs.", "Préréglages de performances et mise en veille des onglets."),
+      notify: Orbit.tr("What Orbit may tell you about.", "Ce qu'Orbit peut te signaler."),
+      shortcuts: Orbit.tr("Keyboard shortcuts.", "Les raccourcis clavier."),
+      about: "",
+    };
   },
 
   open(sectionId = this._last ?? "general") {
@@ -259,22 +294,24 @@ var OrbitSettings = {
         h("div", { class: "orbit-settings-side" },
           h("div", { class: "orbit-settings-brand" },
             h("span", { class: "orbit-settings-logo-box" }, h("img", { class: "orbit-settings-logo", src: `${Orbit.BASE}orbit-logo.svg`, alt: "" })),
-            h("span", {}, this.t("title"))),
+            h("div", {}, h("span", {}, this.t("title")), h("small", {}, `Orbit ${Services.appinfo.version}`))),
           h("label", { class: "orbit-settings-search" }, Orbit.icon("search"), search),
           nav),
         h("div", { class: "orbit-settings-main" },
           h("div", { class: "orbit-settings-top" },
-            title,
-            h("span", { class: "orbit-settings-note" }, Orbit.tr("Applied instantly · ", "Tout est appliqué tout de suite · "), reset),
+            h("div", { class: "orbit-settings-heading" }, title),
+            reset,
             h("button", { class: "orbit-icon-button", title: "Esc", onclick: () => this.close() }, Orbit.icon("x"))),
           body)
       )
     );
+    const sub = h("div", { class: "orbit-settings-sub" });
+    title.after(sub);
+    const desc = this.DESC();
     const setTitle = id => {
-      // Word order differs between languages: outside French and English the
-      // whole section name is the key word.
-      const [plain, key] = ["fr", "en"].includes(Orbit.lang()) ? Orbit.dict(this.TITLES)[id] ?? [this.t(id), ""] : ["", this.t(id)];
-      title.replaceChildren(!plain || plain.endsWith("'") ? plain : `${plain} `, h("span", { class: "orbit-key" }, key));
+      title.textContent = this.t(id);
+      sub.textContent = desc[id] ?? "";
+      sub.hidden = !sub.textContent;
     };
     this.show = id => {
       this._last = id;
@@ -283,7 +320,7 @@ var OrbitSettings = {
       for (const b of nav.children) b.toggleAttribute("active", b.dataset.id == id);
       setTitle(id);
       const section = this.SECTIONS.find(s => s.id == id);
-      body.replaceChildren(...section.items.map(item => this.render(item)).filter(Boolean));
+      body.replaceChildren(...this.group(section.items.map(item => this.render(item)).filter(Boolean)));
       body.scrollTop = 0;
       if (!window.gReduceMotion) {
         body.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }],
@@ -296,22 +333,25 @@ var OrbitSettings = {
       const needle = norm(q.trim());
       if (!needle) return this.show(this._last);
       for (const b of nav.children) b.removeAttribute("active");
-      title.replaceChildren(Orbit.tr("Results for ", "Résultats pour "), h("span", { class: "orbit-key" }, q.trim()));
+      title.textContent = `${Orbit.tr("Results for ", "Résultats pour ")}« ${q.trim()} »`;
+      sub.hidden = true;
       reset.hidden = true;
       const out = [];
       for (const section of this.SECTIONS) {
         if (section.id == "about") continue;
         const rows = section.items.map(item => this.render(item)).filter(el => el && norm(el.textContent).includes(needle));
-        if (rows.length) out.push(h("div", { class: "orbit-sheet-kicker orbit-settings-group" }, this.t(section.id).toUpperCase()), ...rows);
+        if (rows.length) out.push(h("div", { class: "orbit-settings-group" }, this.t(section.id)), ...this.group(rows));
       }
       body.replaceChildren(...(out.length ? out : [h("div", { class: "orbit-setting-desc orbit-settings-empty" },
         Orbit.tr("No setting matches.", "Aucun réglage ne correspond."))]));
     };
-    for (const s of this.SECTIONS) {
-      if (s.id == "about") nav.append(h("div", { class: "orbit-settings-spacer" }));
-      nav.append(h("button", { class: "orbit-settings-tab", "data-id": s.id, onclick: () => this.show(s.id) },
-        Orbit.icon(s.icon), h("span", {}, this.t(s.id))));
+    const tab = s => h("button", { class: "orbit-settings-tab", "data-id": s.id, onclick: () => this.show(s.id) },
+      Orbit.icon(s.icon), h("span", {}, this.t(s.id)));
+    for (const [gid, ids] of this.GROUPS) {
+      nav.append(h("div", { class: "orbit-settings-navlabel" }, desc[gid]));
+      for (const id of ids) nav.append(tab(this.SECTIONS.find(s => s.id == id)));
     }
+    nav.append(h("div", { class: "orbit-settings-spacer" }), tab(this.SECTIONS.find(s => s.id == "about")));
     document.body.append(sheet);
     this.show(sectionId);
     if (sectionId == "general") search.focus();
@@ -363,7 +403,7 @@ var OrbitSettings = {
       }
       case "range":
         return this.row(this.slider({
-          min: item.min, max: item.max, unit: item.unit, value: Orbit.pref(item.pref, item.min),
+          min: item.min, max: item.max, unit: typeof item.unit == "function" ? item.unit() : item.unit, value: Orbit.pref(item.pref, item.min),
           onInput: v => p.setIntPref(item.pref, v),
         }), item.label);
       case "choice":
@@ -382,6 +422,20 @@ var OrbitSettings = {
           v => OrbitUpdates.setAuto(v == "auto"));
         OrbitUpdates.isAuto().then(auto => !auto && seg.querySelector('[data-v="ask"]')?.click());
         return this.row(seg, "updates");
+      }
+      case "scheme":
+        return this.renderScheme();
+      case "autostart": {
+        const { LaunchOnLogin } = ChromeUtils.importESModule("resource://gre/modules/LaunchOnLogin.sys.mjs");
+        if (!LaunchOnLogin.isSupported()) return null;
+        const sw = this.switch(false, on => (on ? LaunchOnLogin.enable() : LaunchOnLogin.disable())
+          .catch(e => console.error("Orbit autostart", e)));
+        // Reflect the real state without writing it back.
+        LaunchOnLogin.isEnabled().then(on => {
+          sw.toggleAttribute("on", on);
+          sw.setAttribute("aria-checked", String(on));
+        }).catch(() => {});
+        return this.row(sw, "autostart");
       }
       case "fortress": {
         const fr = Orbit.lang() == "fr";
@@ -475,6 +529,45 @@ var OrbitSettings = {
           p.setBoolPref("privacy.sanitize.sanitizeOnShutdown", on);
           p.setBoolPref("privacy.clearOnShutdown_v2.cookiesAndStorage", on);
         }));
+  },
+
+  // Light / dark / system, with a small preview of each.
+  renderScheme() {
+    const h = Orbit.h.bind(Orbit);
+    const p = Services.prefs;
+    const cur = Orbit.pref("browser.theme.toolbar-theme", 2);
+    const pick = v => {
+      p.setIntPref("browser.theme.toolbar-theme", v);
+      p.setIntPref("browser.theme.content-theme", v);
+      for (const c of cards.children) c.toggleAttribute("active", +c.dataset.v == v);
+    };
+    const card = (v, cls, label) => h("button", { class: "orbit-scheme", "data-v": String(v), active: v == cur, onclick: () => pick(v) },
+      h("span", { class: `orbit-scheme-prev ${cls}` }, h("i"), h("b"), h("u")), h("span", {}, label));
+    const cards = h("div", { class: "orbit-schemes" },
+      card(2, "p-system", this.t("scheme.system")), card(1, "p-light", this.t("scheme.light")), card(0, "p-dark", this.t("scheme.dark")));
+    return h("div", { class: "orbit-setting orbit-setting-col" },
+      h("div", { class: "orbit-setting-text" },
+        h("div", { class: "orbit-setting-label" }, this.t("scheme")),
+        h("div", { class: "orbit-setting-desc" }, this.t("scheme.d"))),
+      cards);
+  },
+
+  // Consecutive simple rows share one card; wide items get their own.
+  group(rows) {
+    const h = Orbit.h.bind(Orbit);
+    const out = [];
+    let card = null;
+    for (const el of rows) {
+      const wide = el.classList.contains("orbit-setting-col") || !el.classList.contains("orbit-setting");
+      if (wide || el.classList.contains("orbit-setting-link") != !!card?.dataset.links) card = null;
+      if (wide) {
+        out.push(el.classList.contains("orbit-setting") ? h("div", { class: "orbit-card" }, el) : el);
+        continue;
+      }
+      if (!card) out.push((card = h("div", { class: "orbit-card", "data-links": el.classList.contains("orbit-setting-link") ? "1" : "" })));
+      card.append(el);
+    }
+    return out;
   },
 
   renderBackground() {
@@ -617,7 +710,8 @@ var OrbitSettings = {
     const sw = h("button", {
       class: "orbit-switch", role: "switch", "aria-checked": String(on), on,
       onclick: () => {
-        on = !on;
+        // Read the attribute: callers may set the real state later.
+        on = !sw.hasAttribute("on");
         sw.toggleAttribute("on", on);
         sw.setAttribute("aria-checked", String(on));
         onChange(on);

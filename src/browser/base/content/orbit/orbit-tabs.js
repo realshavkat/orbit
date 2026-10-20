@@ -11,11 +11,7 @@ var OrbitTabs = {
     this.initDrag();
   },
 
-  // ---- Tab drag and drop ------------------------------------------------------
-  // While a tab is dragged: the background pauses (smooth 60 fps), drop zones
-  // say what they do, and the space buttons accept the tab.
-  TAB_DROP_TYPE: "application/x-moz-tabbrowser-tab",
-
+  // ---- Sidebar rows (dragging itself lives in OrbitDnD) -------------------------
   initDrag() {
     const tc = gBrowser.tabContainer;
     // "New tab" sits above the list in its own row. Moving it in the DOM (not
@@ -23,46 +19,10 @@ var OrbitTabs = {
     const newTab = document.getElementById("tabs-newtab-button");
     const header = document.getElementById("orbit-sidebar-header");
     if (newTab && header) header.after(newTab);
-    const root = document.documentElement;
-    const fr = Orbit.lang() == "fr";
-    const text = document.getElementById("pinned-drop-indicator-text");
-    if (text) {
-      text.removeAttribute("data-l10n-id");
-      text.textContent = Orbit.tr("Drop here to add to Essentials", "Lâchez ici pour l'ajouter aux favoris");
-    }
     // Only freshly opened tabs slide in; a tab moved by drag must not replay it.
     tc.addEventListener("TabOpen", e => {
       e.target.setAttribute("orbit-new", "true");
       setTimeout(() => e.target.removeAttribute("orbit-new"), 400);
-    });
-    tc.addEventListener("dragstart", e => {
-      const tab = e.target.closest?.(".tabbrowser-tab");
-      if (tab) root.setAttribute("orbit-dragging", tab.pinned ? "pinned" : "tab");
-    });
-    new MutationObserver(() => {
-      if (!tc.hasAttribute("movingtab")) setTimeout(() => !tc.hasAttribute("movingtab") && root.removeAttribute("orbit-dragging"), 50);
-    }).observe(tc, { attributes: true, attributeFilter: ["movingtab"] });
-    window.addEventListener("dragend", () => root.removeAttribute("orbit-dragging"), true);
-    window.addEventListener("drop", () => root.removeAttribute("orbit-dragging"), true);
-  },
-
-  // Space buttons in the footer: drop a tab on one to move it there.
-  dropTarget(el, onTab) {
-    const has = e => e.dataTransfer?.types.includes(this.TAB_DROP_TYPE);
-    el.addEventListener("dragover", e => {
-      if (!has(e)) return;
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "move";
-      el.setAttribute("drop-over", "true");
-    });
-    el.addEventListener("dragleave", () => el.removeAttribute("drop-over"));
-    el.addEventListener("drop", e => {
-      el.removeAttribute("drop-over");
-      if (!has(e)) return;
-      e.preventDefault();
-      e.stopPropagation();
-      const tab = e.dataTransfer.mozGetDataAt(this.TAB_DROP_TYPE, 0);
-      if (tab?.ownerGlobal == window) onTab(tab);
     });
   },
 

@@ -24,8 +24,7 @@ for (const f of readdirSync(dir).filter(f => f.endsWith(".js"))) {
 //    where every unknown global is a harmless stand-in.
 const stub = new Proxy(function () {}, { get: (t, k) => (k == Symbol.toPrimitive ? () => "" : stub), apply: () => stub, construct: () => stub });
 const ctx = vm.createContext(new Proxy({ console }, { has: () => true, get: (t, k) => (k in t ? t[k] : k in globalThis ? globalThis[k] : stub) }));
-const tables = [["orbit.js", "ORBIT_STRINGS"], ["orbit-settings.js", "OrbitSettings.STRINGS"], ["orbit-settings.js", "OrbitSettings.TITLES"],
-  ["orbit-notify.js", "OrbitNotify.S"], ["orbit-welcome.js", "OrbitWelcome.S"]];
+const tables = [["orbit.js", "ORBIT_STRINGS"], ["orbit-settings.js", "OrbitSettings.STRINGS"], ["orbit-notify.js", "OrbitNotify.S"]];
 const add = v => (typeof v == "string" ? strings.add(v) : Array.isArray(v) ? v.forEach(add) : null);
 for (const [file, expr] of tables) {
   const src = readFileSync(join(dir, file), "utf8").replace(/^if \(document\.readyState[\s\S]*$/m, "");

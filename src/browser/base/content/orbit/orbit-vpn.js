@@ -48,7 +48,7 @@ var OrbitVPN = {
         defaultArea: CustomizableUI.AREA_NAVBAR,
         label: "Orbit VPN",
         tooltiptext: "Orbit VPN",
-        onCommand: e => e.target.ownerGlobal.OrbitVPN.togglePanel(e.target),
+        onCommand: e => e.target.ownerDocument.defaultView.OrbitVPN.togglePanel(e.target),
       });
     } catch {}
     this.paint();

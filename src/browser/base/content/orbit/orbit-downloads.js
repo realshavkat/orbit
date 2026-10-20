@@ -4,11 +4,13 @@
 
 // Orbit Turbo: big downloads use several connections at once (like a
 // download manager), which gets past servers that slow down each connection.
-// It only kicks in when the server accepts byte ranges; otherwise, or on any
-// error, the normal download carries on. A global per-IP limit cannot be lifted.
+// Adaptive: the normal download runs first for a moment; if it is already fast
+// (above the user's threshold) or nearly done, Turbo stays out of the way.
+// Otherwise the normal download pauses (its data kept) while Turbo works, and
+// resumes if Turbo fails. Needs a server that accepts byte ranges.
 var OrbitDownloads = {
-  MIN_SIZE: 8 * 1024 * 1024, // smaller files are not worth splitting
-  CHUNK: 4 * 1024 * 1024, // concatenation step, keeps memory flat
+  CHUNK: 4 * 1024 * 1024, // write and concatenation step, keeps memory flat
+  MEASURE_MS: 2500, // how long the normal download runs before deciding
 
   t(k) {
     const fr = Orbit.lang() == "fr";
@@ -24,7 +26,16 @@ var OrbitDownloads = {
   },
 
   get connections() {
-    return Math.min(16, Math.max(2, Orbit.pref("orbit.downloads.connections", 8)));
+    return Math.min(32, Math.max(2, Orbit.pref("orbit.downloads.connections", 8)));
+  },
+
+  // Turbo only when the normal download is slower than this (0 = always).
+  get threshold() {
+    return Math.max(0, Orbit.pref("orbit.downloads.turbo-below-mbps", 20)) * 1048576;
+  },
+
+  get minSize() {
+    return Math.max(1, Orbit.pref("orbit.downloads.turbo-min-mb", 16)) * 1048576;
   },
 
   async init() {
@@ -59,15 +70,34 @@ var OrbitDownloads = {
     if (!this.enabled || download.succeeded || download.source.isPrivate || this._ours?.has(download)) return;
     const url = download.source.url;
     if (!/^https?:/.test(url) || download.source.adjustChannel) return;
-    for (let i = 0; i < 20 && !(download.totalBytes > 0) && !download.stopped; i++) await new Promise(r => setTimeout(r, 150));
-    if (download.stopped || download.succeeded || !(download.totalBytes >= this.MIN_SIZE)) return;
+    // A download can be added before it starts: wait for its size.
+    const over = () => download.succeeded || download.canceled || !!download.error;
+    for (let i = 0; i < 40 && !(download.totalBytes > 0) && !over(); i++) await new Promise(r => setTimeout(r, 150));
+    if (download.stopped || over() || !(download.totalBytes >= this.minSize)) return;
+    // Let the normal download show its speed first.
+    const t0 = Date.now();
+    const b0 = download.currentBytes;
+    await new Promise(r => setTimeout(r, this.MEASURE_MS));
+    if (download.stopped || download.succeeded) return;
+    const speed = (download.currentBytes - b0) / ((Date.now() - t0) / 1000);
+    const left = download.totalBytes - download.currentBytes;
+    if ((this.threshold && speed >= this.threshold) || left / Math.max(1, speed) < 6) return;
     const probe = await this.probe(url, download.totalBytes);
-    if (!probe) return;
+    if (!probe || download.stopped || download.succeeded) return;
     const target = download.target.path;
     const tmp = `${target}.orbit-turbo`;
+    // Both at once would split the bandwidth: pause the normal one, keep its data.
+    download.tryToKeepPartialData = true;
+    await download.cancel().catch(() => {});
+    let resumed = false;
+    const resume = () => {
+      if (resumed || download.succeeded) return;
+      resumed = true;
+      download.start().catch(() => {});
+    };
     try {
       await this.turbo(url, tmp, probe.size, probe.validator);
-      if (download.succeeded || download.canceled || window.closed) {
+      if (download.succeeded || window.closed) {
         await IOUtils.remove(tmp, { ignoreAbsent: true });
         return;
       }
@@ -80,10 +110,14 @@ var OrbitDownloads = {
       await this.list.add(done);
       await this.markDownloaded(done);
     } catch (e) {
-      const dropped = download.stopped || download.succeeded || download.canceled;
-      if (!dropped || e?.name == "AbortError") await IOUtils.remove(tmp, { ignoreAbsent: true });
-      if (e?.name == "AbortError") return;
+      await IOUtils.remove(tmp, { ignoreAbsent: true });
+      // Cancelled from the Turbo card: the user wants no download at all.
+      if (e?.name == "AbortError") {
+        await download.finalize(true).catch(() => {});
+        return;
+      }
       console.error("Orbit Turbo", e);
+      resume();
       OrbitNotify.show({ kind: "turbo", icon: "download", title: this.t("turbo"), text: this.t("failed"), timeout: 4000 });
     }
   },
@@ -135,9 +169,9 @@ var OrbitDownloads = {
     }, 400);
     try {
       await Promise.all(parts.map(p => this.segment(url, p, validator, ctrl.signal, size)));
-      // Stitch the parts in order, a few MB at a time.
-      await IOUtils.write(target, new Uint8Array(0));
-      for (const p of parts) {
+      // Stitch: the first part becomes the file, the others are appended.
+      await IOUtils.move(parts[0].path, target);
+      for (const p of parts.slice(1)) {
         const len = p.to - p.from + 1;
         for (let off = 0; off < len; off += this.CHUNK) {
           const bytes = await IOUtils.read(p.path, { offset: off, maxBytes: Math.min(this.CHUNK, len - off) });
@@ -168,12 +202,30 @@ var OrbitDownloads = {
       throw new Error(`segment ${p.from}: HTTP ${res.status}`);
     }
     const reader = res.body.getReader();
+    // Few large writes instead of one per network packet (that capped speed).
+    let pending = [];
+    let pendingBytes = 0;
+    const flush = async () => {
+      if (!pendingBytes) return;
+      const block = new Uint8Array(pendingBytes);
+      let at = 0;
+      for (const c of pending) {
+        block.set(c, at);
+        at += c.byteLength;
+      }
+      pending = [];
+      pendingBytes = 0;
+      await IOUtils.write(p.path, block, { mode: "append" });
+    };
     for (;;) {
       const { value, done } = await reader.read();
       if (done) break;
-      await IOUtils.write(p.path, value, { mode: "append" });
+      pending.push(value);
+      pendingBytes += value.byteLength;
       p.got += value.byteLength;
+      if (pendingBytes >= this.CHUNK) await flush();
     }
+    await flush();
     if (p.got != p.to - p.from + 1) throw new Error(`segment ${p.from}: short read`);
   },
 

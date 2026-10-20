@@ -2,9 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Edit mode: right-click the sidebar, "Modifier Orbit". Toolbar buttons can
-// be dragged to reorder, removed with ×, added back from a tray, and the
-// layout switched in place. Built on CustomizableUI, so it persists.
+// Edit mode: right-click the sidebar, "Modifier Orbit". A panel lists the
+// toolbar's buttons (remove, reorder by dragging them in the toolbar) and
+// every button that can be added, Orbit's own included (AI assistant, keep on
+// screen...), plus the sidebar's layout. Built on CustomizableUI, so it persists.
 var OrbitEdit = {
   AREA: "nav-bar",
   // Buttons worth offering in the tray (extensions' buttons are always offered).
@@ -12,7 +13,16 @@ var OrbitEdit = {
     "screenshot-button", "fullscreen-button", "zoom-controls", "print-button", "new-window-button",
     "privatebrowsing-button", "find-button", "panic-button", "developer-button", "save-page-button",
     "open-file-button", "preferences-button", "alltabs-button", "new-tab-button", "edit-controls",
-    "ipprotection-button", "unified-extensions-button"],
+    "unified-extensions-button", "orbit-ai-button", "orbit-ref-button", "orbit-vpn-button"],
+  // Lucide icon per known button (palette nodes are detached: no computed icon).
+  ICONS: { "home-button": "house", "history-panelmenu": "history", "bookmarks-menu-button": "bookmark", "downloads-button": "download",
+    "library-button": "book-open", "screenshot-button": "camera", "fullscreen-button": "maximize-2", "zoom-controls": "zoom-in",
+    "print-button": "printer", "new-window-button": "app-window", "privatebrowsing-button": "eye-off", "find-button": "search",
+    "panic-button": "flame", "developer-button": "code-xml", "save-page-button": "download", "open-file-button": "upload",
+    "preferences-button": "settings-2", "alltabs-button": "layers", "new-tab-button": "plus", "edit-controls": "copy",
+    "unified-extensions-button": "puzzle", "orbit-ai-button": "bot", "orbit-ref-button": "picture-in-picture-2",
+    "orbit-vpn-button": "shield", "urlbar-container": "search", "back-button": "arrow-left", "forward-button": "arrow-right",
+    "stop-reload-button": "rotate-cw", "sidebar-button": "panel-left" },
   FIXED: new Set(["urlbar-container", "sidebar-button", "back-button", "forward-button", "stop-reload-button"]),
 
   t(k) {
@@ -33,6 +43,13 @@ var OrbitEdit = {
       tabs: Orbit.tr("Tabs", "Onglets"),
       width: Orbit.tr("Width", "Largeur"),
       remove: Orbit.tr("Remove", "Retirer"),
+      toolbar: Orbit.tr("Toolbar", "Barre d'outils"),
+      sidebar: Orbit.tr("Sidebar", "Barre latérale"),
+      inBar: Orbit.tr("In the toolbar", "Dans la barre"),
+      available: Orbit.tr("Available buttons", "Boutons disponibles"),
+      position: Orbit.tr("Position", "Position"),
+      ai: Orbit.tr("AI assistant", "Assistant IA"),
+      ref: Orbit.tr("Keep page on screen", "Garder la page à l'écran"),
     }[k];
   },
 
@@ -40,6 +57,7 @@ var OrbitEdit = {
 
   init() {
     this.placeBlocker();
+    this.createWidgets();
     // Extensions panel: a pin button on each extension puts it in the toolbar.
     document.addEventListener("ViewShowing", e => {
       if (e.target.id == "unified-extensions-view") setTimeout(() => this.decorateExtensions(e.target), 0);
@@ -50,6 +68,20 @@ var OrbitEdit = {
       e.stopPropagation();
       this.menu(e.screenX, e.screenY, e.clientX, e.clientY);
     }, true);
+  },
+
+  // Orbit's own buttons, offered in the edit panel (app-wide: the first window
+  // creates them, the others get "already exists").
+  createWidgets() {
+    const make = (id, label, run) => {
+      try {
+        CustomizableUI.createWidget({ id, type: "button", label, tooltiptext: label,
+          onCommand: e => run(e.target.ownerDocument.defaultView) });
+      } catch {}
+    };
+    make("orbit-ai-button", this.t("ai"), win => win.OrbitAI.toggleAssistant());
+    make("orbit-ref-button", this.t("ref"), win =>
+      win.OrbitExtras.reference(win.gBrowser.currentURI.spec, win.gBrowser.selectedTab.label, win.gBrowser.selectedTab.getAttribute("image")));
   },
 
   // Orbit Blocker's shield goes in the toolbar once; after that it is the user's.
@@ -146,22 +178,33 @@ var OrbitEdit = {
     OrbitSettings.close?.(true);
     document.documentElement.setAttribute("orbit-editing", "true");
     const h = Orbit.h.bind(Orbit);
+    this.current = h("div", { class: "orbit-edit-current" });
     this.tray = h("div", { class: "orbit-edit-tray" });
+    const panes = {
+      toolbar: h("div", { class: "orbit-edit-pane" },
+        h("div", { class: "orbit-edit-label" }, this.t("inBar")), this.current,
+        h("div", { class: "orbit-edit-label" }, this.t("available")), this.tray),
+      sidebar: h("div", { class: "orbit-edit-pane", hidden: true },
+        h("div", { class: "orbit-card" },
+          OrbitSettings.row(OrbitSettings.segmented([[true, this.t("left")], [false, this.t("right")]], Orbit.pref("sidebar.position_start", true),
+            v => Services.prefs.setBoolPref("sidebar.position_start", v)), "sidebarRight"),
+          OrbitSettings.row(OrbitSettings.switch(Orbit.pref("orbit.view.compact", false), on => Services.prefs.setBoolPref("orbit.view.compact", on)), "compact"),
+          OrbitSettings.row(OrbitSettings.slider({ min: 180, max: 480, unit: "px", value: Orbit.pref("orbit.view.sidebar-width", 240),
+            onInput: v => Services.prefs.setIntPref("orbit.view.sidebar-width", v) }), "sidebarWidth"))),
+    };
+    // The position row reads "Left / Right", so its label is the plain word.
+    panes.sidebar.querySelector(".orbit-setting-label").textContent = this.t("position");
+    const tabs = OrbitSettings.segmented([["toolbar", this.t("toolbar")], ["sidebar", this.t("sidebar")]], "toolbar", v => {
+      panes.toolbar.hidden = v != "toolbar";
+      panes.sidebar.hidden = v != "sidebar";
+    });
     this.bar = h("div", { id: "orbit-edit-bar", role: "dialog", "aria-label": this.t("title") },
       h("div", { class: "orbit-edit-head" },
-        h("div", {}, h("b", {}, this.t("title")), h("span", {}, this.t("hint"))),
-        h("button", { class: "orbit-toast-b2", onclick: () => { CustomizableUI.reset(); this.refresh(); } }, this.t("reset")),
-        h("button", { class: "orbit-toast-b1", onclick: () => this.exit() }, this.t("done"))),
-      h("div", { class: "orbit-edit-row" },
-        h("span", { class: "orbit-sheet-kicker" }, this.t("tabs").toUpperCase()),
-        OrbitSettings.segmented([[true, this.t("left")], [false, this.t("right")]], Orbit.pref("sidebar.position_start", true),
-          v => Services.prefs.setBoolPref("sidebar.position_start", v)),
-        h("span", { class: "orbit-sheet-kicker" }, this.t("compact").toUpperCase()),
-        OrbitSettings.switch(Orbit.pref("orbit.view.compact", false), on => Services.prefs.setBoolPref("orbit.view.compact", on)),
-        h("span", { class: "orbit-sheet-kicker" }, this.t("width").toUpperCase()),
-        OrbitSettings.slider({ min: 180, max: 480, unit: "px", value: Orbit.pref("orbit.view.sidebar-width", 240),
-          onInput: v => Services.prefs.setIntPref("orbit.view.sidebar-width", v) })),
-      h("div", { class: "orbit-edit-row" }, h("span", { class: "orbit-sheet-kicker" }, this.t("add").toUpperCase()), this.tray));
+        h("span", { class: "orbit-edit-icon" }, Orbit.icon("pencil")),
+        h("div", {}, h("b", {}, this.t("edit")), h("span", {}, this.t("hint"))),
+        h("button", { class: "orbit-button", onclick: () => { CustomizableUI.reset(); this.refresh(); } }, this.t("reset")),
+        h("button", { class: "orbit-button primary", onclick: () => this.exit() }, this.t("done"))),
+      tabs, panes.toolbar, panes.sidebar);
     document.body.append(this.bar);
 
     this._click = e => {
@@ -178,10 +221,18 @@ var OrbitEdit = {
     this.refresh();
   },
 
+  iconFor(id, node) {
+    const name = this.ICONS[id];
+    if (name) return Orbit.icon(name);
+    const img = node?.getAttribute?.("image");
+    return img ? Orbit.h("img", { class: "orbit-icon", src: img, alt: "" }) : Orbit.icon("puzzle");
+  },
+
   refresh() {
     if (!this.active) return;
     const h = Orbit.h.bind(Orbit);
     document.querySelectorAll(".orbit-edit-x").forEach(x => x.remove());
+    const current = [];
     for (const id of this.items()) {
       if (/spring|spacer|separator/.test(id)) continue;
       const node = document.getElementById(id);
@@ -208,27 +259,32 @@ var OrbitEdit = {
         CustomizableUI.moveWidgetWithinArea(dragged, Math.max(0, to));
         this.refresh();
       };
-      if (!this.FIXED.has(id) && CustomizableUI.isWidgetRemovable(id)) {
-        node.append(h("button", {
-          class: "orbit-edit-x", title: this.t("remove"),
-          onclick: e => {
-            e.stopPropagation();
-            CustomizableUI.removeWidgetFromArea(id);
-            this.refresh();
-          },
-        }, Orbit.icon("x")));
+      const removable = !this.FIXED.has(id) && CustomizableUI.isWidgetRemovable(id);
+      const remove = () => {
+        CustomizableUI.removeWidgetFromArea(id);
+        this.refresh();
+      };
+      if (removable) {
+        node.append(h("button", { class: "orbit-edit-x", title: this.t("remove"), onclick: e => { e.stopPropagation(); remove(); } }, Orbit.icon("x")));
       }
+      const label = h("span", {}, id);
+      const named = { "urlbar-container": Orbit.tr("Address bar", "Barre d'adresse"), "stop-reload-button": Orbit.tr("Reload", "Actualiser") }[id];
+      this.label(CustomizableUI.getWidget(id)).then(l => (label.textContent = named ?? l));
+      current.push(h("div", { class: "orbit-edit-item", fixed: !removable }, this.iconFor(id, node), label,
+        removable ? h("button", { class: "orbit-icon-button", title: this.t("remove"), onclick: remove }, Orbit.icon("x")) : null));
     }
+    this.current.replaceChildren(...current);
     const unused = CustomizableUI.getUnusedWidgets(gNavToolbox.palette)
       .filter(w => this.OFFER.includes(w.id) || w.id.endsWith("-browser-action"));
-    const chips = unused.map(w => {
+    const cards = unused.map(w => {
       const label = h("span", {}, w.id);
       this.label(w).then(l => (label.textContent = l));
+      const node = w.forWindow?.(window)?.node;
       return h("button", {
-        class: "orbit-edit-chip", onclick: () => { CustomizableUI.addWidgetToArea(w.id, this.AREA); this.refresh(); },
-      }, Orbit.icon("plus"), label);
+        class: "orbit-edit-card", onclick: () => { CustomizableUI.addWidgetToArea(w.id, this.AREA); this.refresh(); },
+      }, h("span", { class: "orbit-edit-card-icon" }, this.iconFor(w.id, node)), label, Orbit.icon("plus", "orbit-icon orbit-edit-plus"));
     });
-    this.tray.replaceChildren(...(chips.length ? chips : [h("span", { class: "orbit-setting-desc" }, this.t("none"))]));
+    this.tray.replaceChildren(...(cards.length ? cards : [h("span", { class: "orbit-setting-desc" }, this.t("none"))]));
   },
 
   // A palette widget's localized name.

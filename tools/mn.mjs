@@ -59,6 +59,26 @@ try {
     if (mod) actions.unshift({ type: "key", id: "k", actions: [{ type: "keyDown", value: mod }, { type: "pause", duration: 0 }, { type: "pause", duration: 0 }, { type: "pause", duration: 0 }, { type: "pause", duration: 0 }, { type: "keyUp", value: mod }] });
     await send("WebDriver:PerformActions", { actions });
     await send("WebDriver:ReleaseActions");
+  } else if (cmd === "drag") {
+    // node tools/mn.mjs drag "<css selector>" dx,dy[;dx,dy...]  (real input; ends pressed unless "up")
+    const el = await send("WebDriver:FindElement", { using: "css selector", value: arg });
+    const steps = process.argv[4].split(";").map(p => p.split(",").map(Number));
+    const acts = [{ type: "pointerMove", x: 0, y: 0, origin: el.value }, { type: "pointerDown", button: 0 }];
+    // Relative to the previous point: the dragged element may vanish while dragging.
+    let px = 0, py = 0;
+    for (const [x, y] of steps) { acts.push({ type: "pointerMove", x: x - px, y: y - py, origin: "pointer", duration: 120 }); px = x; py = y; }
+    // A 4th argument ending in .png: screenshot while the button is still down.
+    const shotPath = process.argv[5]?.endsWith(".png") ? process.argv[5] : null;
+    await send("WebDriver:PerformActions", { actions: [{ type: "pointer", id: "m", parameters: { pointerType: "mouse" }, actions: acts }] });
+    if (shotPath) {
+      await new Promise(r => setTimeout(r, 300));
+      const r = await send("WebDriver:TakeScreenshot", { full: false, hash: false });
+      writeFileSync(shotPath, Buffer.from(r.value, "base64"));
+      const info = await send("WebDriver:ExecuteScript", { script: "return [OrbitDnD.action?.textContent, OrbitDnD.target?.type, OrbitDnD.target?.index]", args: [], sandbox: "system" });
+      console.log("during drag:", JSON.stringify(info.value));
+    }
+    await send("WebDriver:PerformActions", { actions: [{ type: "pointer", id: "m", parameters: { pointerType: "mouse" }, actions: [{ type: "pointerUp", button: 0 }] }] });
+    await send("WebDriver:ReleaseActions");
   } else if (cmd === "actions") {
     // WebDriver actions JSON, e.g. an Alt+click: see tools/README in comments.
     await send("WebDriver:PerformActions", { actions: JSON.parse(arg) });

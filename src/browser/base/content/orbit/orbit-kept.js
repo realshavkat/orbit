@@ -4,8 +4,8 @@
 
 // Space-pinned tabs (Zen's pinned list). They are Gecko pinned tabs shown as
 // rows under the essentials, above the space name, and only in their own
-// space. Pin one from its menu or by dragging it to the top of the list;
-// drag it back into the list to unpin. Closing one only puts it to sleep.
+// space. Pin one from its menu or by dragging it (OrbitDnD). Closing one
+// only puts it to sleep.
 var OrbitKept = {
   KEY: "orbit-kept", // attribute and session value: the id of the tab's space
 
@@ -19,10 +19,6 @@ var OrbitKept = {
 
   init() {
     const tc = gBrowser.tabContainer;
-    // Only a drag by the user changes membership, never a programmatic move.
-    tc.addEventListener("dragstart", () => (this._drag = true));
-    window.addEventListener("dragend", () => setTimeout(() => (this._drag = false), 200), true);
-    tc.addEventListener("TabMove", e => this._drag && this.onMove(e.target));
     // Dragged out of the pinned area: back to a normal tab of its space.
     tc.addEventListener("TabUnpinned", e => {
       const space = e.target.getAttribute(this.KEY);
@@ -42,6 +38,17 @@ var OrbitKept = {
         return;
       }
       return origRemove(tab, options);
+    };
+    // Ctrl+W on any pinned tab (essential or space-pinned): Gecko ignores it;
+    // Orbit closes the page but keeps the pin (unloaded, like Zen).
+    const origClose = BrowserCommands.closeTabOrWindow.bind(BrowserCommands);
+    BrowserCommands.closeTabOrWindow = event => {
+      const tab = gBrowser.selectedTab;
+      if (tab.pinned && !gBrowser.multiSelectedTabsCount && window.location.href == AppConstants.BROWSER_CHROME_URL) {
+        this.sleep(tab);
+        return;
+      }
+      origClose(event);
     };
     this.addMenu();
     // Lazily restored tabs never fire SSTabRestoring: read the value directly.
@@ -95,17 +102,6 @@ var OrbitKept = {
       gBrowser.selectedTab = next;
     }
     gBrowser.discardBrowser(tab);
-  },
-
-  // Dropped at the very top of a space's list: pin it in the space.
-  onMove(tab) {
-    if (tab.pinned || this._moving) return;
-    const list = OrbitSpaces.tabsIn(OrbitSpaces.spaceOf(tab));
-    if (list.indexOf(tab) == 0 && list.length > 1) {
-      this._moving = true;
-      this.set(tab, true);
-      this._moving = false;
-    }
   },
 
   // Only the current space's pinned rows show.

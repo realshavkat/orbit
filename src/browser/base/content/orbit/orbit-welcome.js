@@ -2,40 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// First-run setup: a short animated walkthrough (style, layout, import).
+// First-run setup. Built to stay light on any PC: a static background, no
+// blur or masks, and only one small demo animating at a time (transforms and
+// opacity only). The window's own background is paused meanwhile.
 var OrbitWelcome = {
-  S: {
-    fr: {
-      skip: "Passer", next: "Continuer", back: "Retour", start: "Commencer",
-      "hello.t": "Bienvenue dans Orbit", "hello.s": "Un navigateur calme, rapide et beau.", name: "Ton prénom (facultatif)",
-      "style.t": "Choisis ton style", "style.s": "Tu pourras tout changer plus tard dans les paramètres.",
-      dark: "Sombre", light: "Clair", system: "Système",
-      "layout.t": "Ta disposition", "layout.s": "Où veux-tu tes onglets ?",
-      left: "À gauche", right: "À droite", compact: "Compact",
-      "import.t": "Retrouve tes affaires", "import.s": "Marque-pages, mots de passe et historique.",
-      import: "Importer depuis un autre navigateur", blocker: "Bloque pubs et pisteurs. Tu peux le couper ici ou plus tard.", "default": "Définir Orbit par défaut",
-      "done.t": "Tout est prêt", "done.s": "Quelques raccourcis pour bien démarrer :",
-      k1: "Nouvel onglet / barre de commande", k2: "Aperçu d'un lien (Glance)",
-      k3: "Mode compact", k4: "Paramètres", go: "Commencer à naviguer",
-    },
-    en: {
-      skip: "Skip", next: "Continue", back: "Back", start: "Get started",
-      "hello.t": "Welcome to Orbit", "hello.s": "A calm, fast and beautiful browser.", name: "Your first name (optional)",
-      "style.t": "Pick your style", "style.s": "You can change everything later in Settings.",
-      dark: "Dark", light: "Light", system: "System",
-      "layout.t": "Your layout", "layout.s": "Where do you want your tabs?",
-      left: "Left", right: "Right", compact: "Compact",
-      "import.t": "Bring your stuff", "import.s": "Bookmarks, passwords and history.",
-      import: "Import from another browser", blocker: "Blocks ads and trackers. Turn it off here or later.", "default": "Make Orbit the default browser",
-      "done.t": "You're all set", "done.s": "A few shortcuts to get going:",
-      k1: "New tab / command bar", k2: "Preview a link (Glance)",
-      k3: "Compact mode", k4: "Settings", go: "Start browsing",
-    },
-  },
-
-  t(k) {
-    return Orbit.dict(this.S)[k] ?? k;
-  },
+  STEPS: ["hello", "look", "tour", "layout", "setup", "done"],
 
   maybeShow() {
     if (Orbit.pref("orbit.welcome.done", false) || PrivateBrowsingUtils.isWindowPrivate(window)) return;
@@ -44,84 +15,100 @@ var OrbitWelcome = {
     this.show();
   },
 
+  // Feature tour: [icon, title, text, demo builder].
+  FEATURES() {
+    return [
+      ["layers", Orbit.tr("Spaces and Essentials", "Espaces et favoris"),
+        Orbit.tr("One space per project with its own colors. Your favorite sites stay as tiles at the top.", "Un espace par projet, avec ses couleurs. Tes sites préférés restent en tuiles tout en haut."), "spaces"],
+      ["pin", Orbit.tr("Drag to pin", "Glisse pour épingler"),
+        Orbit.tr("Drag a tab to the tiles, to the pinned rows or into a folder. A slot shows where it lands.", "Glisse un onglet vers les tuiles, les épinglés ou un dossier. Un emplacement montre où il atterrit."), "drag"],
+      ["command", Orbit.tr("Command bar", "Barre de commande"),
+        Orbit.tr("Ctrl+T opens a floating search: sites, tabs, settings and AI with @claude or @gpt.", "Ctrl+T ouvre une recherche flottante : sites, onglets, réglages et IA avec @claude ou @gpt."), "command"],
+      ["eye", "Glance", Orbit.tr("Alt+click a link to preview it without leaving the page.", "Alt+clic sur un lien pour le prévisualiser sans quitter la page."), "glance"],
+      ["shield-check", Orbit.tr("Private by default", "Privé par défaut"),
+        Orbit.tr("Orbit Blocker stops ads and trackers, no telemetry is sent, and Orbit VPN hides your IP.", "Orbit Blocker bloque pubs et pisteurs, aucune télémétrie n'est envoyée, et Orbit VPN masque ton IP."), "shield"],
+      ["gauge", Orbit.tr("Light on memory", "Léger en mémoire"),
+        Orbit.tr("Tabs you don't use go to sleep and use almost nothing until you come back.", "Les onglets inutilisés se mettent en veille et ne consomment presque rien jusqu'à ton retour."), "sleep"],
+      ["picture-in-picture-2", Orbit.tr("Keep it on screen", "Garde-le à l'écran"),
+        Orbit.tr("Picture-in-Picture for videos, and any image or page as an always-on-top reference.", "Picture-in-Picture pour les vidéos, et n'importe quelle image ou page en référence toujours visible."), "ref"],
+    ];
+  },
+
   show() {
     const h = Orbit.h.bind(Orbit);
-    const steps = ["hello", "style", "layout", "import", "done"];
     let index = 0;
-    const stage = h("div", { class: "orbit-welcome-stage" });
-    const dots = h("div", { class: "orbit-welcome-dots" }, ...steps.map(() => h("span", {})));
-    const back = h("button", { class: "orbit-button orbit-welcome-back", onclick: () => go(index - 1) }, this.t("back"));
-    const next = h("button", { class: "orbit-button primary orbit-welcome-next", onclick: () => go(index + 1) });
-    const root = h("div", { id: "orbit-welcome" },
-      h("div", { class: "orbit-welcome-sky" }),
-      h("button", { class: "orbit-welcome-skip", onclick: () => this.finish(root) }, this.t("skip")),
+    const stage = h("div", { class: "ow-stage" });
+    const dots = h("div", { class: "ow-dots" }, ...this.STEPS.map(() => h("span")));
+    const back = h("button", { class: "ow-btn", onclick: () => go(index - 1) }, Orbit.tr("Back", "Retour"));
+    const next = h("button", { class: "ow-btn primary", onclick: () => go(index + 1) });
+    const root = h("div", { id: "orbit-welcome", class: "ow" },
+      h("button", { class: "ow-skip", onclick: () => this.finish(root) }, Orbit.tr("Skip", "Passer")),
       stage,
-      h("div", { class: "orbit-welcome-nav" }, back, dots, next));
+      h("div", { class: "ow-nav" }, back, dots, next));
+    document.documentElement.setAttribute("orbit-welcome-open", "true");
 
     const go = i => {
-      if (i >= steps.length) return this.finish(root);
+      if (i >= this.STEPS.length) return this.finish(root);
       if (i < 0) return;
       const dir = i > index ? 1 : -1;
       index = i;
       const old = stage.firstChild;
-      const page = this.page(steps[i]);
-      page.classList.add("orbit-welcome-page");
+      this.stopTour();
+      const page = h("div", { class: "ow-page" }, ...this.page(this.STEPS[i]));
       if (old && !window.gReduceMotion) {
-        old.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${-40 * dir}px)` }],
-          { duration: 220, easing: "ease-in", fill: "forwards" }).finished.then(() => old.remove());
-        page.animate([{ opacity: 0, transform: `translateX(${40 * dir}px)` }, { opacity: 1, transform: "none" }],
-          { duration: 420, delay: 120, easing: "cubic-bezier(.2,.9,.25,1)", fill: "backwards" });
+        old.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${-24 * dir}px)` }],
+          { duration: 160, easing: "ease-in", fill: "forwards" }).finished.then(() => old.remove());
+        page.animate([{ opacity: 0, transform: `translateX(${24 * dir}px)` }, { opacity: 1, transform: "none" }],
+          { duration: 320, delay: 100, easing: "cubic-bezier(.2,.9,.25,1)", fill: "backwards" });
       } else {
         old?.remove();
       }
       stage.append(page);
       [...dots.children].forEach((d, j) => d.toggleAttribute("active", j == i));
-      back.style.visibility = i == 0 || i == steps.length - 1 ? "hidden" : "visible";
-      next.textContent = i == 0 ? this.t("start") : i == steps.length - 1 ? this.t("go") : this.t("next");
+      back.style.visibility = i == 0 || i == this.STEPS.length - 1 ? "hidden" : "visible";
+      next.textContent = i == 0 ? Orbit.tr("Get started", "Commencer") : i == this.STEPS.length - 1
+        ? Orbit.tr("Start browsing", "Commencer à naviguer") : Orbit.tr("Continue", "Continuer");
     };
+    this._key = e => {
+      if (e.key == "Escape") this.finish(root);
+      else if (e.key == "Enter" && e.target.localName != "input") go(index + 1);
+    };
+    window.addEventListener("keydown", this._key, true);
     document.body.append(root);
     go(0);
     next.focus();
   },
 
-  // Option cards that write a pref when picked.
-  cards(options) {
+  head(title, sub) {
     const h = Orbit.h.bind(Orbit);
-    const wrap = h("div", { class: "orbit-welcome-cards" });
-    for (const o of options) {
-      const card = h("button", {
-        class: "orbit-welcome-card", active: o.active(),
-        onclick: () => {
-          o.pick();
-          for (const c of wrap.children) c.toggleAttribute("active", c == card);
-        },
-      }, h("div", { class: `orbit-welcome-preview ${o.preview}` }, h("i"), h("b"), h("u")), h("span", {}, o.label));
-      wrap.append(card);
-    }
-    return wrap;
+    return [h("h1", {}, title), h("p", {}, sub)];
   },
 
   page(id) {
     const h = Orbit.h.bind(Orbit);
     const p = Services.prefs;
-    const title = h("h1", {}, this.t(`${id}.t`));
-    const sub = h("p", {}, this.t(`${id}.s`));
     switch (id) {
       case "hello":
-        return h("div", {},
-          h("div", { class: "orbit-welcome-logo" },
-            h("div", { class: "orbit-welcome-ring" }),
-            h("img", { src: `${Orbit.BASE}orbit-logo.svg`, alt: "" })),
-          title, sub,
+        return [
+          h("img", { class: "ow-logo", src: `${Orbit.BASE}orbit-logo.svg`, alt: "" }),
+          ...this.head(Orbit.tr("Welcome to Orbit", "Bienvenue dans Orbit"),
+            Orbit.tr("A calm, fast browser built on Firefox. No telemetry, ad blocking built in.",
+              "Un navigateur calme et rapide, basé sur Firefox. Sans télémétrie, avec bloqueur intégré.")),
           h("input", {
-            class: "orbit-welcome-name", maxlength: 40, placeholder: this.t("name"), value: Orbit.pref("orbit.user.name", ""),
-            oninput: e => p.setStringPref("orbit.user.name", e.target.value.trim()),
-          }));
-      case "style": {
-        const scheme = () => Orbit.pref("browser.theme.toolbar-theme", 0);
-        const swatches = h("div", { class: "orbit-welcome-swatches" },
+            class: "ow-input", maxlength: 40, placeholder: Orbit.tr("Your first name (optional)", "Ton prénom (facultatif)"),
+            value: Orbit.pref("orbit.user.name", ""), oninput: e => p.setStringPref("orbit.user.name", e.target.value.trim()),
+          }),
+        ];
+      case "look": {
+        const cur = () => Orbit.pref("browser.theme.toolbar-theme", 2);
+        const cards = this.choices([[2, "p-system", Orbit.tr("System", "Système")], [1, "p-light", Orbit.tr("Light", "Clair")],
+          [0, "p-dark", Orbit.tr("Dark", "Sombre")]], cur(), v => {
+          p.setIntPref("browser.theme.toolbar-theme", v);
+          p.setIntPref("browser.theme.content-theme", v);
+        });
+        const swatches = h("div", { class: "ow-swatches" },
           ...OrbitSpaces.THEMES.map(th => h("button", {
-            class: "orbit-pick-theme", style: `--c1:${th.c1};--c2:${th.c2}`, active: OrbitSpaces.active.theme == th.id,
+            class: "ow-swatch", style: `--c1:${th.c1};--c2:${th.c2}`, active: OrbitSpaces.active.theme == th.id, title: th.id,
             onclick: e => {
               OrbitSpaces.active.theme = th.id;
               OrbitSpaces.save();
@@ -129,59 +116,138 @@ var OrbitWelcome = {
               for (const b of e.currentTarget.parentNode.children) b.toggleAttribute("active", b == e.currentTarget);
             },
           })));
-        return h("div", {}, title, sub,
-          this.cards([0, 1, 2].map(v => ({
-            label: this.t(["dark", "light", "system"][v]), preview: ["p-dark", "p-light", "p-system"][v],
-            active: () => scheme() == v, pick: () => p.setIntPref("browser.theme.toolbar-theme", v),
-          }))),
-          swatches);
+        return [...this.head(Orbit.tr("Your look", "Ton style"), Orbit.tr("Everything can change later in Settings.", "Tout se change plus tard dans les paramètres.")),
+          cards, h("div", { class: "ow-label" }, Orbit.tr("Space color", "Couleur de l'espace")), swatches];
       }
+      case "tour":
+        return [...this.head(Orbit.tr("What Orbit does for you", "Ce qu'Orbit fait pour toi"), ""), this.tour()];
       case "layout": {
-        const mode = () => Orbit.pref("orbit.view.compact", false) ? "compact"
-          : Orbit.pref("sidebar.position_start", true) ? "left" : "right";
-        const set = m => {
-          p.setBoolPref("orbit.view.compact", m == "compact");
-          p.setBoolPref("sidebar.position_start", m != "right");
-        };
-        return h("div", {}, title, sub, this.cards(["left", "right", "compact"].map(m => ({
-          label: this.t(m), preview: `p-${m}`, active: () => mode() == m, pick: () => set(m),
-        }))));
+        const mode = () => Orbit.pref("orbit.view.compact", false) ? "compact" : Orbit.pref("sidebar.position_start", true) ? "left" : "right";
+        return [...this.head(Orbit.tr("Your layout", "Ta disposition"), Orbit.tr("Where do you want your tabs?", "Où veux-tu tes onglets ?")),
+          this.choices([["left", "p-left", Orbit.tr("Left", "À gauche")], ["right", "p-right", Orbit.tr("Right", "À droite")],
+            ["compact", "p-compact", Orbit.tr("Compact", "Compact")]], mode(), m => {
+            p.setBoolPref("orbit.view.compact", m == "compact");
+            p.setBoolPref("sidebar.position_start", m != "right");
+          })];
       }
-      case "import": {
-        const done = btn => btn.setAttribute("done", "true");
-        return h("div", {}, title, sub,
-          h("div", { class: "orbit-welcome-actions" },
-            h("button", { class: "orbit-welcome-action", onclick: e => {
-              done(e.currentTarget);
-              OrbitImport.open();
-            } }, Orbit.icon("upload"), h("span", {}, this.t("import")), Orbit.icon("check", "orbit-icon orbit-done")),
-            h("button", { class: "orbit-welcome-action", onclick: e => {
-              done(e.currentTarget);
-              try {
-                ShellService.setDefaultBrowser(false);
-              } catch (err) {
-                console.error(err);
-              }
-            } }, Orbit.icon("star"), h("span", {}, this.t("default")), Orbit.icon("check", "orbit-icon orbit-done"))),
-          h("div", { class: "orbit-welcome-blocker" },
-            h("div", {}, h("b", {}, "Orbit Blocker"), h("span", {}, this.t("blocker"))),
-            OrbitSettings.switch(true, async on => {
-              const addon = await AddonManager.getAddonByID("orbit-blocker@orbit.app");
-              if (addon) await (on ? addon.enable() : addon.disable());
-            })));
+      case "setup": {
+        const row = (icon, title, text, control) => h("div", { class: "ow-row" },
+          h("span", { class: "ow-row-icon" }, Orbit.icon(icon)),
+          h("div", {}, h("b", {}, title), h("small", {}, text)), control);
+        const action = (label, run) => h("button", { class: "ow-btn small", onclick: e => {
+          e.currentTarget.setAttribute("done", "true");
+          run();
+        } }, label);
+        const updates = OrbitSettings.switch(true, on => OrbitUpdates.setAuto(on));
+        OrbitUpdates.isAuto().then(on => !on && updates.click());
+        return [...this.head(Orbit.tr("Make it yours", "Dernières touches"), Orbit.tr("All optional, all reversible.", "Tout est facultatif et réversible.")),
+          h("div", { class: "ow-rows" },
+            row("upload", Orbit.tr("Import from another browser", "Importer depuis un autre navigateur"),
+              Orbit.tr("Bookmarks, passwords, history, from Chrome, Edge, Zen, Brave…", "Favoris, mots de passe, historique, depuis Chrome, Edge, Zen, Brave…"),
+              action(Orbit.tr("Import", "Importer"), () => OrbitImport.open())),
+            row("star", Orbit.tr("Default browser", "Navigateur par défaut"),
+              Orbit.tr("Links from other apps open in Orbit.", "Les liens des autres applis s'ouvrent dans Orbit."),
+              action(Orbit.tr("Set", "Définir"), () => { try { ShellService.setDefaultBrowser(false); } catch (err) { console.error(err); } })),
+            row("shield", "Orbit Blocker", Orbit.tr("Blocks ads and trackers.", "Bloque pubs et pisteurs."),
+              OrbitSettings.switch(true, async on => {
+                const addon = await AddonManager.getAddonByID("orbit-blocker@orbit.app");
+                if (addon) await (on ? addon.enable() : addon.disable());
+              })),
+            row("refresh-cw", Orbit.tr("Automatic updates", "Mises à jour automatiques"),
+              Orbit.tr("Installed when Orbit restarts.", "Installées au redémarrage d'Orbit."), updates))];
       }
-      case "done":
-        return h("div", {}, title, sub,
-          h("div", { class: "orbit-welcome-keys" },
-            ...[["Ctrl+T", "k1"], ["Alt+Clic", "k2"], ["Ctrl+Alt+C", "k3"], ["Ctrl+,", "k4"]].map(([k, l]) =>
-              h("div", {}, h("kbd", {}, k), h("span", {}, this.t(l))))));
+      case "done": {
+        const name = Orbit.pref("orbit.user.name", "");
+        return [h("div", { class: "ow-check" }, Orbit.icon("check")),
+          ...this.head(name ? Orbit.tr("You're all set, {name}", "Tout est prêt, {name}").replace("{name}", name) : Orbit.tr("You're all set", "Tout est prêt"),
+            Orbit.tr("A few shortcuts to get going:", "Quelques raccourcis pour bien démarrer :")),
+          h("div", { class: "ow-keys" },
+            ...[["Ctrl+T", Orbit.tr("Command bar", "Barre de commande")], ["Alt+Clic", "Glance"],
+              ["Ctrl+Alt+C", Orbit.tr("Compact mode", "Mode compact")], ["Ctrl+,", Orbit.tr("Settings", "Paramètres")],
+              ["Ctrl+W", Orbit.tr("Close the page (pins stay)", "Fermer la page (les épinglés restent)")],
+              ["Ctrl+Maj+U", Orbit.tr("AI assistant", "Assistant IA")]].map(([k, l]) => h("div", {}, h("kbd", {}, k), h("span", {}, l))))];
+      }
+    }
+    return [];
+  },
+
+  // Three big picture cards; `pick` runs on click.
+  choices(options, current, pick) {
+    const h = Orbit.h.bind(Orbit);
+    const wrap = h("div", { class: "ow-choices" });
+    for (const [v, cls, label] of options) {
+      const card = h("button", { class: "ow-choice", active: v == current, onclick: () => {
+        pick(v);
+        for (const c of wrap.children) c.toggleAttribute("active", c == card);
+      } }, h("span", { class: `ow-prev ${cls}` }, h("i"), h("b"), h("u")), h("span", {}, label));
+      wrap.append(card);
+    }
+    return wrap;
+  },
+
+  // ---- feature tour: one demo at a time, auto-advancing --------------------------
+  tour() {
+    const h = Orbit.h.bind(Orbit);
+    const features = this.FEATURES();
+    const demo = h("div", { class: "ow-demo" });
+    const text = h("div", { class: "ow-feature" });
+    const list = h("div", { class: "ow-features" });
+    let i = 0;
+    const pick = n => {
+      i = (n + features.length) % features.length;
+      const [icon, title, desc, kind] = features[i];
+      demo.replaceChildren(this.demo(kind));
+      text.replaceChildren(h("b", {}, title), h("span", {}, desc));
+      for (const [j, b] of [...list.children].entries()) b.toggleAttribute("active", j == i);
+      clearTimeout(this._tour);
+      this._tour = setTimeout(() => pick(i + 1), 5200);
+    };
+    features.forEach(([icon, title], j) => list.append(h("button", { class: "ow-feature-tab", onclick: () => pick(j) }, Orbit.icon(icon), h("span", {}, title))));
+    pick(0);
+    return h("div", { class: "ow-tour" }, list, h("div", { class: "ow-tour-main" }, demo, text));
+  },
+
+  stopTour() {
+    clearTimeout(this._tour);
+  },
+
+  // Tiny looping scenes made of boxes: cheap to draw, easy to read.
+  demo(kind) {
+    const h = Orbit.h.bind(Orbit);
+    const row = (cls = "") => h("i", { class: `d-row ${cls}` });
+    const side = (...kids) => h("div", { class: "d-side" }, ...kids);
+    switch (kind) {
+      case "spaces":
+        return h("div", { class: `d d-${kind}` }, side(h("div", { class: "d-tiles" }, h("i"), h("i"), h("i")), row("sel"), row(), row()),
+          h("div", { class: "d-page" }), h("div", { class: "d-spaces" }, h("i", { class: "on" }), h("i"), h("i")));
+      case "drag":
+        return h("div", { class: `d d-${kind}` }, side(h("div", { class: "d-tiles" }, h("i"), h("i"), h("i", { class: "d-landing" })),
+          h("i", { class: "d-row d-slot" }), row(), row(), row()), h("i", { class: "d-row d-moving" }), h("div", { class: "d-page" }));
+      case "command":
+        return h("div", { class: `d d-${kind}` }, side(row(), row(), row()), h("div", { class: "d-page" }),
+          h("div", { class: "d-bar" }, h("i", { class: "d-type" }), h("i", { class: "d-res" }), h("i", { class: "d-res" }), h("i", { class: "d-res" })));
+      case "glance":
+        return h("div", { class: `d d-${kind}` }, side(row(), row(), row()), h("div", { class: "d-page" }, h("i", { class: "d-link" })),
+          h("div", { class: "d-glance" }));
+      case "shield":
+        return h("div", { class: `d d-${kind}` }, h("div", { class: "d-shield" }, Orbit.icon("shield-check")),
+          ...[1, 2, 3, 4, 5].map(n => h("i", { class: `d-ad d-ad${n}` })));
+      case "sleep":
+        return h("div", { class: `d d-${kind}` }, side(row("sel"), row("zz"), row("zz"), row("zz")),
+          h("div", { class: "d-meter" }, h("i")));
+      case "ref":
+        return h("div", { class: `d d-${kind}` }, side(row(), row(), row()), h("div", { class: "d-page" }),
+          h("div", { class: "d-float" }, h("i")));
     }
     return h("div");
   },
 
   finish(root) {
     Services.prefs.setBoolPref("orbit.welcome.done", true);
+    this.stopTour();
+    window.removeEventListener("keydown", this._key, true);
+    document.documentElement.removeAttribute("orbit-welcome-open");
     root.setAttribute("closing", "true");
-    setTimeout(() => root.remove(), 450);
+    setTimeout(() => root.remove(), 260);
   },
 };

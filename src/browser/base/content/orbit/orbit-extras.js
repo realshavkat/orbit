@@ -18,11 +18,20 @@ var OrbitExtras = {
       glance: Orbit.tr("Open in Glance", "Ouvrir dans Glance"),
       unloadSpace: Orbit.tr("Put space to sleep", "Mettre l'espace en veille"),
       unloadOthers: Orbit.tr("Put other spaces to sleep", "Mettre les autres espaces en veille"),
+      tag: Orbit.tr("Add a tag…", "Ajouter un tag…"),
+      editTag: Orbit.tr("Edit tag…", "Modifier le tag…"),
+      removeTag: Orbit.tr("Remove tag", "Retirer le tag"),
+      tagHint: Orbit.tr("Tag text", "Texte du tag"),
+      refImage: Orbit.tr("Keep image on screen", "Garder l'image à l'écran"),
+      refVideo: Orbit.tr("Keep video on screen", "Garder la vidéo à l'écran"),
+      refLink: Orbit.tr("Keep link on screen", "Garder le lien à l'écran"),
+      refPage: Orbit.tr("Keep page on screen", "Garder la page à l'écran"),
     }[k];
   },
 
   init() {
     this.initRename();
+    this.initTags();
     this.initMenus();
     this.initLastUsed();
     window.addEventListener("keydown", e => {
@@ -60,7 +69,7 @@ var OrbitExtras = {
     tc.addEventListener("dblclick", e => {
       const label = e.target.closest?.(".tab-label-container");
       const tab = e.target.closest?.(".tabbrowser-tab");
-      if (!label || !tab || tab.pinned) return;
+      if (!label || !tab || (tab.pinned && !OrbitKept.isKept(tab))) return;
       e.preventDefault();
       e.stopPropagation();
       this.rename(tab);
@@ -82,7 +91,11 @@ var OrbitExtras = {
   // Inline editor over the tab title.
   rename(tab) {
     const box = tab.querySelector(".tab-label-container");
-    if (!box || tab.querySelector(".orbit-rename")) return;
+    // Essentials tiles show no title: edit the name in a small popover instead.
+    if (!box || !box.getBoundingClientRect().width) {
+      return this.popover(tab, { value: tab.label, placeholder: this.t("rename"), onDone: v => this.setName(tab, v) });
+    }
+    if (tab.querySelector(".orbit-rename")) return;
     const input = Orbit.h("input", { class: "orbit-rename", value: tab.label, maxlength: 80, "aria-label": this.t("rename") });
     box.after(input);
     box.hidden = true;
@@ -106,6 +119,127 @@ var OrbitExtras = {
     for (const type of ["mousedown", "click", "dblclick"]) input.addEventListener(type, e => e.stopPropagation());
   },
 
+  // Floating text field under a tab (essentials have no visible title).
+  popover(tab, { value = "", placeholder = "", extra = null, onDone }) {
+    document.getElementById("orbit-tab-popover")?.remove();
+    const h = Orbit.h.bind(Orbit);
+    const input = h("input", { class: "orbit-input", value, placeholder, maxlength: 80, "aria-label": placeholder });
+    const pop = h("div", { id: "orbit-tab-popover", class: "orbit-ctx orbit-tab-popover" }, input, extra);
+    document.body.append(pop);
+    const r = tab.getBoundingClientRect();
+    pop.style.left = `${Math.round(Math.max(8, r.left))}px`;
+    pop.style.top = `${Math.round(r.bottom + 6)}px`;
+    let done = false;
+    const close = save => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("mousedown", outside, true);
+      pop.remove();
+      if (save) onDone(input.value.trim());
+    };
+    const outside = e => !pop.contains(e.target) && close(true);
+    window.addEventListener("mousedown", outside, true);
+    input.addEventListener("keydown", e => {
+      e.stopPropagation();
+      if (e.key == "Enter") close(true);
+      else if (e.key == "Escape") close(false);
+    });
+    input.focus();
+    input.select();
+    return { pop, input, close };
+  },
+
+  // ---- tags: a colored label on a tab ("IMPORTANT" in yellow...) -------------------
+  TAG_KEY: "orbit-tag",
+  TAG_COLORS: ["#f5c518", "#ff5d5d", "#ff9f43", "#3ddc97", "#4f8cff", "#a66bff", "#ff6bcb", "#8a8a99"],
+  TAG_PRESETS: [["IMPORTANT", "#f5c518"], ["URGENT", "#ff5d5d"], ["À LIRE", "#4f8cff"], ["TODO", "#3ddc97"]],
+
+  initTags() {
+    const restoreAll = () => {
+      for (const tab of gBrowser.tabs) this.paintTag(tab);
+    };
+    window.addEventListener("SSWindowRestored", restoreAll);
+    gBrowser.tabContainer.addEventListener("SSTabRestoring", e => this.paintTag(e.target));
+    setTimeout(restoreAll, 0);
+  },
+
+  getTag(tab) {
+    if (!tab) return null;
+    try {
+      return JSON.parse(SessionStore.getCustomTabValue(tab, this.TAG_KEY) || "null");
+    } catch {
+      return null;
+    }
+  },
+
+  setTag(tab, tag) {
+    if (!tab) return;
+    if (tag?.text) SessionStore.setCustomTabValue(tab, this.TAG_KEY, JSON.stringify(tag));
+    else SessionStore.deleteCustomTabValue(tab, this.TAG_KEY);
+    this.paintTag(tab);
+  },
+
+  // Black or white text, whichever reads better on the tag color.
+  ink(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
+    return lum > 0.6 ? "#111" : "#fff";
+  },
+
+  paintTag(tab) {
+    const tag = this.getTag(tab);
+    let pill = tab.querySelector(".orbit-tab-tag");
+    if (!tag) {
+      pill?.remove();
+      tab.removeAttribute("orbit-tagged");
+      return;
+    }
+    if (!pill) {
+      pill = Orbit.h("span", { class: "orbit-tab-tag" });
+      tab.querySelector(".tab-content")?.append(pill);
+    }
+    pill.textContent = tag.text;
+    pill.style.background = tag.color;
+    pill.style.color = this.ink(tag.color);
+    tab.setAttribute("orbit-tagged", "true");
+    tab.style.setProperty("--orbit-tag", tag.color);
+  },
+
+  editTag(tab) {
+    if (!tab) return;
+    const h = Orbit.h.bind(Orbit);
+    const cur = this.getTag(tab) ?? { text: "", color: this.TAG_COLORS[0] };
+    let color = cur.color;
+    const swatches = h("div", { class: "orbit-tag-swatches" }, ...this.TAG_COLORS.map(c =>
+      h("button", { class: "orbit-tag-swatch", style: `background:${c}`, active: c == color, title: c, onclick: e => {
+        color = c;
+        for (const b of swatches.children) b.toggleAttribute("active", b == e.currentTarget);
+        ui.input.focus();
+      } })));
+    const presets = h("div", { class: "orbit-tag-presets" }, ...this.TAG_PRESETS.map(([text, c]) =>
+      h("button", { class: "orbit-tab-tag", style: `background:${c};color:${this.ink(c)}`, onclick: () => {
+        this.setTag(tab, { text, color: c });
+        ui.close(false);
+      } }, text)));
+    const ui = this.popover(tab, {
+      value: cur.text, placeholder: this.t("tagHint"),
+      extra: h("div", { class: "orbit-tag-extra" }, swatches, presets),
+      onDone: v => this.setTag(tab, v ? { text: v.toUpperCase().slice(0, 18), color } : null),
+    });
+  },
+
+  // An image, a video or a page in its own small window, always on top.
+  reference(url, title = "", icon = "") {
+    const w = 420;
+    const hgt = 300;
+    const left = screen.availLeft + screen.availWidth - w - 24;
+    const top = screen.availTop + screen.availHeight - hgt - 24;
+    const args = { url, title, icon };
+    args.wrappedJSObject = args;
+    window.openDialog(`${Orbit.BASE}orbit-ref.html`, "_blank",
+      `chrome,dialog=no,alwaysontop,resizable,titlebar=no,width=${w},height=${hgt},left=${left},top=${top}`, args);
+  },
+
   // ---- context menus -----------------------------------------------------------------
   initMenus() {
     const h = Orbit.h.bind(Orbit);
@@ -117,6 +251,9 @@ var OrbitExtras = {
         oncommand: () => this.rename(TabContextMenu.contextTab) });
       const reset = h("xul:menuitem", { id: "orbit-tab-reset-name", label: this.t("resetName"),
         oncommand: () => this.setName(TabContextMenu.contextTab, "") });
+      const tag = h("xul:menuitem", { id: "orbit-tab-tag", oncommand: () => this.editTag(TabContextMenu.contextTab) });
+      const untag = h("xul:menuitem", { id: "orbit-tab-untag", label: this.t("removeTag"),
+        oncommand: () => this.setTag(TabContextMenu.contextTab, null) });
       const copy = h("xul:menuitem", { id: "orbit-tab-copy", label: this.t("copy"),
         oncommand: () => this.copy(TabContextMenu.contextTab.linkedBrowser.currentURI.spec) });
       const sleepSpace = h("xul:menuitem", { id: "orbit-space-unload", label: this.t("unloadSpace"),
@@ -126,13 +263,18 @@ var OrbitExtras = {
       const first = tabMenu.firstElementChild;
       tabMenu.insertBefore(rename, first);
       tabMenu.insertBefore(reset, first);
+      tabMenu.insertBefore(tag, first);
+      tabMenu.insertBefore(untag, first);
       tabMenu.insertBefore(copy, first);
       tabMenu.insertBefore(h("xul:menuseparator"), first);
       tabMenu.append(h("xul:menuseparator"), sleepSpace, sleepOthers);
       tabMenu.addEventListener("popupshowing", e => {
         if (e.target != tabMenu) return;
         const tab = TabContextMenu.contextTab;
-        rename.hidden = !tab || tab.pinned;
+        rename.hidden = !tab;
+        tag.setAttribute("label", this.getTag(tab) ? this.t("editTag") : this.t("tag"));
+        tag.hidden = !tab;
+        untag.hidden = !this.getTag(tab);
         reset.hidden = !tab?.hasAttribute(this.RENAME_KEY);
         sleepSpace.hidden = !tab || tab.pinned;
         sleepOthers.hidden = OrbitSpaces.spaces.length < 2;
@@ -143,9 +285,24 @@ var OrbitExtras = {
       const glance = h("xul:menuitem", { id: "orbit-context-glance", label: this.t("glance"),
         oncommand: () => OrbitGlance.open?.(gContextMenu.linkURL) });
       linkMenu.insertBefore(glance, document.getElementById("context-openlinkintab"));
+      // "Keep on screen": a reference window above every other window.
+      const ref = h("xul:menuitem", { id: "orbit-context-reference", oncommand: () => {
+        const c = this._refCtx;
+        if (c) this.reference(c.url, c.title, c.icon);
+      } });
+      linkMenu.insertBefore(ref, glance);
       linkMenu.addEventListener("popupshowing", e => {
         if (e.target != linkMenu) return;
         glance.hidden = !gContextMenu?.onLink || !/^https?:/.test(gContextMenu.linkURL ?? "") || !OrbitGlance.open;
+        const c = gContextMenu;
+        const media = c?.onImage ? ["refImage", c.imageInfo?.currentSrc || c.mediaURL] : c?.onVideo ? ["refVideo", c.mediaURL]
+          : c?.onLink ? ["refLink", c.linkURL] : !c?.onTextInput && !c?.isTextSelected ? ["refPage", gBrowser.currentURI.spec] : null;
+        const ok = media && /^(https?|file):/.test(media[1] ?? "");
+        ref.hidden = !ok;
+        if (ok) {
+          ref.setAttribute("label", this.t(media[0]));
+          this._refCtx = { url: media[1], title: media[0] == "refPage" ? gBrowser.selectedTab.label : "", icon: gBrowser.selectedTab.getAttribute("image") };
+        }
       });
     }
   },
@@ -154,7 +311,7 @@ var OrbitExtras = {
   TAB_MENU: [
     ["context_openANewTab", "context_duplicateTab", "context_duplicateTabs", "context_reloadTab", "context_reloadSelectedTabs",
       "context_toggleMuteTab", "context_toggleMuteSelectedTabs", "context_playTab", "context_playSelectedTabs"],
-    ["orbit-tab-rename", "orbit-tab-reset-name", "orbit-tab-copy", "orbit-tab-keep", "context_pinTab", "context_unpinTab",
+    ["orbit-tab-rename", "orbit-tab-reset-name", "orbit-tab-tag", "orbit-tab-untag", "orbit-tab-copy", "orbit-tab-keep", "context_pinTab", "context_unpinTab",
       "context_pinSelectedTabs", "context_unpinSelectedTabs", "context_moveTabToNewGroup", "context_moveSplitViewToNewGroup",
       "context_moveTabToGroup", "context_ungroupTab", "context_ungroupSplitView", "context_moveTabToSplitView",
       "context_separateSplitView", "context_reverseSplitView", "orbit-move-to-space"],

@@ -2,59 +2,138 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* Orbit look for the Picture-in-Picture window. */
+/* Orbit's Picture-in-Picture: Firefox's player, fully restyled. Glass buttons
+   at the top, one floating glass bar at the bottom, Lucide icons. The window
+   moves and resizes freely (no size presets, no snapping). */
 @font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
 
-:root {
-  --orbit-accent: #7c86ff;
-  --border-radius-small: 7px;
+:root[orbit-pip] {
+  --o-accent: #7c86ff;
+  --o-glass: rgb(14 14 18 / .62);
+  --o-line: rgb(255 255 255 / .1);
+  --o-fg: #f2f2f6;
+  --o-dim: rgb(242 242 246 / .65);
+  --player-control-item-height: 30px;
+  --controls-bottom-distance: 10px;
+  --border-radius-small: 8px;
 }
-body, #controls, .panel, #timestamp, button {
-  font-family: "Outfit", system-ui, sans-serif !important;
-}
-.player-holder { border-radius: 10px; overflow: hidden; }
-.control-button { border-radius: 7px !important; cursor: pointer; }
-.control-button:hover:enabled { background-color: rgba(255, 255, 255, .18) !important; }
-#playpause {
-  background-color: rgba(255, 255, 255, .14) !important;
-  border-radius: 50% !important;
-}
-#scrubber, #audio-scrubber, #playback-rate-slider { accent-color: var(--orbit-accent); }
-#controls-bottom-gradient {
-  background: linear-gradient(transparent, rgba(3, 3, 5, .82)) !important;
-}
-.panel, #playbackRateSettings, #settings {
-  background: #121216 !important;
-  color: #ececf1 !important;
-  border: 1px solid rgba(255, 255, 255, .08) !important;
-  border-radius: 10px !important;
-}
-.playback-rate-preset[aria-pressed="true"] { background: var(--orbit-accent) !important; color: #06070f !important; }
+:root[orbit-pip] :is(body, button, #timestamp) { font-family: "Outfit", system-ui, sans-serif !important; }
 
-/* Orbit size presets, top center (the corners hold native buttons). */
-#orbit-pip-sizes {
-  position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: 9px;
-  background: rgba(3, 3, 5, .6);
-  backdrop-filter: blur(8px);
-  z-index: 2;
+/* Softer scrims: only where the controls are. */
+:root[orbit-pip] #controls-bottom-gradient {
+  background: linear-gradient(transparent, rgb(0 0 0 / .45)) !important;
+  height: 120px !important;
 }
-#orbit-pip-sizes button {
-  appearance: none;
-  border: none;
-  min-width: 26px;
-  height: 22px;
-  border-radius: 6px;
-  background: transparent;
-  color: rgba(236, 236, 241, .75);
-  font: 600 11px "Outfit", sans-serif;
-  cursor: pointer;
+
+/* Every button: same round glass, Lucide icon drawn with stroke. */
+:root[orbit-pip] .control-button {
+  width: 30px !important;
+  min-width: 30px !important;
+  max-width: 30px !important;
+  height: 30px !important;
+  border: none !important;
+  border-radius: 50% !important;
+  background-color: transparent !important;
+  background-size: 16px !important;
+  -moz-context-properties: stroke !important;
+  stroke: var(--o-fg) !important;
+  fill: none !important;
+  transition: background-color .15s, transform .2s cubic-bezier(.34, 1.4, .64, 1), opacity .16s linear !important;
 }
-#orbit-pip-sizes button:hover { color: #fff; background: rgba(255, 255, 255, .12); }
-#orbit-pip-sizes button[active] { background: var(--orbit-accent); color: #06070f; }
+:root[orbit-pip] .control-button:hover:enabled { background-color: rgb(255 255 255 / .16) !important; transform: scale(1.06); }
+:root[orbit-pip] .control-button:active:enabled { transform: scale(.94); }
+
+:root[orbit-pip] :is(#close, #unpip) {
+  top: 10px !important;
+  background-color: var(--o-glass) !important;
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 1px var(--o-line) !important;
+}
+:root[orbit-pip] #close { right: 10px !important; background-image: url("chrome://orbit/content/icons/x.svg") !important; }
+:root[orbit-pip] #unpip { left: 10px !important; background-image: url("chrome://orbit/content/icons/picture-in-picture-2.svg") !important; }
+:root[orbit-pip] :is(#close, #unpip):hover { background-color: rgb(40 40 48 / .8) !important; }
+
+/* Bottom: one floating glass bar, scrubber on top, controls below. */
+:root[orbit-pip] #controls-bottom {
+  left: 10px;
+  right: 10px;
+  width: auto !important;
+  box-sizing: border-box;
+  padding: 2px 10px 8px;
+  border-radius: 14px;
+  background: var(--o-glass);
+  backdrop-filter: blur(14px);
+  box-shadow: inset 0 0 0 1px var(--o-line), 0 10px 30px rgb(0 0 0 / .35);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity .18s linear, transform .25s cubic-bezier(.2, .9, .25, 1);
+}
+:root[orbit-pip] body:hover #controls-bottom,
+:root[orbit-pip] #controls:is([keying], [showing]) #controls-bottom { opacity: 1; transform: none; }
+:root[orbit-pip] .controls-bottom-lower { margin: 0 !important; align-items: center; }
+:root[orbit-pip] .center-controls { gap: 4px !important; align-items: center; }
+
+:root[orbit-pip] #playpause {
+  width: 38px !important;
+  min-width: 38px !important;
+  max-width: 38px !important;
+  height: 38px !important;
+  background-color: var(--o-fg) !important;
+  background-size: 18px !important;
+  stroke: #0b0b0e !important;
+}
+:root[orbit-pip] #playpause:hover:enabled { background-color: #fff !important; }
+:root[orbit-pip] #controls.playing #playpause { background-image: url("chrome://orbit/content/icons/pause.svg") !important; }
+:root[orbit-pip] #controls:not(.playing) #playpause { background-image: url("chrome://orbit/content/icons/play.svg") !important; }
+:root[orbit-pip] #seekBackward { background-image: url("chrome://orbit/content/icons/rotate-ccw.svg") !important; }
+:root[orbit-pip] #seekForward { background-image: url("chrome://orbit/content/icons/rotate-cw.svg") !important; }
+:root[orbit-pip] #controls.muted #audio { background-image: url("chrome://orbit/content/icons/volume-x.svg") !important; }
+:root[orbit-pip] #controls:not(.muted) #audio { background-image: url("chrome://orbit/content/icons/volume-2.svg") !important; }
+:root[orbit-pip] #fullscreen { background-image: url("chrome://orbit/content/icons/maximize-2.svg") !important; }
+:root[orbit-pip] body:fullscreen #fullscreen { background-image: url("chrome://orbit/content/icons/minimize-2.svg") !important; }
+:root[orbit-pip] #playbackRate { background-image: url("chrome://orbit/content/icons/gauge.svg") !important; }
+:root[orbit-pip] #closed-caption { background-image: url("chrome://orbit/content/icons/captions.svg") !important; }
+
+/* Thin scrubbers that thicken on hover; accent progress. */
+:root[orbit-pip] :is(#scrubber, #audio-scrubber) {
+  &, &::-moz-range-track, &::-moz-range-progress { height: 4px !important; border-radius: 4px !important; transition: height .15s; }
+  &::-moz-range-track { background-color: rgb(255 255 255 / .22) !important; }
+  &::-moz-range-progress { background-color: var(--o-accent) !important; }
+  &::-moz-range-thumb {
+    width: 12px !important;
+    height: 12px !important;
+    border: none !important;
+    border-radius: 50% !important;
+    background-color: #fff !important;
+    box-shadow: 0 1px 4px rgb(0 0 0 / .4);
+    transform: scale(0);
+    transition: transform .15s cubic-bezier(.34, 1.4, .64, 1);
+  }
+  &:hover { &, &::-moz-range-track, &::-moz-range-progress { height: 6px !important; } }
+  &:hover::-moz-range-thumb { transform: scale(1); }
+}
+:root[orbit-pip] #timestamp { color: var(--o-dim) !important; font-size: 12px !important; }
+
+/* Tooltips: small dark pills. */
+:root[orbit-pip] .control-item:is(:hover, :focus-visible)::after {
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  background: rgb(10 10 12 / .9) !important;
+  color: var(--o-fg) !important;
+  font: 500 11px "Outfit", sans-serif !important;
+  box-shadow: 0 0 0 1px var(--o-line) !important;
+}
+
+/* Panels (speed, subtitles). */
+:root[orbit-pip] :is(.panel, #playbackRateSettings, #settings) {
+  background: rgb(18 18 22 / .96) !important;
+  color: var(--o-fg) !important;
+  border: 1px solid var(--o-line) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 16px 40px rgb(0 0 0 / .5) !important;
+}
+:root[orbit-pip] .panel .arrow { display: none !important; }
+:root[orbit-pip] #playback-rate-slider { accent-color: var(--o-accent); }
+:root[orbit-pip] .playback-rate-preset { border-radius: 7px !important; }
+:root[orbit-pip] .playback-rate-preset[aria-pressed="true"] { background: var(--o-accent) !important; color: #06070f !important; }
+:root[orbit-pip] .switch input:checked + .slider { background-color: var(--o-accent) !important; }

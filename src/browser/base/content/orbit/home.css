@@ -105,17 +105,22 @@ input::placeholder { color: var(--dim); }
 .chips button:hover { color: var(--fg); background: color-mix(in srgb, var(--accent) 18%, transparent); }
 .tiles { display: grid; }
 
-/* Design v3 */
-:root { --bg: #0b0b0e; }
+/* Design v3. Colors only through these variables so light mode works. */
+:root { --bg: #0b0b0e; --soft: rgb(255 255 255 / .055); --soft-2: rgb(255 255 255 / .07); --text-2: rgb(236 236 241 / .75);
+  --text-3: rgb(236 236 241 / .6); --text-4: rgb(236 236 241 / .45); --dash: rgb(255 255 255 / .18); --badge: #26262c; --foot: rgb(236 236 241 / .35); }
+@media (prefers-color-scheme: light) {
+  :root { --bg: #ffffff; --soft: rgb(0 0 0 / .045); --soft-2: rgb(0 0 0 / .06); --text-2: rgb(27 26 34 / .78);
+    --text-3: rgb(27 26 34 / .66); --text-4: rgb(27 26 34 / .5); --dash: rgb(0 0 0 / .2); --badge: #e4e4ea; --foot: rgb(27 26 34 / .4); }
+}
 form kbd {
   font: 500 11px "Outfit", sans-serif;
   padding: 4px 7px;
   border-radius: 5px;
-  background: rgb(255 255 255 / .07);
+  background: var(--soft-2);
   color: var(--fg);
   white-space: nowrap;
 }
-.chips button { padding: 0 12px; height: 31px; color: rgb(236 236 241 / .75); background: rgb(255 255 255 / .05); }
+.chips button { padding: 0 12px; height: 31px; color: var(--text-2); background: var(--soft); }
 .tiles { display: flex !important; flex-wrap: wrap; justify-content: center; width: 620px; max-width: 100%; gap: 14px; margin-top: 18px; }
 .tile { width: 89px; }
 .tile {
@@ -124,7 +129,7 @@ form kbd {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  color: rgb(236 236 241 / .6);
+  color: var(--text-3);
   font: 12px "Outfit", sans-serif;
   text-decoration: none;
   border: none;
@@ -134,12 +139,12 @@ form kbd {
   min-width: 0;
 }
 .tile > span:nth-child(2) { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tile .ico { width: 64px; height: 64px; border-radius: 10px; background: rgb(255 255 255 / .055); display: grid; place-items: center;
+.tile .ico { width: 64px; height: 64px; border-radius: 10px; background: var(--soft); display: grid; place-items: center;
   font: 700 22px "Syne", sans-serif; color: var(--accent); transition: transform .25s cubic-bezier(.34, 1.35, .64, 1), background-color .15s; }
-.tile:hover .ico { transform: translateY(-2px); background: color-mix(in srgb, var(--accent) 14%, rgb(255 255 255 / .055)); }
-.tile.add { color: rgb(236 236 241 / .45); }
-.tile.add .ico { background: transparent; border: 1px dashed rgb(255 255 255 / .18); box-sizing: border-box; }
-.tile.add svg { width: 16px; height: 16px; fill: none; stroke: rgb(236 236 241 / .5); stroke-width: 1.8; stroke-linecap: round; }
+.tile:hover .ico { transform: translateY(-2px); background: color-mix(in srgb, var(--accent) 14%, var(--soft)); }
+.tile.add { color: var(--text-4); }
+.tile.add .ico { background: transparent; border: 1px dashed var(--dash); box-sizing: border-box; }
+.tile.add svg { width: 16px; height: 16px; fill: none; stroke: var(--text-4); stroke-width: 1.8; stroke-linecap: round; }
 .tile .x {
   position: absolute;
   top: -6px;
@@ -152,7 +157,7 @@ form kbd {
   font-size: 12px;
   line-height: 1;
   color: var(--fg);
-  background: #26262c;
+  background: var(--badge);
   cursor: pointer;
   opacity: 0;
   transition: opacity .15s;
@@ -167,8 +172,7 @@ footer {
   justify-content: space-between;
   font: 500 10.5px "Outfit", sans-serif;
   letter-spacing: .1em;
-  color: rgb(236 236 241 / .35);
+  color: var(--foot);
   pointer-events: none;
 }
-@media (prefers-color-scheme: light) { :root { --bg: #ffffff; } footer { color: rgb(27 26 34 / .4); } }
 @media (max-width: 680px) { footer { display: none; } }

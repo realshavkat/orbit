@@ -181,7 +181,7 @@ var OrbitSpaces = {
       if (tab.pinned || tab.closing) continue;
       if (!this.spaceOf(tab)) this.adopt(tab);
       // Tabs of a pinned folder show in every space.
-      const inSpace = this.spaceOf(tab) == this.activeId || OrbitFolders.isPinnedTab(tab);
+      const inSpace = this.spaceOf(tab) == this.activeId || OrbitFolders.isEverywhere(tab);
       if (inSpace && tab.hidden) gBrowser.showTab(tab);
       else if (!inSpace && !tab.hidden) gBrowser.hideTab(tab, "orbit-spaces");
     }
@@ -291,7 +291,7 @@ var OrbitSpaces = {
         this.indicator,
         ...this.spaces.map((s, i) =>
           h("button", {
-            class: "orbit-space-button", title: `${s.name} (Alt+${i + 1})`,
+            class: "orbit-space-button", title: `${s.name} (Alt+${i + 1})`, "data-space-id": s.id,
             active: s.id == space.id, style: `--c1:${this.theme(s).c1};--c2:${this.theme(s).c2}`,
             onclick: () => this.switchTo(s.id),
             oncontextmenu: ev => { ev.preventDefault(); this.edit(s); },
@@ -301,13 +301,6 @@ var OrbitSpaces = {
       h("button", { class: "orbit-icon-button", title: t("space.new"), onclick: () => this.edit(null) }, icon("plus")),
       h("button", { class: "orbit-icon-button", title: `${t("settings")} (Ctrl+,)`, onclick: () => OrbitSettings.toggle() }, icon("settings-2"))
     );
-    footer.querySelectorAll(".orbit-space-button").forEach((btn, i) => {
-      const id = this.spaces[i].id;
-      OrbitTabs.dropTarget(btn, tab => {
-        if (tab.pinned) gBrowser.unpinTab(tab);
-        this.moveTabs([tab], id);
-      });
-    });
     requestAnimationFrame(() => this.moveIndicator());
     // Keep the pill under the active space when the sidebar is resized.
     this._indicatorObserver ??= new ResizeObserver(() => this.moveIndicator());
@@ -319,6 +312,7 @@ var OrbitSpaces = {
     const btn = document.querySelector(".orbit-space-button[active]");
     if (!btn) return;
     this.indicator.style.transform = `translate(${btn.offsetLeft}px, ${btn.offsetTop}px)`;
+    btn.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
   },
 
   helpers() {

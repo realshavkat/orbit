@@ -174,6 +174,9 @@ pref("signon.management.page.os-auth.locked.enabled", true);
 
 pref("orbit.downloads.turbo", true);
 pref("orbit.downloads.connections", 8);
+// Turbo only steps in below this speed (MB/s, 0 = always) and above this size (MB).
+pref("orbit.downloads.turbo-below-mbps", 20);
+pref("orbit.downloads.turbo-min-mb", 16);
 
 // ---- Security hardening (on by default, keeps every site working) -----------
 // Phishing: show internationalized look-alike domains as punycode.

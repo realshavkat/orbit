@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- This Source Code Form is subject to the terms of the Mozilla Public
+   - License, v. 2.0. If a copy of the MPL was not distributed with this
+   - file, You can obtain one at http://mozilla.org/MPL/2.0/. -->
+<!-- Orbit reference window: an image, a video or a page kept on screen,
+     above every other window (for designers' references, a tutorial...). -->
+<html windowtype="Orbit:Reference" customtitlebar="true" scrolling="false">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src chrome:; img-src chrome: moz-icon: data: https: http: file:">
+<title>Orbit</title>
+<link rel="stylesheet" href="chrome://orbit/content/orbit-ref.css">
+<script src="chrome://orbit/content/orbit-ref-window.js"></script>
+</head>
+<body>
+  <div id="holder"></div>
+  <div id="bar">
+    <img id="favicon" alt="">
+    <span id="title"></span>
+    <button id="tab" class="btn"></button>
+    <button id="close" class="btn"></button>
+  </div>
+  <div id="drop"></div>
+</body>
+</html>
