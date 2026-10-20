@@ -38,7 +38,23 @@ export function zipOffset(bytes) {
   throw new Error(`crx v${version}`);
 }
 
+// Date group of a download for orbit://downloads: "today", "yesterday",
+// "week" (last 7 days), "month" (this calendar month), else "YYYY-MM".
+export function downloadGroup(time, now = Date.now()) {
+  const day = new Date(now);
+  day.setHours(0, 0, 0, 0);
+  const start = day.getTime();
+  if (time >= start) return "today";
+  if (time >= start - 864e5) return "yesterday";
+  if (time >= start - 6 * 864e5) return "week";
+  const d = new Date(time);
+  const n = new Date(now);
+  if (d.getFullYear() == n.getFullYear() && d.getMonth() == n.getMonth()) return "month";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
 const ORBIT_ALIASES = {
+  downloads: "orbit:downloads", telechargements: "orbit:downloads",
   home: "orbit:home", accueil: "orbit:home", memoire: "orbit:memory", memory: "orbit:memory",
   settings: "orbit:settings", preferences: "about:preferences", extensions: "about:addons",
   addons: "about:addons", credits: "orbit:about", about: "orbit:about",

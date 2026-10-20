@@ -63,6 +63,17 @@ var OrbitMemory = {
     return n;
   },
 
+  // Sleep every background tab, then let Gecko give unused memory back.
+  async freeNow() {
+    const total = info => info.memory + info.children.reduce((a, c) => a + c.memory, 0);
+    const before = total(await ChromeUtils.requestProcInfo());
+    let slept = 0;
+    for (const win of Services.wm.getEnumerator("navigator:browser")) slept += win.OrbitMemory?.sleepAll() ?? 0;
+    await new Promise(resolve => Cc["@mozilla.org/memory-reporter-manager;1"]
+      .getService(Ci.nsIMemoryReporterManager).minimizeMemoryUsage(resolve));
+    return { slept, bytes: Math.max(0, before - total(await ChromeUtils.requestProcInfo())) };
+  },
+
   sleepAll() {
     let n = 0;
     for (const tab of gBrowser.tabs) if (this.canSleep(tab) && gBrowser.discardBrowser(tab)) n++;

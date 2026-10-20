@@ -1,0 +1,92 @@
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+@font-face { font-family: "Outfit"; src: url("fonts/Outfit.ttf"); font-weight: 100 900; }
+
+:root {
+  --bg: #0b0b0e;
+  --card: #141419;
+  --card-2: #1a1a21;
+  --fg: #ececf1;
+  --dim: rgb(236 236 241 / .55);
+  --faint: rgb(236 236 241 / .35);
+  --line: rgb(255 255 255 / .07);
+  --field: rgb(255 255 255 / .05);
+  --hover: rgb(255 255 255 / .07);
+  --accent: #7c86ff;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f4f3f8; --card: #ffffff; --card-2: #fafafd; --fg: #1b1a22; --dim: rgb(27 26 34 / .58); --faint: rgb(27 26 34 / .4);
+    --line: rgb(0 0 0 / .08); --field: rgb(0 0 0 / .04); --hover: rgb(0 0 0 / .05); --accent: #5b45e0; color-scheme: light; }
+}
+html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 14px "Outfit", system-ui, sans-serif; }
+main { width: min(960px, calc(100vw - 48px)); margin: 0 auto; padding: 40px 0 60px; }
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.title { display: flex; flex-direction: column; gap: 4px; }
+h1 { margin: 0; font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
+#stats { font-size: 13px; color: var(--dim); }
+.tools { display: flex; gap: 8px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 14px;
+  border: none; border-radius: 9px; background: var(--card); color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line); font: 500 13px "Outfit", sans-serif; cursor: pointer;
+  & svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  &:hover { background: var(--card-2); }
+}
+.bar { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px; padding: 12px 0; margin-bottom: 8px; background: var(--bg); }
+.search {
+  flex: 1; display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 14px; border-radius: 10px;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--line);
+  &:focus-within { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  & svg { width: 16px; height: 16px; fill: none; stroke: var(--dim); stroke-width: 2; stroke-linecap: round; flex-shrink: 0; }
+  & input { flex: 1; min-width: 0; border: none; outline: none; background: none; color: var(--fg); font: 14px "Outfit", sans-serif; }
+}
+.chips { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line); }
+.chip {
+  height: 32px; padding: 0 12px; border: none; border-radius: 7px; background: none; color: var(--dim);
+  font: 500 12.5px "Outfit", sans-serif; cursor: pointer;
+  &:hover { color: var(--fg); }
+  &[active] { background: var(--hover); color: var(--fg); }
+}
+select {
+  height: 40px; padding: 0 12px; border: none; border-radius: 10px; background: var(--card); color: var(--fg);
+  box-shadow: inset 0 0 0 1px var(--line); font: 500 13px "Outfit", sans-serif; cursor: pointer;
+}
+.group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 22px; }
+h2 { margin: 6px 4px 4px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+.item {
+  display: flex; align-items: center; gap: 14px; padding: 12px 12px 12px 14px; border-radius: 12px;
+  background: var(--card); box-shadow: inset 0 0 0 1px var(--line); outline: none; transition: background-color .12s;
+  &:hover, &:focus-visible { background: var(--card-2); }
+  &:focus-visible { box-shadow: inset 0 0 0 1.5px var(--accent); }
+  &.missing .name { color: var(--dim); text-decoration: line-through; text-decoration-color: var(--faint); }
+  &.failed .meta, &.canceled .meta { color: #ff8a7a; }
+}
+.badge {
+  width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px;
+  font: 700 10.5px "Outfit", sans-serif; letter-spacing: .03em; color: var(--c);
+  background: color-mix(in srgb, var(--c) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent);
+}
+.info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.name { font-size: 14px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.meta { font-size: 12.5px; color: var(--dim); font-variant-numeric: tabular-nums; white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.path { font-size: 11.5px; color: var(--faint); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; direction: rtl; text-align: left; }
+.progress { height: 4px; margin-top: 6px; border-radius: 2px; background: var(--line); overflow: hidden;
+  & i { display: block; height: 100%; border-radius: 2px; background: var(--accent); transition: width .3s; }
+  &.unknown i { animation: slide 1.2s ease-in-out infinite; } }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(330%); } }
+.paused .progress i { background: var(--faint); }
+.actions { display: flex; gap: 2px; opacity: 0; transition: opacity .12s; }
+.item:hover .actions, .item:focus-within .actions { opacity: 1; }
+.icon {
+  width: 32px; height: 32px; display: grid; place-items: center; border: none; border-radius: 8px; background: none; color: var(--dim); cursor: pointer;
+  & svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  &:hover { background: var(--hover); color: var(--fg); }
+}
+#empty { padding: 80px 0; text-align: center; color: var(--dim); font-size: 14px; }
+@media (max-width: 700px) {
+  .bar { flex-wrap: wrap; } .search { flex-basis: 100%; }
+  .actions { opacity: 1; } .path { display: none; }
+}

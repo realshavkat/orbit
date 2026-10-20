@@ -71,6 +71,7 @@ var OrbitTabs = {
     if (target == "orbit:about") return OrbitSettings.open("about");
     if (target == "orbit:memory") return OrbitMemory.open();
     if (target == "orbit:home") return openTrustedLinkIn(this.homeURL(), "current");
+    if (target == "orbit:downloads") return switchToTabHavingURI(OrbitDownloads.PAGE, true);
     if (target == "about:preferences" || target.startsWith("about:preferences#")) {
       return openPreferences(target.split("#")[1]);
     }
@@ -80,6 +81,7 @@ var OrbitTabs = {
   displayOrbitURL() {
     const spec = gBrowser.currentURI?.spec ?? "";
     if (this.isHome(spec) && !gURLBar.focused) gURLBar.value = "orbit://home";
+    if (spec.startsWith(OrbitDownloads.PAGE) && !gURLBar.focused) gURLBar.value = "orbit://downloads";
     if (gURLBar.focused || !spec.startsWith("about:") || /^about:(blank|newtab|home)$/.test(spec)) return;
     const page = spec.slice(6).replace(/^addons/, "extensions");
     gURLBar.value = `orbit://${page}`;

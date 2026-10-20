@@ -3338,84 +3338,14 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   &[active] { box-shadow: 0 0 0 2px var(--orbit-base), 0 0 0 4px var(--orbit-fg); }
 }
 
-/* Feature tour */
-.ow-tour { display: flex; gap: 20px; width: 100%; text-align: start; }
-.ow-features { display: flex; flex-direction: column; gap: 2px; width: 220px; flex-shrink: 0; }
-.ow-feature-tab {
-  appearance: none;
-  border: none;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
-  background: none;
-  font: inherit;
-  font-size: 13px;
-  color: var(--orbit-fg-dim);
-  text-align: start;
-  cursor: pointer;
-  & .orbit-icon { width: 15px; height: 15px; }
-  &:hover { background: var(--orbit-hover); color: var(--orbit-fg); }
-  &[active] { background: var(--orbit-active); color: var(--orbit-fg); font-weight: 500; }
-}
-.ow-tour-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
-.ow-demo { height: 230px; border-radius: 14px; overflow: hidden; background: var(--orbit-tile); box-shadow: inset 0 0 0 1px var(--orbit-border); }
-.ow-feature { display: flex; flex-direction: column; gap: 4px; min-height: 64px;
-  & b { font-size: 15px; font-weight: 600; } & span { font-size: 13.5px; line-height: 1.5; color: var(--orbit-fg-dim); } }
-
-/* Demo scenes: boxes only. */
-.d { position: relative; width: 100%; height: 100%; --a: var(--orbit-accent); animation: orbit-fade-in .3s; }
-.d i { display: block; }
-.d-side { position: absolute; left: 12px; top: 12px; bottom: 12px; width: 31%; display: flex; flex-direction: column; gap: 6px; }
-.d-page { position: absolute; left: calc(31% + 24px); right: 12px; top: 12px; bottom: 12px; border-radius: 8px; background: var(--orbit-field); }
-.d-row { height: 18px; border-radius: 5px; background: var(--orbit-field); }
-.d-row.sel { background: color-mix(in srgb, var(--a) 30%, var(--orbit-field)); }
-.d-tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 4px; & i { height: 26px; border-radius: 6px; background: var(--orbit-field); } }
-.d-spaces { position: absolute; left: 12px; bottom: 14px; display: flex; gap: 6px;
-  & i { width: 10px; height: 10px; border-radius: 50%; background: var(--orbit-border); }
-  & i.on { background: var(--a); animation: d-space 3.6s ease-in-out infinite; } }
-@keyframes d-space { 0%, 30% { transform: translateX(0); } 40%, 65% { transform: translateX(16px); } 75%, 100% { transform: translateX(32px); } }
-.d-moving { position: absolute; left: 12px; width: 31%; top: 150px; background: color-mix(in srgb, var(--a) 45%, var(--orbit-field)); box-shadow: 0 6px 16px rgb(0 0 0 / .25);
-  animation: d-move 4s cubic-bezier(.4, 0, .2, 1) infinite; }
-@keyframes d-move { 0%, 15% { transform: translate(0, 0); opacity: 1; } 55%, 70% { transform: translate(0, -96px); opacity: 1; } 78%, 100% { transform: translate(0, -96px); opacity: 0; } }
-.d-slot { border: 1.5px dashed var(--a); background: color-mix(in srgb, var(--a) 12%, transparent); opacity: 0; animation: d-slot 4s infinite; }
-@keyframes d-slot { 0%, 25% { opacity: 0; } 35%, 70% { opacity: 1; } 78%, 100% { opacity: 0; } }
-.d-bar { position: absolute; left: 50%; top: 26px; width: 58%; transform: translateX(-30%); padding: 8px; border-radius: 10px;
-  background: var(--orbit-panel); box-shadow: 0 0 0 1px var(--orbit-border), 0 12px 30px rgb(0 0 0 / .3); display: flex; flex-direction: column; gap: 6px;
-  animation: d-pop 4s infinite; }
-@keyframes d-pop { 0% { opacity: 0; transform: translateX(-30%) scale(.95); } 10%, 85% { opacity: 1; transform: translateX(-30%) scale(1); } 100% { opacity: 0; } }
-.d-type { height: 14px; border-radius: 4px; background: var(--a); transform-origin: left; animation: d-type 4s steps(8) infinite; }
-@keyframes d-type { 0%, 10% { transform: scaleX(.05); } 45%, 100% { transform: scaleX(.7); } }
-.d-res { height: 12px; border-radius: 4px; background: var(--orbit-field); opacity: 0; animation: d-res 4s infinite; }
-.d-res:nth-child(3) { animation-delay: .15s; }
-.d-res:nth-child(4) { animation-delay: .3s; }
-@keyframes d-res { 0%, 40% { opacity: 0; } 50%, 90% { opacity: 1; } 100% { opacity: 0; } }
-.d-link { position: absolute; left: 14px; top: 20px; width: 40%; height: 8px; border-radius: 4px; background: var(--a); }
-.d-glance { position: absolute; left: 40%; right: 6%; top: 18%; bottom: 10%; border-radius: 10px; background: var(--orbit-panel);
-  box-shadow: 0 0 0 1px var(--orbit-border), 0 16px 40px rgb(0 0 0 / .35); transform-origin: 30% 10%; animation: d-glance 4s cubic-bezier(.2, .9, .25, 1) infinite; }
-@keyframes d-glance { 0%, 20% { opacity: 0; transform: scale(.4); } 35%, 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(.96); } }
-.d-shield { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px; display: grid; place-items: center; border-radius: 22px;
-  background: color-mix(in srgb, #3ddc97 18%, transparent); & .orbit-icon { width: 38px; height: 38px; -moz-context-properties: stroke; stroke: #3ddc97; } }
-.d-ad { position: absolute; width: 34px; height: 22px; border-radius: 5px; background: #ff5d5d; opacity: .8; animation: d-ad 3s ease-in infinite; }
-.d-ad1 { left: 6%; top: 18%; }
-.d-ad2 { right: 8%; top: 22%; animation-delay: .5s; }
-.d-ad3 { left: 12%; bottom: 16%; animation-delay: 1s; }
-.d-ad4 { right: 12%; bottom: 14%; animation-delay: 1.5s; }
-.d-ad5 { left: 46%; top: 6%; animation-delay: 2s; }
-@keyframes d-ad { 0% { opacity: .85; transform: none; } 60% { opacity: .85; } 80%, 100% { opacity: 0; transform: scale(.4); } }
-.d-row.zz { animation: d-zz 4s infinite; }
-.d-row.zz:nth-child(3) { animation-delay: .4s; }
-.d-row.zz:nth-child(4) { animation-delay: .8s; }
-@keyframes d-zz { 0%, 20% { opacity: 1; } 45%, 90% { opacity: .3; } 100% { opacity: 1; } }
-.d-meter { position: absolute; left: calc(31% + 30px); right: 24px; top: 50%; height: 12px; border-radius: 6px; background: var(--orbit-field); overflow: hidden;
-  & i { height: 100%; border-radius: 6px; background: linear-gradient(90deg, #3ddc97, var(--a)); transform-origin: left; animation: d-meter 4s ease-in-out infinite; } }
-@keyframes d-meter { 0%, 20% { transform: scaleX(.9); } 50%, 90% { transform: scaleX(.3); } 100% { transform: scaleX(.9); } }
-.d-float { position: absolute; width: 34%; height: 40%; right: 18px; bottom: 18px; border-radius: 8px; padding: 6px; box-sizing: border-box;
-  background: var(--orbit-panel); box-shadow: 0 0 0 1px var(--orbit-border), 0 14px 30px rgb(0 0 0 / .35); animation: d-float 4s ease-in-out infinite;
-  & i { width: 100%; height: 100%; border-radius: 5px; background: linear-gradient(135deg, var(--orbit-c1), var(--orbit-c2)); } }
-@keyframes d-float { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-40px, -30px); } }
+/* Feature list */
+.ow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: min(720px, 100%); text-align: start; }
+.ow-feat { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px;
+  background: var(--orbit-tile); box-shadow: inset 0 0 0 1px var(--orbit-border);
+  & > div { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  & b { font-size: 13.5px; font-weight: 600; }
+  & small { font-size: 12.5px; line-height: 1.45; color: var(--orbit-fg-dim); } }
+.ow-feat:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 .ow-rows { display: flex; flex-direction: column; width: min(560px, 100%); border-radius: 12px; overflow: clip;
   background: var(--orbit-tile); box-shadow: inset 0 0 0 1px var(--orbit-border); text-align: start; }
@@ -3433,13 +3363,11 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   & kbd { min-width: 96px; padding: 5px 9px; border-radius: 7px; text-align: center; font: 500 12px var(--orbit-font), sans-serif;
     background: var(--orbit-field); box-shadow: inset 0 0 0 1px var(--orbit-border); } }
 @media (max-width: 760px) {
-  .ow-tour { flex-direction: column; }
-  .ow-features { width: auto; flex-direction: row; flex-wrap: wrap; justify-content: center; & .ow-feature-tab span { display: none; } }
+  .ow-grid { grid-template-columns: 1fr; }
   .ow-prev { width: 120px; height: 78px; }
   .ow-keys { grid-template-columns: 1fr; }
 }
-@media (max-height: 640px) { .ow-stage { min-height: 0; } .ow-demo { height: 170px; } }
-@media (prefers-reduced-motion: reduce) { .d, .d * { animation: none !important; } }
+@media (max-height: 640px) { .ow-stage { min-height: 0; } }
 
 /* ==========================================================================
    Edit mode v2 panel
@@ -3790,3 +3718,7 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   background: linear-gradient(color-mix(in srgb, var(--orbit-fg) 14%, transparent), color-mix(in srgb, var(--orbit-fg) 14%, transparent))
     no-repeat calc(16.5px + var(--orbit-folder-depth, 0) * 14px) 0 / 1px 100% !important;
 }
+
+/* Wider downloads panel. */
+#downloadsPanel { --panel-width: 400px !important; }
+#downloadsPanel-mainView { width: 400px !important; }

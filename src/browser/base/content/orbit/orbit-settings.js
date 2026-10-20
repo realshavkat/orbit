@@ -81,6 +81,15 @@ var OrbitSettings = {
         { kind: "choice", pref: "orbit.memory.budget-mb", label: "budget",
           options: [[0, "budget.off"], [1024, "1 Go"], [2048, "2 Go"], [4096, "4 Go"]] },
         { kind: "eco" },
+        { kind: "freeNow" },
+        { kind: "choice", pref: "dom.ipc.processCount", label: "processes", options: [[1, "1"], [2, "2"], [4, "4"], [8, "8"]] },
+        { kind: "choice", pref: "browser.sessionhistory.max_total_viewers", label: "bfcache", options: [[0, "0"], [1, "1"], [2, "2"], [4, "4"]] },
+        { kind: "choice", pref: "image.mem.surfacecache.max_size_kb", label: "imageCache",
+          options: [[65536, "64 Mo"], [131072, "128 Mo"], [262144, "256 Mo"], [524288, "512 Mo"]] },
+        { kind: "toggle", pref: "browser.tabs.unloadOnLowMemory", label: "lowMemory" },
+        { kind: "toggle", pref: "config.trim_on_minimize", label: "trim" },
+        { kind: "toggle", pref: "network.prefetch-next", label: "prefetch" },
+        { kind: "toggle", pref: "layers.acceleration.disabled", label: "gpu", invert: true, def: false },
         { kind: "link", label: "memoryPage", action: () => OrbitMemory.open() },
       ],
     },
@@ -150,6 +159,14 @@ var OrbitSettings = {
       budget: "Plafond mémoire", "budget.d": "Au-delà, les onglets les plus anciens passent en veille", "budget.off": "Aucun",
       eco: "Mode éco", "eco.d": "2 processus au lieu de 4 (au prochain démarrage), fond figé, cache d'images réduit",
       memoryPage: "Voir la mémoire par onglet (orbit://memoire)",
+      processes: "Processus pour les pages", "processes.d": "Moins = moins de mémoire ; plus = un site lourd gêne moins les autres. Au prochain démarrage",
+      bfcache: "Pages précédentes gardées", "bfcache.d": "Retour instantané en arrière, au prix de mémoire. 0 = le plus léger",
+      imageCache: "Cache des images", "imageCache.d": "Images décodées gardées en mémoire",
+      lowMemory: "Mettre en veille si le PC manque de mémoire", "lowMemory.d": "Windows prévient Orbit, qui endort les onglets les plus anciens",
+      trim: "Libérer la mémoire quand Orbit est réduit", "trim.d": "Windows récupère la mémoire d'Orbit quand sa fenêtre est réduite",
+      prefetch: "Précharger les liens", "prefetch.d": "Pages plus rapides quand un site le demande, un peu plus de réseau et de mémoire",
+      gpu: "Accélération matérielle", "gpu.d": "La carte graphique dessine les pages. Coupée : moins de mémoire graphique, plus de processeur. Au prochain démarrage",
+      freeNow: "Libérer la mémoire maintenant", "freeNow.d": "Endort les onglets en arrière-plan et rend la mémoire inutilisée",
       adblock: "Bloqueur de publicités", "adblock.d": "uBlock Origin Lite : bloque pubs et traqueurs, sans coût mémoire",
       mediaPlayer: "Lecteur dans la barre latérale", "mediaPlayer.d": "Contrôle la musique ou la vidéo d'un autre onglet",
       aiProvider: "Assistant du panneau", "aiProvider.d": "Ouvert à côté de la page avec Ctrl+Maj+U",
@@ -212,6 +229,14 @@ var OrbitSettings = {
       budget: "Memory limit", "budget.d": "Above it, the oldest tabs go to sleep", "budget.off": "None",
       eco: "Eco mode", "eco.d": "2 processes instead of 4 (next start), still background, smaller image cache",
       memoryPage: "Memory per tab (orbit://memory)",
+      processes: "Processes for pages", "processes.d": "Fewer = less memory; more = a heavy site slows the others less. Next start",
+      bfcache: "Previous pages kept", "bfcache.d": "Instant back navigation, at a memory cost. 0 = lightest",
+      imageCache: "Image cache", "imageCache.d": "Decoded images kept in memory",
+      lowMemory: "Sleep tabs when the PC runs low on memory", "lowMemory.d": "Windows warns Orbit, which puts the oldest tabs to sleep",
+      trim: "Free memory when Orbit is minimized", "trim.d": "Windows takes Orbit's memory back while its window is minimized",
+      prefetch: "Preload links", "prefetch.d": "Faster pages when a site asks for it, a bit more network and memory",
+      gpu: "Hardware acceleration", "gpu.d": "The graphics card draws pages. Off: less graphics memory, more processor. Next start",
+      freeNow: "Free memory now", "freeNow.d": "Puts background tabs to sleep and gives unused memory back",
       adblock: "Ad blocker", "adblock.d": "uBlock Origin Lite: blocks ads and trackers at no memory cost",
       mediaPlayer: "Sidebar media player", "mediaPlayer.d": "Control music or video playing in another tab",
       aiProvider: "Panel assistant", "aiProvider.d": "Opens beside the page with Ctrl+Shift+U",
@@ -471,9 +496,20 @@ var OrbitSettings = {
           else OrbitChromeExt.unloadAll().catch(e => console.error("Orbit: Chrome extension", e));
         }), "unsigned");
       case "vpn":
-        return this.renderVPN();
+        return OrbitVPN.AVAILABLE ? this.renderVPN() : null;
       case "shortcuts":
         return this.renderShortcuts();
+      case "freeNow": {
+        const btn = h("button", { class: "orbit-button", onclick: async () => {
+          btn.disabled = true;
+          const freed = await OrbitMemory.freeNow();
+          btn.disabled = false;
+          OrbitNotify.show({ kind: "memory", icon: "gauge", tone: "ok", title: this.t("freeNow"), timeout: 3500,
+            text: Orbit.tr("{n} tabs put to sleep, {m} freed", "{n} onglets mis en veille, {m} libérés")
+              .replace("{n}", freed.slept).replace("{m}", OrbitMemory.fmt(freed.bytes)) });
+        } }, Orbit.icon("zap"), Orbit.tr("Free", "Libérer"));
+        return this.row(btn, "freeNow");
+      }
       case "eco":
         return this.row(this.switch(Orbit.pref("orbit.memory.eco", false), on => OrbitMemory.setEco(on)), "eco");
       case "addon": {

@@ -55,7 +55,11 @@ pref("browser.newtab.preload", false);
 pref("browser.newtabpage.enabled", false);
 pref("browser.tabs.unloadOnLowMemory", true);
 // Keep at most 2 pages in the in-memory back/forward cache.
-pref("browser.sessionhistory.max_total_viewers", 2);
+pref("browser.sessionhistory.max_total_viewers", 1);
+// Windows takes memory back while Orbit is minimized; low-memory tab sleeping
+// starts a little earlier than Firefox's default.
+pref("config.trim_on_minimize", true);
+pref("browser.low_commit_space_threshold_percent", 10);
 pref("browser.sessionstore.interval", 60000);
 pref("browser.sessionstore.max_tabs_undo", 10);
 pref("image.mem.decode_bytes_at_a_time", 65536);

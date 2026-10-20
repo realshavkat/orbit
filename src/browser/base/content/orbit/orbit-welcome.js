@@ -15,22 +15,22 @@ var OrbitWelcome = {
     this.show();
   },
 
-  // Feature tour: [icon, title, text, demo builder].
+  // Feature list: [icon, title, text].
   FEATURES() {
     return [
       ["layers", Orbit.tr("Spaces and Essentials", "Espaces et favoris"),
-        Orbit.tr("One space per project with its own colors. Your favorite sites stay as tiles at the top.", "Un espace par projet, avec ses couleurs. Tes sites préférés restent en tuiles tout en haut."), "spaces"],
+        Orbit.tr("One space per project with its own colors. Your favorite sites stay as tiles at the top.", "Un espace par projet, avec ses couleurs. Tes sites préférés restent en tuiles tout en haut.")],
       ["pin", Orbit.tr("Drag to pin", "Glisse pour épingler"),
-        Orbit.tr("Drag a tab to the tiles, to the pinned rows or into a folder. A slot shows where it lands.", "Glisse un onglet vers les tuiles, les épinglés ou un dossier. Un emplacement montre où il atterrit."), "drag"],
+        Orbit.tr("Drag a tab to the tiles, to the pinned rows or into a folder. A slot shows where it lands.", "Glisse un onglet vers les tuiles, les épinglés ou un dossier. Un emplacement montre où il atterrit.")],
       ["command", Orbit.tr("Command bar", "Barre de commande"),
-        Orbit.tr("Ctrl+T opens a floating search: sites, tabs, settings and AI with @claude or @gpt.", "Ctrl+T ouvre une recherche flottante : sites, onglets, réglages et IA avec @claude ou @gpt."), "command"],
-      ["eye", "Glance", Orbit.tr("Alt+click a link to preview it without leaving the page.", "Alt+clic sur un lien pour le prévisualiser sans quitter la page."), "glance"],
+        Orbit.tr("Ctrl+T opens a floating search: sites, tabs, settings and AI with @claude or @gpt.", "Ctrl+T ouvre une recherche flottante : sites, onglets, réglages et IA avec @claude ou @gpt.")],
+      ["eye", "Glance", Orbit.tr("Alt+click a link to preview it without leaving the page.", "Alt+clic sur un lien pour le prévisualiser sans quitter la page.")],
       ["shield-check", Orbit.tr("Private by default", "Privé par défaut"),
-        Orbit.tr("Orbit Blocker stops ads and trackers, no telemetry is sent, and Orbit VPN hides your IP.", "Orbit Blocker bloque pubs et pisteurs, aucune télémétrie n'est envoyée, et Orbit VPN masque ton IP."), "shield"],
+        Orbit.tr("Orbit Blocker stops ads and trackers, and no telemetry is ever sent.", "Orbit Blocker bloque pubs et pisteurs, et aucune télémétrie n'est jamais envoyée.")],
       ["gauge", Orbit.tr("Light on memory", "Léger en mémoire"),
-        Orbit.tr("Tabs you don't use go to sleep and use almost nothing until you come back.", "Les onglets inutilisés se mettent en veille et ne consomment presque rien jusqu'à ton retour."), "sleep"],
+        Orbit.tr("Tabs you don't use go to sleep and use almost nothing until you come back.", "Les onglets inutilisés se mettent en veille et ne consomment presque rien jusqu'à ton retour.")],
       ["picture-in-picture-2", Orbit.tr("Keep it on screen", "Garde-le à l'écran"),
-        Orbit.tr("Picture-in-Picture for videos, and any image or page as an always-on-top reference.", "Picture-in-Picture pour les vidéos, et n'importe quelle image ou page en référence toujours visible."), "ref"],
+        Orbit.tr("Picture-in-Picture for videos, and any image or page as an always-on-top reference.", "Picture-in-Picture pour les vidéos, et n'importe quelle image ou page en référence toujours visible.")],
     ];
   },
 
@@ -53,7 +53,6 @@ var OrbitWelcome = {
       const dir = i > index ? 1 : -1;
       index = i;
       const old = stage.firstChild;
-      this.stopTour();
       const page = h("div", { class: "ow-page" }, ...this.page(this.STEPS[i]));
       if (old && !window.gReduceMotion) {
         old.animate([{ opacity: 1, transform: "none" }, { opacity: 0, transform: `translateX(${-24 * dir}px)` }],
@@ -120,7 +119,9 @@ var OrbitWelcome = {
           cards, h("div", { class: "ow-label" }, Orbit.tr("Space color", "Couleur de l'espace")), swatches];
       }
       case "tour":
-        return [...this.head(Orbit.tr("What Orbit does for you", "Ce qu'Orbit fait pour toi"), ""), this.tour()];
+        return [...this.head(Orbit.tr("What Orbit does for you", "Ce qu'Orbit fait pour toi"), ""),
+          h("div", { class: "ow-grid" }, ...this.FEATURES().map(([icon, title, text]) => h("div", { class: "ow-feat" },
+            h("span", { class: "ow-row-icon" }, Orbit.icon(icon)), h("div", {}, h("b", {}, title), h("small", {}, text)))))];
       case "layout": {
         const mode = () => Orbit.pref("orbit.view.compact", false) ? "compact" : Orbit.pref("sidebar.position_start", true) ? "left" : "right";
         return [...this.head(Orbit.tr("Your layout", "Ta disposition"), Orbit.tr("Where do you want your tabs?", "Où veux-tu tes onglets ?")),
@@ -185,66 +186,8 @@ var OrbitWelcome = {
     return wrap;
   },
 
-  // ---- feature tour: one demo at a time, auto-advancing --------------------------
-  tour() {
-    const h = Orbit.h.bind(Orbit);
-    const features = this.FEATURES();
-    const demo = h("div", { class: "ow-demo" });
-    const text = h("div", { class: "ow-feature" });
-    const list = h("div", { class: "ow-features" });
-    let i = 0;
-    const pick = n => {
-      i = (n + features.length) % features.length;
-      const [icon, title, desc, kind] = features[i];
-      demo.replaceChildren(this.demo(kind));
-      text.replaceChildren(h("b", {}, title), h("span", {}, desc));
-      for (const [j, b] of [...list.children].entries()) b.toggleAttribute("active", j == i);
-      clearTimeout(this._tour);
-      this._tour = setTimeout(() => pick(i + 1), 5200);
-    };
-    features.forEach(([icon, title], j) => list.append(h("button", { class: "ow-feature-tab", onclick: () => pick(j) }, Orbit.icon(icon), h("span", {}, title))));
-    pick(0);
-    return h("div", { class: "ow-tour" }, list, h("div", { class: "ow-tour-main" }, demo, text));
-  },
-
-  stopTour() {
-    clearTimeout(this._tour);
-  },
-
-  // Tiny looping scenes made of boxes: cheap to draw, easy to read.
-  demo(kind) {
-    const h = Orbit.h.bind(Orbit);
-    const row = (cls = "") => h("i", { class: `d-row ${cls}` });
-    const side = (...kids) => h("div", { class: "d-side" }, ...kids);
-    switch (kind) {
-      case "spaces":
-        return h("div", { class: `d d-${kind}` }, side(h("div", { class: "d-tiles" }, h("i"), h("i"), h("i")), row("sel"), row(), row()),
-          h("div", { class: "d-page" }), h("div", { class: "d-spaces" }, h("i", { class: "on" }), h("i"), h("i")));
-      case "drag":
-        return h("div", { class: `d d-${kind}` }, side(h("div", { class: "d-tiles" }, h("i"), h("i"), h("i", { class: "d-landing" })),
-          h("i", { class: "d-row d-slot" }), row(), row(), row()), h("i", { class: "d-row d-moving" }), h("div", { class: "d-page" }));
-      case "command":
-        return h("div", { class: `d d-${kind}` }, side(row(), row(), row()), h("div", { class: "d-page" }),
-          h("div", { class: "d-bar" }, h("i", { class: "d-type" }), h("i", { class: "d-res" }), h("i", { class: "d-res" }), h("i", { class: "d-res" })));
-      case "glance":
-        return h("div", { class: `d d-${kind}` }, side(row(), row(), row()), h("div", { class: "d-page" }, h("i", { class: "d-link" })),
-          h("div", { class: "d-glance" }));
-      case "shield":
-        return h("div", { class: `d d-${kind}` }, h("div", { class: "d-shield" }, Orbit.icon("shield-check")),
-          ...[1, 2, 3, 4, 5].map(n => h("i", { class: `d-ad d-ad${n}` })));
-      case "sleep":
-        return h("div", { class: `d d-${kind}` }, side(row("sel"), row("zz"), row("zz"), row("zz")),
-          h("div", { class: "d-meter" }, h("i")));
-      case "ref":
-        return h("div", { class: `d d-${kind}` }, side(row(), row(), row()), h("div", { class: "d-page" }),
-          h("div", { class: "d-float" }, h("i")));
-    }
-    return h("div");
-  },
-
   finish(root) {
     Services.prefs.setBoolPref("orbit.welcome.done", true);
-    this.stopTour();
     window.removeEventListener("keydown", this._key, true);
     document.documentElement.removeAttribute("orbit-welcome-open");
     root.setAttribute("closing", "true");

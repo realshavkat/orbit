@@ -34,7 +34,16 @@ var OrbitVPN = {
     ["tor", "socks5://127.0.0.1:9050"],
   ],
 
+  // Off for now (not reliable yet): no button, no setting, and a tunnel left
+  // on by an earlier version is turned off so browsing goes direct.
+  AVAILABLE: false,
+
   init() {
+    if (!this.AVAILABLE) {
+      if (Orbit.pref("orbit.vpn.enabled", false)) this.apply(false, { quiet: true });
+      if (CustomizableUI.getPlacementOfWidget(this.WIDGET)) CustomizableUI.removeWidgetFromArea(this.WIDGET);
+      return;
+    }
     // Gecko's own (Mozilla-account) VPN is not part of Orbit.
     if (Orbit.pref("orbit.vpn.mode", "custom") != "custom") Services.prefs.setStringPref("orbit.vpn.mode", "custom");
     Services.prefs.clearUserPref("browser.ipProtection.enabled");

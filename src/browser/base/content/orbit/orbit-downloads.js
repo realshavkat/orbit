@@ -42,6 +42,21 @@ var OrbitDownloads = {
     // Every window dresses its own downloads panel; the download list view
     // below is app-wide (first window only).
     window.addEventListener("popupshowing", e => e.target.id == "downloadsPanel" && this.panelHead(), true);
+    // "Show all downloads" opens orbit://downloads in a tab, not the Library window.
+    try {
+      ChromeUtils.registerWindowActor("OrbitDownloads", {
+        parent: { esModuleURI: "resource://orbit/actors/OrbitDownloadsParent.sys.mjs" },
+        child: {
+          esModuleURI: "resource://orbit/actors/OrbitDownloadsChild.sys.mjs",
+          events: { "OrbitDownloads:Ready": { wantUntrusted: true }, "OrbitDownloads:Act": { wantUntrusted: true } },
+        },
+        matches: [`${this.PAGE}*`],
+        messageManagerGroups: ["browsers"],
+        // The parent only answers this page and only runs fixed actions.
+        safeForUntrustedWebProcess: true,
+      });
+    } catch {}
+    BrowserCommands.downloadsUI = () => switchToTabHavingURI(this.PAGE, true);
     if (this._view) return;
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
       if (win != window && win.OrbitDownloads?._view) return;
@@ -245,6 +260,30 @@ var OrbitDownloads = {
     const mb = bps / 1048576;
     const fr = Orbit.lang() == "fr";
     return mb >= 1 ? `${mb.toFixed(1).replace(".", Orbit.tr(".", ","))} ${Orbit.tr("MB", "Mo")}/s` : `${Math.round(bps / 1024)} ${Orbit.tr("KB", "Ko")}/s`;
+  },
+
+  PAGE: "resource://orbit/downloads.html",
+
+  // Text of orbit://downloads (the page has no access to Orbit's translations).
+  pageStrings() {
+    return {
+      title: Orbit.tr("Downloads", "Téléchargements"), search: Orbit.tr("Search downloads", "Rechercher dans les téléchargements"),
+      openDir: Orbit.tr("Downloads folder", "Dossier des téléchargements"), clear: Orbit.tr("Clear list", "Vider la liste"),
+      confirmClear: Orbit.tr("Remove finished downloads from the list? Files stay on disk.", "Retirer les téléchargements terminés de la liste ? Les fichiers restent sur le disque."),
+      confirmDelete: Orbit.tr("Delete “{name}” from the disk?", "Supprimer « {name} » du disque ?"),
+      count: Orbit.tr("{n} downloads", "{n} téléchargements"),
+      f_all: Orbit.tr("All", "Tous"), f_done: Orbit.tr("Finished", "Terminés"), f_running: Orbit.tr("In progress", "En cours"), f_failed: Orbit.tr("Failed", "Échoués"),
+      s_newest: Orbit.tr("Newest first", "Plus récents"), s_oldest: Orbit.tr("Oldest first", "Plus anciens"),
+      s_size: Orbit.tr("Largest first", "Plus gros"), s_name: Orbit.tr("By name", "Par nom"),
+      today: Orbit.tr("Today", "Aujourd'hui"), yesterday: Orbit.tr("Yesterday", "Hier"), week: Orbit.tr("This week", "Cette semaine"), month: Orbit.tr("This month", "Ce mois-ci"),
+      open: Orbit.tr("Open", "Ouvrir"), folder: Orbit.tr("Show in folder", "Afficher dans le dossier"), pause: Orbit.tr("Pause", "Pause"),
+      cancel: Orbit.tr("Cancel", "Annuler"), retry: Orbit.tr("Retry", "Réessayer"), copy: Orbit.tr("Copy link", "Copier le lien"),
+      source: Orbit.tr("Open the page it came from", "Ouvrir la page d'origine"), remove: Orbit.tr("Remove from list", "Retirer de la liste"),
+      delete: Orbit.tr("Delete file", "Supprimer le fichier"),
+      missing: Orbit.tr("File moved or deleted", "Fichier déplacé ou supprimé"), failed: Orbit.tr("Failed", "Échec"),
+      canceled: Orbit.tr("Canceled", "Annulé"), paused: Orbit.tr("Paused", "En pause"),
+      empty: Orbit.tr("No downloads yet.", "Aucun téléchargement pour l'instant."), noMatch: Orbit.tr("Nothing matches.", "Aucun résultat."),
+    };
   },
 
   // ---- downloads panel -------------------------------------------------------------

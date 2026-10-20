@@ -4,7 +4,7 @@
 
 // node tools/check-orbit.mjs
 import assert from "node:assert/strict";
-import { contentRange, parseProxy, resolveOrbitURL, zipOffset } from "../src/browser/base/content/orbit/orbit-pure.mjs";
+import { contentRange, downloadGroup, parseProxy, resolveOrbitURL, zipOffset } from "../src/browser/base/content/orbit/orbit-pure.mjs";
 
 assert.deepEqual(parseProxy("socks5://127.0.0.1:9050"), { kind: "socks5", host: "127.0.0.1", port: 9050 });
 assert.deepEqual(parseProxy("https://proxy.example:443"), { kind: "http", host: "proxy.example", port: 443 });
@@ -32,5 +32,14 @@ assert.equal(resolveOrbitURL("orbit://home"), "orbit:home");
 assert.equal(resolveOrbitURL("orbit:preferences#privacy"), "about:preferences#privacy");
 assert.equal(resolveOrbitURL("orbit://credits"), "orbit:about");
 assert.equal(resolveOrbitURL("https://example.com"), null);
+assert.equal(resolveOrbitURL("orbit://downloads"), "orbit:downloads");
+{
+  const now = new Date(2026, 9, 20, 15, 0).getTime();
+  assert.equal(downloadGroup(new Date(2026, 9, 20, 0, 1).getTime(), now), "today");
+  assert.equal(downloadGroup(new Date(2026, 9, 19, 23, 59).getTime(), now), "yesterday");
+  assert.equal(downloadGroup(new Date(2026, 9, 14, 10, 0).getTime(), now), "week");
+  assert.equal(downloadGroup(new Date(2026, 9, 2, 10, 0).getTime(), now), "month");
+  assert.equal(downloadGroup(new Date(2026, 8, 30, 10, 0).getTime(), now), "2026-09");
+}
 
 console.log("orbit checks ok");
