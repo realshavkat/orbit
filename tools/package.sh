@@ -51,5 +51,6 @@ openssl x509 -inform DER -in "$ROOT/src/toolkit/mozapps/update/updater/release_p
 echo "MAR signature OK"
 
 echo "== update.xml"
-node tools/update-xml.mjs "$VERSION" dist/windows.mar "$OBJ/dist/bin/platform.ini"
+# The packaged app (what the MAR installs) gives the build IDs.
+node tools/update-xml.mjs "$VERSION" dist/windows.mar "$OBJ/dist/orbit/platform.ini"
 echo "Done: dist/Orbit-Setup-$VERSION.exe, dist/windows.mar, dist/update/"

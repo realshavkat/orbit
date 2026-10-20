@@ -14,7 +14,10 @@ const [version, mar, platformIni] = process.argv.slice(2);
 const root = resolve(import.meta.dirname, "..");
 const { brands } = JSON.parse(readFileSync(join(root, "surfer.json"), "utf8"));
 const repo = brands.release.release.github.repo;
-const buildID = /BuildID=(\d+)/.exec(readFileSync(platformIni, "utf8"))[1];
+// The updater compares the app's build ID (application.ini), not Gecko's
+// (platform.ini): with the wrong one, the same version is offered forever.
+const appIni = platformIni.replace(/platform\.ini$/, "application.ini");
+const buildID = /BuildID=(\d+)/.exec(readFileSync(appIni, "utf8"))[1];
 const milestone = /Milestone=([\w.]+)/.exec(readFileSync(platformIni, "utf8"))[1];
 const bytes = readFileSync(mar);
 const hash = createHash("sha512").update(bytes).digest("hex");
