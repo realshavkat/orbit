@@ -186,6 +186,7 @@ var OrbitSpaces = {
       else if (!inSpace && !tab.hidden) gBrowser.hideTab(tab, "orbit-spaces");
     }
     globalThis.OrbitKept?.sync();
+    globalThis.OrbitFolders?.placeHeader();
   },
 
   // ---- switching ----------------------------------------------------------

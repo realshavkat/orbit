@@ -2,10 +2,11 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Folders: Gecko's tab groups with an icon, a tab count, sub-folders and
-// pinning: a folder pinned in a space sits at the top of that space and is
-// kept by "clear" (pinned: true, from older versions, means every space).
-// Extra data per group lives in the orbit.folders pref: { id: {icon, parent, pinned} }.
+// Folders: Gecko's tab groups with an icon, a tab count, a tag, sub-folders
+// and pinning: a folder pinned in a space sits with the space's pinned tabs,
+// above the space's name, and is kept by "clear" (pinned: true, from older
+// versions, means every space). The whole row opens and closes it.
+// Extra data per group lives in the orbit.folders pref: { id: {icon, parent, pinned, tag} }.
 var OrbitFolders = {
   PREF: "orbit.folders",
   ICONS: ["folder", "star", "briefcase", "code", "music", "film", "gamepad-2", "book-open", "graduation-cap", "heart",
@@ -19,6 +20,7 @@ var OrbitFolders = {
       pin: Orbit.tr("Pin folder in this space", "Épingler le dossier dans l'espace"),
       unpin: Orbit.tr("Unpin folder", "Désépingler le dossier"),
       sub: Orbit.tr("New sub-folder", "Nouveau sous-dossier"),
+      tag: Orbit.tr("Add a tag…", "Ajouter un tag…"),
       subName: Orbit.tr("Sub-folder", "Sous-dossier"),
       newFolder: Orbit.tr("New folder", "Nouveau dossier"),
     }[k];
@@ -66,6 +68,17 @@ var OrbitFolders = {
       delete all[id];
       Services.prefs.setStringPref(this.PREF, JSON.stringify(all));
     });
+    // Gecko only toggles on the name itself: the chevron, icon, count and
+    // padding of the row must open and close it too.
+    tc.addEventListener("click", e => {
+      const box = e.target.closest?.(".tab-group-label-container");
+      if (!box || e.button != 0 || e.ctrlKey || e.shiftKey || e.metaKey) return;
+      if (e.target.classList.contains("tab-group-label") || e.target.closest(".orbit-folder-tag")) return;
+      const group = box.closest("tab-group");
+      if (!group) return;
+      e.preventDefault();
+      group.collapsed = !group.collapsed;
+    });
     Services.prefs.addObserver(this.PREF, schedule);
     window.addEventListener("unload", () => Services.prefs.removeObserver(this.PREF, schedule), { once: true });
     this.extendEditor();
@@ -99,12 +112,45 @@ var OrbitFolders = {
         label.dataset.count = String(group.tabs.length);
       }
       group.toggleAttribute("orbit-pinned", !!m.pinned);
+      this.paintTag(group, m.tag);
       group.style.setProperty("--orbit-folder-depth", String(this.depth(group.id, meta)));
       // A collapsed parent hides its sub-folders.
       let hidden = false;
       for (let p = m.parent; p && !hidden; p = meta[p]?.parent) hidden = !!byId.get(p)?.collapsed;
       group.toggleAttribute("orbit-folder-hidden", hidden);
     }
+    this.placeHeader();
+  },
+
+  // Pinned folders of the current space go above the space's name, with its
+  // pinned tabs: the header and "New tab" move right after the last one.
+  placeHeader() {
+    const header = document.getElementById("orbit-sidebar-header");
+    const newTab = document.getElementById("tabs-newtab-button");
+    const list = document.getElementById("tabbrowser-arrowscrollbox");
+    if (!header || !newTab || !list) return;
+    const pinned = this.groups().filter(g => g.hasAttribute("orbit-pinned") && g.tabs.some(t => !t.hidden) &&
+      !g.hasAttribute("orbit-folder-hidden"));
+    const last = pinned.at(-1);
+    document.documentElement.toggleAttribute("orbit-has-pinned-folders", !!last);
+    if (last) {
+      if (last.nextElementSibling != header) last.after(header, newTab);
+    } else if (header.parentNode == list) {
+      list.before(header, newTab);
+    }
+  },
+
+  // A folder's tag, shown on its row like a tab's.
+  paintTag(group, tag) {
+    const box = group.querySelector(".tab-group-label-hover-highlight");
+    let pill = box?.querySelector(".orbit-folder-tag");
+    if (!tag?.text) return pill?.remove();
+    if (!box) return;
+    if (!pill) {
+      pill = Orbit.h("span", { class: "orbit-tab-tag orbit-folder-tag" });
+      box.querySelector(".tab-group-label")?.after(pill);
+    }
+    OrbitExtras.fillTag(pill, tag);
   },
 
   // Extra buttons in Gecko's folder editor panel.
@@ -117,13 +163,19 @@ var OrbitFolders = {
     const iconBtn = btn("orbit-folder-icon-btn", () => this.pickIcon(editor.activeGroup));
     const pinBtn = btn("orbit-folder-pin-btn", () => this.togglePin(editor.activeGroup));
     const subBtn = btn("orbit-folder-sub-btn", () => this.addSubFolder(editor.activeGroup));
+    const tagBtn = btn("orbit-folder-tag-btn", () => {
+      const group = editor.activeGroup;
+      gBrowser.tabGroupMenu.panel?.hidePopup?.();
+      OrbitExtras.editTag(group);
+    });
     panel.addEventListener("popupshowing", () => {
       const actions = panel.querySelector(".tab-group-edit-actions");
-      if (actions && !iconBtn.isConnected) actions.prepend(iconBtn, pinBtn, subBtn, h("xul:toolbarseparator"));
+      if (actions && !iconBtn.isConnected) actions.prepend(iconBtn, tagBtn, pinBtn, subBtn, h("xul:toolbarseparator"));
       const pinned = !!this.meta[editor.activeGroup?.id]?.pinned;
       iconBtn.setAttribute("label", this.t("icon"));
       pinBtn.setAttribute("label", pinned ? this.t("unpin") : this.t("pin"));
       subBtn.setAttribute("label", this.t("sub"));
+      tagBtn.setAttribute("label", this.meta[editor.activeGroup?.id]?.tag ? OrbitExtras.t("editTag") : this.t("tag"));
     });
   },
 

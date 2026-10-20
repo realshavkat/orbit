@@ -39,6 +39,9 @@ var OrbitDownloads = {
   },
 
   async init() {
+    // Every window dresses its own downloads panel; the download list view
+    // below is app-wide (first window only).
+    window.addEventListener("popupshowing", e => e.target.id == "downloadsPanel" && this.panelHead(), true);
     if (this._view) return;
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
       if (win != window && win.OrbitDownloads?._view) return;
@@ -86,13 +89,18 @@ var OrbitDownloads = {
     if (!probe || download.stopped || download.succeeded) return;
     const target = download.target.path;
     const tmp = `${target}.orbit-turbo`;
-    // Both at once would split the bandwidth: pause the normal one, keep its data.
+    // Both at once would split the bandwidth: pause the normal one, keep its
+    // data, and hide it from the panel while Turbo shows its own progress.
     download.tryToKeepPartialData = true;
+    (this._paused ??= new Set()).add(download);
     await download.cancel().catch(() => {});
+    this.hidePaused();
     let resumed = false;
     const resume = () => {
       if (resumed || download.succeeded) return;
       resumed = true;
+      this._paused.delete(download);
+      this.hidePaused();
       download.start().catch(() => {});
     };
     try {
@@ -239,14 +247,53 @@ var OrbitDownloads = {
     return mb >= 1 ? `${mb.toFixed(1).replace(".", Orbit.tr(".", ","))} ${Orbit.tr("MB", "Mo")}/s` : `${Math.round(bps / 1024)} ${Orbit.tr("KB", "Ko")}/s`;
   },
 
-  // Progress card in the toast stack.
+  // ---- downloads panel -------------------------------------------------------------
+  // A header with Orbit Turbo's switch, then Turbo's running downloads.
+  panelHead() {
+    const body = document.querySelector("#downloadsPanel-mainView > .panel-view-body-unscrollable");
+    if (!body) return null;
+    let jobs = document.getElementById("orbit-dl-jobs");
+    if (!jobs) {
+      const h = Orbit.h.bind(Orbit);
+      const sw = OrbitSettings.switch(this.enabled, on => Services.prefs.setBoolPref("orbit.downloads.turbo", on));
+      body.prepend(
+        h("div", { id: "orbit-dl-head" },
+          h("b", {}, Orbit.tr("Downloads", "Téléchargements")),
+          h("label", { class: "orbit-dl-turbo", title: Orbit.tr("Several connections for big downloads, only when it helps.",
+            "Plusieurs connexions pour les gros téléchargements, seulement quand ça aide.") },
+            Orbit.icon("zap"), h("span", {}, "Turbo"), sw),
+          h("button", { class: "orbit-icon-button", title: Orbit.tr("Download settings", "Réglages des téléchargements"), onclick: () => {
+            PanelMultiView.hidePopup(document.getElementById("downloadsPanel"));
+            OrbitSettings.open("downloads");
+          } }, Orbit.icon("settings-2"))),
+        jobs = h("div", { id: "orbit-dl-jobs" }));
+      Services.prefs.addObserver("orbit.downloads.turbo", this._turboObs = () => {
+        sw.toggleAttribute("on", this.enabled);
+        sw.setAttribute("aria-checked", String(this.enabled));
+      });
+      window.addEventListener("unload", () => Services.prefs.removeObserver("orbit.downloads.turbo", this._turboObs), { once: true });
+    }
+    this.hidePaused();
+    return jobs;
+  },
+
+  // The normal download Turbo paused looks "cancelled" in the list: hidden meanwhile.
+  hidePaused() {
+    for (const el of document.querySelectorAll("#downloadsListBox > richlistitem")) {
+      const d = el._shell?.download;
+      if (d) el.hidden = !!this._paused?.has(d);
+    }
+  },
+
+  // Turbo's progress: in the downloads panel, or a toast if the panel was never built.
   card(name, onCancel) {
     const h = Orbit.h.bind(Orbit);
-    let stack = document.getElementById("orbit-toasts");
+    let stack = this.panelHead();
+    if (!stack) stack = document.getElementById("orbit-toasts");
     if (!stack) document.body.append(stack = h("div", { id: "orbit-toasts" }));
     const bar = h("i");
     const info = h("span", {}, "…");
-    const card = h("div", { class: "orbit-toast orbit-turbo", role: "status" },
+    const card = h("div", { class: stack.id == "orbit-dl-jobs" ? "orbit-dl-job orbit-turbo" : "orbit-toast orbit-turbo", role: "status" },
       h("div", { class: "orbit-toast-main" },
         h("span", { class: "orbit-toast-icon" }, Orbit.icon("zap")),
         h("div", { class: "orbit-toast-text" }, h("b", {}, name), info),

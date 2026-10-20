@@ -76,6 +76,10 @@ var OrbitDnD = {
 
   up(e) {
     if (!this.drag) return this.cleanup();
+    // A shaky click (a few pixels, dropped where it started) stays a click:
+    // it must still open the folder or select the tab.
+    const near = Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) < 12;
+    if (near && (!this.target || this.target.type == "noop" || this.target.ref == this.drag.item)) return this.end(false);
     e.preventDefault();
     e.stopPropagation();
     // The click that follows a drag must not select or toggle anything.
@@ -321,7 +325,9 @@ var OrbitDnD = {
     const rows = this.listItems();
     const listLabel = drag.kind == "tab" || drag.isGroup ? this.t("reorder") : this.t("list");
     if (el.closest("#orbit-sidebar-header, #tabs-newtab-button")) {
-      return { type: "list", label: listLabel, rows, index: 0, inList: true, anchor: this.rect(listBox) };
+      // Right under the header: after the pinned folders that sit above it.
+      const index = rows.findIndex(r => !(r.localName == "tab-group" && r.hasAttribute("orbit-pinned")));
+      return { type: "list", label: listLabel, rows, index: index < 0 ? rows.length : index, inList: true, anchor: this.rect(listBox) };
     }
     if (!drag.isGroup) {
       for (const g of rows) {

@@ -1050,10 +1050,8 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   & .orbit-icon { width: 14px; height: 14px; color: var(--orbit-fg-dim); }
 }
 .orbit-dropdown-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 5;
+  position: fixed;
+  z-index: 50;
   min-width: 100%;
   max-height: 300px;
   overflow-y: auto;
@@ -1063,6 +1061,7 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   box-shadow: 0 0 0 1px var(--orbit-border), 0 16px 40px rgb(0 0 0 / .4);
   transform-origin: top right;
   animation: orbit-menu-in .2s var(--orbit-ease);
+  &[up] { transform-origin: bottom right; }
 }
 @keyframes orbit-menu-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } }
 .orbit-dropdown-item {
@@ -1721,7 +1720,7 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & .orbit-icon-button { width: 26px; height: 26px; }
 }
 /* Thin rule under "New tab", as in the design. */
-#tabbrowser-tabs > #tabs-newtab-button {
+#tabbrowser-tabs #tabs-newtab-button {
   margin: 0 0 4px !important;
   box-shadow: 0 5px 0 -4px var(--orbit-border);
 }
@@ -2508,7 +2507,7 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 /* ==========================================================================
    "New tab" row: the same shape as a tab
    ========================================================================== */
-#tabbrowser-tabs > #tabs-newtab-button {
+#tabbrowser-tabs #tabs-newtab-button {
   height: 34px !important;
   min-height: 34px !important;
   padding: 0 8px !important;
@@ -2528,8 +2527,8 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   &::after { opacity: .5 !important; }
 }
 /* Its separator moved under it as a thin line, with air like the design. */
-#tabbrowser-tabs > #tabs-newtab-button { margin-bottom: 6px !important; }
-#tabbrowser-tabs > #tabs-newtab-button + * { border-top: 1px solid var(--orbit-border); padding-top: 4px; }
+#tabbrowser-tabs #tabs-newtab-button { margin-bottom: 6px !important; }
+#tabbrowser-tabs #tabs-newtab-button + * { border-top: 1px solid var(--orbit-border); padding-top: 4px; }
 
 /* ==========================================================================
    Motion everywhere: short, springy, compositor-only
@@ -2673,8 +2672,8 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   margin-bottom: 4px !important;
 }
 #orbit-sidebar-header { padding: 6px 2px 2px 8px !important; }
-#tabbrowser-tabs > #tabs-newtab-button { margin-bottom: 4px !important; }
-#tabbrowser-tabs > #tabs-newtab-button + * { padding-top: 2px !important; }
+#tabbrowser-tabs #tabs-newtab-button { margin-bottom: 4px !important; }
+#tabbrowser-tabs #tabs-newtab-button + * { padding-top: 2px !important; }
 #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { margin-bottom: 4px !important; }
 .orbit-fortress[on] { box-shadow: inset 0 0 0 1px rgb(126 226 168 / .35) !important; background: rgb(126 226 168 / .05) !important; }
 
@@ -2687,9 +2686,9 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #tabbrowser-tabs[orient="vertical"][expanded] { padding-inline: 8px !important; }
 #vertical-tabs .tabbrowser-tab:not([pinned]) { padding-block: 1px !important; }
 #vertical-tabs :is(.tabbrowser-tab:not([pinned]), #tabs-newtab-button, tab-group .tab-group-label-container) .tab-content,
-#tabbrowser-tabs > #tabs-newtab-button { padding-inline: 8px 6px !important; gap: 10px !important; }
-#vertical-tabs .tabbrowser-tab .tab-icon-stack, #tabbrowser-tabs > #tabs-newtab-button > .toolbarbutton-icon { margin: 0 !important; }
-#tabbrowser-tabs > #tabs-newtab-button > .toolbarbutton-text { padding-inline-start: 0 !important; margin-inline-start: 10px !important; }
+#tabbrowser-tabs #tabs-newtab-button { padding-inline: 8px 6px !important; gap: 10px !important; }
+#vertical-tabs .tabbrowser-tab .tab-icon-stack, #tabbrowser-tabs #tabs-newtab-button > .toolbarbutton-icon { margin: 0 !important; }
+#tabbrowser-tabs #tabs-newtab-button > .toolbarbutton-text { padding-inline-start: 0 !important; margin-inline-start: 10px !important; }
 
 /* Essentials, then space-pinned rows, then a separator. */
 #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { margin: 0 !important; padding: 0 !important; }
@@ -2706,8 +2705,8 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #orbit-space-title { flex: 1; height: 34px; }
 
 /* "New tab", then a separator with 8px on each side, then the tabs. */
-#tabbrowser-tabs > #tabs-newtab-button { margin: 0 0 8px !important; }
-#tabbrowser-tabs > #tabs-newtab-button + * { border-top: 1px solid var(--orbit-border); padding-top: 8px !important; margin-top: 0 !important; }
+#tabbrowser-tabs #tabs-newtab-button { margin: 0 0 8px !important; }
+#tabbrowser-tabs #tabs-newtab-button + * { border-top: 1px solid var(--orbit-border); padding-top: 8px !important; margin-top: 0 !important; }
 
 /* Folders sit on the same 34px rows. */
 #vertical-tabs tab-group { margin-block: 1px !important; }
@@ -2715,7 +2714,7 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #orbit-space-title { width: 100%; justify-content: flex-start !important; }
 #orbit-space-title .orbit-space-name { flex: 1 1 auto !important; text-align: start; }
 #tabbrowser-tabs[orient="vertical"] { --tab-inner-inline-margin: 0px !important; }
-#tabbrowser-tabs > #tabs-newtab-button { gap: 0 !important; }
+#tabbrowser-tabs #tabs-newtab-button { gap: 0 !important; }
 #pinned-tabs-container[orient="vertical"]::part(items-wrapper) { padding: 0 !important; margin: 0 !important; }
 #pinned-tabs-container .tabbrowser-tab { margin-inline: 0 !important; }
 #vertical-tabs .tabbrowser-tab .tab-icon-stack { width: 16px !important; min-width: 16px !important; max-width: 16px !important; overflow: visible; }
@@ -3628,3 +3627,97 @@ menupopup > :is(menuitem, menu)[orbit-icon] .menu-icon {
   width: 16px; height: 16px; margin-inline-end: 10px !important;
   -moz-context-properties: stroke; stroke: var(--orbit-fg-dim); fill: none;
 }
+
+/* ==========================================================================
+   Folders v2: whole row toggles, closed folders fade, open folders show
+   their tabs indented along a guide line; pinned folders sit above the
+   space name with the pinned tabs. (tab-group is display: contents.)
+   ========================================================================== */
+#vertical-tabs tab-group {
+  & .tab-group-label-container { cursor: default; }
+  &[collapsed] .tab-group-label-container { opacity: .55; transition: opacity .15s; }
+  &[collapsed] .tab-group-label-container:hover { opacity: 1; }
+  & .orbit-folder-tag { margin-inline-start: 6px; }
+}
+#vertical-tabs #tabbrowser-arrowscrollbox tab-group > .tabbrowser-tab:not([pinned]) .tab-content {
+  padding-inline-start: calc(28px + var(--orbit-folder-depth, 0) * 14px) !important;
+  background: linear-gradient(color-mix(in srgb, var(--tab-group-color, var(--orbit-accent)) 75%, transparent),
+    color-mix(in srgb, var(--tab-group-color, var(--orbit-accent)) 75%, transparent))
+    no-repeat calc(14px + var(--orbit-folder-depth, 0) * 14px) 3px / 2px calc(100% - 6px) !important;
+}
+.orbit-tab-tag { display: inline-flex; align-items: center; gap: 4px; }
+.orbit-tag-icon { width: 10px; height: 10px; flex-shrink: 0; -moz-context-properties: stroke; }
+.orbit-tag-icons { display: flex; flex-wrap: wrap; gap: 2px;
+  & .orbit-icon-button { width: 26px !important; height: 26px !important; }
+  & .orbit-icon-button[active] { background: var(--orbit-active); box-shadow: inset 0 0 0 1px var(--orbit-border); } }
+/* Pinned folders join the pinned tabs: one separator, above the space name. */
+:root[orbit-has-pinned-folders] #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { box-shadow: none !important; border-bottom: none !important; }
+:root[orbit-has-pinned-folders] #orbit-sidebar-header { margin-top: 6px !important; padding-top: 8px !important; border-top: 1px solid var(--orbit-border) !important; }
+
+/* ==========================================================================
+   Downloads panel v2: header with Turbo, Turbo jobs, empty state
+   ========================================================================== */
+#orbit-dl-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 10px 8px 14px;
+  & > b { flex: 1; font-size: 14px; font-weight: 600; }
+  & .orbit-icon-button { width: 28px; height: 28px; }
+}
+.orbit-dl-turbo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 4px 0 9px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--orbit-field);
+  box-shadow: inset 0 0 0 1px var(--orbit-border);
+  & .orbit-icon { width: 13px; height: 13px; color: #f5c518; -moz-context-properties: stroke; stroke: #f5c518; }
+  & .orbit-switch { transform: scale(.82); }
+}
+#orbit-dl-jobs { display: flex; flex-direction: column; gap: 6px; padding: 0 8px; &:empty { display: none; } }
+.orbit-dl-job {
+  padding: 10px 10px 10px 12px;
+  border-radius: 10px;
+  background: color-mix(in srgb, #f5c518 8%, var(--orbit-field));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #f5c518 22%, transparent);
+  animation: orbit-pop-in .25s var(--orbit-spring);
+  &[closing] { animation: orbit-fade-out .2s ease-in forwards; }
+  & .orbit-toast-main { display: flex; align-items: center; gap: 10px; }
+  & .orbit-toast-icon { width: 28px; height: 28px; flex-shrink: 0; display: grid; place-items: center; border-radius: 8px;
+    background: color-mix(in srgb, #f5c518 18%, transparent);
+    & .orbit-icon { width: 14px; height: 14px; -moz-context-properties: stroke; stroke: #f5c518; } }
+  & .orbit-toast-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px;
+    & b { font-size: 12.5px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    & span { font-size: 11px; color: var(--orbit-fg-dim); font-variant-numeric: tabular-nums; } }
+  & .orbit-toast-close { width: 24px; height: 24px; border: none; border-radius: 6px; background: none; display: grid; place-items: center;
+    &:hover { background: var(--orbit-hover); } & .orbit-icon { width: 12px; height: 12px; } }
+  & .orbit-turbo-bar { margin-top: 8px; height: 4px; border-radius: 2px; background: var(--orbit-border); overflow: hidden;
+    & i { display: block; height: 100%; border-radius: 2px; background: linear-gradient(90deg, #f5c518, #ff9f43); transform-origin: left; transform: scaleX(0); transition: transform .35s; } }
+  &[data-tone="ok"] .orbit-turbo-bar i { background: #3ddc97; }
+}
+#emptyDownloads {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 0 !important;
+  padding: 26px 16px 22px !important;
+  font-size: 12.5px !important;
+  color: var(--orbit-fg-dim) !important;
+  text-align: center;
+  &::before {
+    content: "";
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: url("chrome://orbit/content/icons/download.svg") center / 20px no-repeat, var(--orbit-field);
+    -moz-context-properties: stroke;
+    stroke: var(--orbit-fg-dim);
+  }
+}
+#downloadsPanel[hasdownloads] #emptyDownloads, #emptyDownloads[hidden] { display: none !important; }

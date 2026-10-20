@@ -167,7 +167,7 @@ var OrbitSettings = {
       spaceColors: "Couleurs de l'espace", custom: "Personnalisées",
       scheme: "Thème", "scheme.dark": "Sombre", "scheme.light": "Clair", "scheme.system": "Système",
       intensity: "Intensité du fond", radius: "Arrondi des coins",
-      quickColors: "Couleurs rapides (comme Zen)", grainAmount: "Quantité de grain", grainSize: "Taille du grain", "grainSize.d": "Petit = grain fin, grand = grain large",
+      quickColors: "Couleurs rapides", grainAmount: "Quantité de grain", grainSize: "Taille du grain", "grainSize.d": "Petit = grain fin, grand = grain large",
       glass: "Verre liquide", "glass.d": "Reflets et transparence sur les onglets et les barres",
       nebula: "Mouvement du fond", "nebula.d": "Les rubans de couleur dérivent lentement (en pause quand la fenêtre est inactive)",
       grain: "Grain", "grain.d": "Texture fine sur l'arrière-plan",
@@ -229,7 +229,7 @@ var OrbitSettings = {
       spaceColors: "Space colors", custom: "Custom",
       scheme: "Theme", "scheme.dark": "Dark", "scheme.light": "Light", "scheme.system": "System",
       intensity: "Background intensity", radius: "Corner radius",
-      quickColors: "Quick colors (like Zen)", grainAmount: "Grain amount", grainSize: "Grain size", "grainSize.d": "Small = fine grain, large = coarse grain",
+      quickColors: "Quick colors", grainAmount: "Grain amount", grainSize: "Grain size", "grainSize.d": "Small = fine grain, large = coarse grain",
       glass: "Liquid glass", "glass.d": "Highlights and translucency on tabs and bars",
       nebula: "Background motion", "nebula.d": "Color ribbons drift slowly (paused when the window is inactive)",
       grain: "Grain", "grain.d": "Fine texture on the background",
@@ -647,7 +647,7 @@ var OrbitSettings = {
       list.replaceChildren(...(mods.length ? mods.map(m => this.modCard(m, !off.has(m.id), fill))
         : [h("div", { class: "orbit-mods-empty" }, Orbit.icon("sparkles"),
           h("b", {}, Orbit.tr("No mods yet", "Aucun mod pour l'instant")),
-          h("span", {}, Orbit.tr("Browse Zen's mods or make your own.", "Parcours les mods de Zen ou crée le tien.")))]));
+          h("span", {}, Orbit.tr("Browse mods or make your own.", "Parcours les mods ou crée le tien.")))]));
     };
     fill();
     const open = url => { this.close(); gBrowser.selectedTab = gBrowser.addTrustedTab(url); };
@@ -866,7 +866,28 @@ var OrbitSettings = {
         }, h("span", {}, o.label), o.value == current ? Orbit.icon("check") : null)),
         footer ? h("div", { class: "orbit-dropdown-sep" }) : null,
         footer);
-      wrap.append(menu);
+      // On the sheet itself, not in the row: cards clip their content.
+      const host = document.getElementById("orbit-settings") ?? document.body;
+      host.append(menu);
+      const r = btn.getBoundingClientRect();
+      const below = innerHeight - r.bottom - 12;
+      const above = r.top - 12;
+      const up = menu.offsetHeight > below && above > below;
+      menu.style.maxHeight = `${Math.min(320, up ? above : below)}px`;
+      menu.style.minWidth = `${r.width}px`;
+      menu.style.right = `${innerWidth - r.right}px`;
+      menu.style.top = up ? "" : `${r.bottom + 6}px`;
+      menu.style.bottom = up ? `${innerHeight - r.top + 6}px` : "";
+      menu.toggleAttribute("up", up);
+      // A scroll of the page under it would leave it floating: close it.
+      menu.closest("#orbit-settings")?.querySelector(".orbit-settings-body")
+        ?.addEventListener("scroll", () => this.closeMenus(), { once: true });
+      const outside = e => {
+        if (menu.contains(e.target) || btn.contains(e.target)) return;
+        window.removeEventListener("mousedown", outside, true);
+        this.closeMenus();
+      };
+      window.addEventListener("mousedown", outside, true);
     });
     sync();
     return wrap;
@@ -975,7 +996,9 @@ var OrbitSettings = {
         h("button", { class: "orbit-setting orbit-setting-link", onclick: () => open(`${repo}/releases/tag/${version}`) },
           h("div", { class: "orbit-setting-label" }, Orbit.tr("Release notes", "Notes de version")), Orbit.icon("external-link")),
         h("button", { class: "orbit-setting orbit-setting-link", onclick: () => open(repo) },
-          h("div", { class: "orbit-setting-label" }, this.t("about.source")), Orbit.icon("code-xml"))),
+          h("div", { class: "orbit-setting-label" }, this.t("about.source")), Orbit.icon("code-xml")),
+        h("button", { class: "orbit-setting orbit-setting-link", onclick: () => { this.close(); OrbitWelcome.show(); } },
+          h("div", { class: "orbit-setting-label" }, Orbit.tr("Run the setup again", "Refaire la configuration")), Orbit.icon("sparkles"))),
       h("div", { class: "orbit-about-author" }, this.t("about.by"), " ", h("strong", {}, "shavkat"), " ",
         Orbit.icon("heart", "orbit-icon orbit-about-heart")),
       h("div", { class: "orbit-about-fine" }, this.t("about.engine")),
@@ -1053,7 +1076,9 @@ var OrbitSettings = {
     };
     updater.addListener(listener);
     set("checking", Orbit.tr("Checking for updates…", "Recherche de mises à jour…"));
-    check();
+    // After the card is on screen: the updater may answer synchronously, and
+    // the listener stops for good when it sees the card detached.
+    setTimeout(check, 0);
     return card;
   },
 };

@@ -44,7 +44,8 @@ var OrbitKept = {
     const origClose = BrowserCommands.closeTabOrWindow.bind(BrowserCommands);
     BrowserCommands.closeTabOrWindow = event => {
       const tab = gBrowser.selectedTab;
-      if (tab.pinned && !gBrowser.multiSelectedTabsCount && window.location.href == AppConstants.BROWSER_CHROME_URL) {
+      // Tabs of a pinned folder are kept the same way.
+      if ((tab.pinned || OrbitFolders.isPinnedTab(tab)) && !gBrowser.multiSelectedTabsCount && window.location.href == AppConstants.BROWSER_CHROME_URL) {
         this.sleep(tab);
         return;
       }
@@ -98,7 +99,7 @@ var OrbitKept = {
 
   sleep(tab) {
     if (tab.selected) {
-      const next = OrbitSpaces.tabsIn(OrbitSpaces.activeId).findLast(t => !t.closing) ?? OrbitSpaces.openTab();
+      const next = OrbitSpaces.tabsIn(OrbitSpaces.activeId).findLast(t => !t.closing && t != tab) ?? OrbitSpaces.openTab();
       gBrowser.selectedTab = next;
     }
     gBrowser.discardBrowser(tab);

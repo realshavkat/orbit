@@ -49,7 +49,9 @@ var OrbitMemory = {
   canSleep(tab) {
     const b = tab.linkedBrowser;
     return !(tab.selected || tab.closing || !tab.linkedPanel || tab.soundPlaying || tab.hasAttribute("pending") ||
-      b?.docShellIsActive || b?._sharingState?.webRTC?.sharing || tab.pictureinpicture);
+      b?.docShellIsActive || b?._sharingState?.webRTC?.sharing ||
+      // Gecko marks the tab with an attribute; sleeping it would close its Picture-in-Picture.
+      tab.hasAttribute("pictureinpicture"));
   },
 
   sleepIdle(idleMs) {

@@ -143,7 +143,7 @@ var OrbitWelcome = {
         return [...this.head(Orbit.tr("Make it yours", "Dernières touches"), Orbit.tr("All optional, all reversible.", "Tout est facultatif et réversible.")),
           h("div", { class: "ow-rows" },
             row("upload", Orbit.tr("Import from another browser", "Importer depuis un autre navigateur"),
-              Orbit.tr("Bookmarks, passwords, history, from Chrome, Edge, Zen, Brave…", "Favoris, mots de passe, historique, depuis Chrome, Edge, Zen, Brave…"),
+              Orbit.tr("Bookmarks, passwords, history, from Chrome, Edge, Brave, Opera…", "Favoris, mots de passe, historique, depuis Chrome, Edge, Brave, Opera…"),
               action(Orbit.tr("Import", "Importer"), () => OrbitImport.open())),
             row("star", Orbit.tr("Default browser", "Navigateur par défaut"),
               Orbit.tr("Links from other apps open in Orbit.", "Les liens des autres applis s'ouvrent dans Orbit."),

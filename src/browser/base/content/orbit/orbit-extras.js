@@ -152,7 +152,8 @@ var OrbitExtras = {
   // ---- tags: a colored label on a tab ("IMPORTANT" in yellow...) -------------------
   TAG_KEY: "orbit-tag",
   TAG_COLORS: ["#f5c518", "#ff5d5d", "#ff9f43", "#3ddc97", "#4f8cff", "#a66bff", "#ff6bcb", "#8a8a99"],
-  TAG_PRESETS: [["IMPORTANT", "#f5c518"], ["URGENT", "#ff5d5d"], ["À LIRE", "#4f8cff"], ["TODO", "#3ddc97"]],
+  TAG_PRESETS: [["IMPORTANT", "#f5c518", "star"], ["URGENT", "#ff5d5d", "flame"], ["À LIRE", "#4f8cff", "book-open"], ["TODO", "#3ddc97", "check"]],
+  TAG_ICONS: ["", "star", "flame", "zap", "heart", "check", "bookmark", "briefcase", "code", "music", "book-open", "rocket"],
 
   initTags() {
     const restoreAll = () => {
@@ -163,8 +164,10 @@ var OrbitExtras = {
     setTimeout(restoreAll, 0);
   },
 
+  // A target is a tab or a folder (tab-group); folders keep their tag in OrbitFolders' data.
   getTag(tab) {
     if (!tab) return null;
+    if (tab.localName == "tab-group") return OrbitFolders.meta[tab.id]?.tag ?? null;
     try {
       return JSON.parse(SessionStore.getCustomTabValue(tab, this.TAG_KEY) || "null");
     } catch {
@@ -174,6 +177,7 @@ var OrbitExtras = {
 
   setTag(tab, tag) {
     if (!tab) return;
+    if (tab.localName == "tab-group") return OrbitFolders.setMeta(tab.id, { tag: tag?.text ? tag : null });
     if (tag?.text) SessionStore.setCustomTabValue(tab, this.TAG_KEY, JSON.stringify(tag));
     else SessionStore.deleteCustomTabValue(tab, this.TAG_KEY);
     this.paintTag(tab);
@@ -201,33 +205,54 @@ var OrbitExtras = {
       if (close) close.before(pill);
       else tab.querySelector(".tab-content")?.append(pill);
     }
-    pill.textContent = tag.text;
-    pill.style.background = tag.color;
-    pill.style.color = this.ink(tag.color);
+    this.fillTag(pill, tag);
     tab.setAttribute("orbit-tagged", "true");
     tab.style.setProperty("--orbit-tag", tag.color);
   },
 
-  editTag(tab) {
-    if (!tab) return;
+  // Text, color and an optional icon, drawn in the tag's ink color.
+  fillTag(pill, tag) {
+    const ink = this.ink(tag.color);
+    pill.replaceChildren(...(tag.icon ? [Orbit.h("img", { class: "orbit-tag-icon", alt: "",
+      src: `${Orbit.BASE}icons/${tag.icon}.svg`, style: `stroke: ${ink}` })] : []), tag.text);
+    pill.style.background = tag.color;
+    pill.style.color = ink;
+  },
+
+  // On every selected tab when the menu was opened on a selection.
+  editTag(target) {
+    if (!target) return;
+    const targets = target.multiselected ? gBrowser.selectedTabs : [target];
+    const anchor = target.localName == "tab-group" ? target.querySelector(".tab-group-label-container") ?? target : target;
     const h = Orbit.h.bind(Orbit);
-    const cur = this.getTag(tab) ?? { text: "", color: this.TAG_COLORS[0] };
+    const cur = this.getTag(target) ?? { text: "", color: this.TAG_COLORS[0] };
     let color = cur.color;
+    let icon = cur.icon ?? "";
+    const apply = tag => { for (const t of targets) this.setTag(t, tag); };
     const swatches = h("div", { class: "orbit-tag-swatches" }, ...this.TAG_COLORS.map(c =>
       h("button", { class: "orbit-tag-swatch", style: `background:${c}`, active: c == color, title: c, onclick: e => {
         color = c;
         for (const b of swatches.children) b.toggleAttribute("active", b == e.currentTarget);
         ui.input.focus();
       } })));
-    const presets = h("div", { class: "orbit-tag-presets" }, ...this.TAG_PRESETS.map(([text, c]) =>
-      h("button", { class: "orbit-tab-tag", style: `background:${c};color:${this.ink(c)}`, onclick: () => {
-        this.setTag(tab, { text, color: c });
+    const icons = h("div", { class: "orbit-tag-icons" }, ...this.TAG_ICONS.map(name =>
+      h("button", { class: "orbit-icon-button", title: name || "–", active: name == icon, onclick: e => {
+        icon = name;
+        for (const b of icons.children) b.toggleAttribute("active", b == e.currentTarget);
+        ui.input.focus();
+      } }, name ? Orbit.icon(name) : Orbit.icon("x"))));
+    const presets = h("div", { class: "orbit-tag-presets" }, ...this.TAG_PRESETS.map(([text, c, ic]) => {
+      const pill = h("button", { class: "orbit-tab-tag", onclick: () => {
+        apply({ text, color: c, icon: ic });
         ui.close(false);
-      } }, text)));
-    const ui = this.popover(tab, {
+      } });
+      this.fillTag(pill, { text, color: c, icon: ic });
+      return pill;
+    }));
+    const ui = this.popover(anchor, {
       value: cur.text, placeholder: this.t("tagHint"),
-      extra: h("div", { class: "orbit-tag-extra" }, swatches, presets),
-      onDone: v => this.setTag(tab, v ? { text: v.toUpperCase().slice(0, 18), color } : null),
+      extra: h("div", { class: "orbit-tag-extra" }, swatches, icons, presets),
+      onDone: v => apply(v ? { text: v.toUpperCase().slice(0, 18), color, icon: icon || null } : null),
     });
   },
 
@@ -260,7 +285,10 @@ var OrbitExtras = {
         oncommand: () => this.setName(TabContextMenu.contextTab, "") });
       const tag = h("xul:menuitem", { id: "orbit-tab-tag", oncommand: () => this.editTag(TabContextMenu.contextTab) });
       const untag = h("xul:menuitem", { id: "orbit-tab-untag", label: this.t("removeTag"),
-        oncommand: () => this.setTag(TabContextMenu.contextTab, null) });
+        oncommand: () => {
+          const tab = TabContextMenu.contextTab;
+          for (const t of tab.multiselected ? gBrowser.selectedTabs : [tab]) this.setTag(t, null);
+        } });
       const copy = h("xul:menuitem", { id: "orbit-tab-copy", label: this.t("copy"),
         oncommand: () => this.copy(TabContextMenu.contextTab.linkedBrowser.currentURI.spec) });
       const sleepSpace = h("xul:menuitem", { id: "orbit-space-unload", label: this.t("unloadSpace"),
