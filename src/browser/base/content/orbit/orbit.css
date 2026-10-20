@@ -3614,6 +3614,9 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-menu-more { width: 14px !important; height: 14px !important; }
 .orbit-ctx-sub { display: none; position: absolute !important; top: -6px; left: calc(100% + 10px); min-width: 200px !important; animation: none !important; z-index: 1;
   &[left] { left: auto; right: calc(100% + 10px); } }
+/* An invisible bridge over the gap keeps the submenu open on the way to it. */
+.orbit-ctx-sub::before { content: ""; position: absolute; top: 0; bottom: 0; left: -14px; width: 14px; }
+.orbit-ctx-sub[left]::before { left: auto; right: -14px; }
 .orbit-menu-parent:is(:hover, :focus-within) > .orbit-ctx-sub { display: block; }
 .orbit-menu-parent:is(:hover, :focus-within) { background: var(--orbit-hover); }
 
