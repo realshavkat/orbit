@@ -176,6 +176,24 @@ var OrbitSettings = {
       lockNow: "Verrouiller Orbit maintenant (Ctrl+Alt+L)",
       lockIdle: "Verrouiller après une inactivité", "lockIdle.d": "Windows (code PIN, visage ou mot de passe) déverrouille Orbit",
       "lockIdle.off": "Jamais", "lockIdle.5": "5 min", "lockIdle.15": "15 min", "lockIdle.60": "1 h",
+      "intensity.d": "Force de la couleur de l'espace dans le fond d'Orbit",
+      "grainAmount.d": "Texture de grain par-dessus le fond, comme une photo",
+      "radius.d": "Arrondi des coins de la page, des cartes et des menus",
+      "quickColors.d": "Choisis la couleur de l'espace en un geste, avec le grain",
+      "sidebarRight.d": "Place les onglets du côté droit de la fenêtre",
+      "sidebarWidth.d": "Largeur de la colonne des onglets",
+      "gap.d": "Espace entre la page et les bords de la fenêtre",
+      "advanced.d": "Tous les réglages de Firefox, pour aller plus loin",
+      "import.d": "Favoris, mots de passe et historique de Chrome, Edge, Brave…",
+      "downloadsFolder.d": "Où vont les fichiers téléchargés",
+      "memoryPage.d": "Combien chaque onglet utilise, en direct",
+      "aiPanel.d": "L'assistant s'ouvre à côté de la page",
+      "lockNow.d": "Cache toutes les fenêtres jusqu'à ce que tu confirmes que c'est toi",
+      "installExt.d": "Pour les extensions qui ne sont pas sur les boutiques",
+      "privacyAdvanced.d": "Cookies, permissions, mots de passe et plus",
+      "syncAccount.d": "Connecte-toi pour synchroniser favoris, mots de passe et historique",
+      "exportSettings.d": "Un fichier .json avec tous tes réglages d'Orbit",
+      "importSettings.d": "Reprends les réglages d'un autre PC",
       horizontalTabs: "Onglets en haut", "horizontalTabs.d": "Une barre d'onglets classique au lieu de la barre latérale. Espaces et réglages avec Ctrl+K",
       splitGrid: "Vue partagée en grille", "splitGrid.d": "À 3 ou 4 pages, une grille 2 × 2 au lieu de colonnes",
       lockPin: "Code PIN Orbit", "lockPin.d": "Déverrouille sans Windows. Obligatoire si ton compte Windows n'a pas de mot de passe",
@@ -257,6 +275,24 @@ var OrbitSettings = {
       lockNow: "Lock Orbit now (Ctrl+Alt+L)",
       lockIdle: "Lock after inactivity", "lockIdle.d": "Windows (PIN, face or password) unlocks Orbit",
       "lockIdle.off": "Never", "lockIdle.5": "5 min", "lockIdle.15": "15 min", "lockIdle.60": "1 h",
+      "intensity.d": "How strongly the space's color tints Orbit's background",
+      "grainAmount.d": "A film grain texture over the background",
+      "radius.d": "Roundness of the page, cards and menus",
+      "quickColors.d": "Pick the space's color in one gesture, with the grain",
+      "sidebarRight.d": "Puts the tabs on the right side of the window",
+      "sidebarWidth.d": "Width of the tab column",
+      "gap.d": "Space between the page and the window's edges",
+      "advanced.d": "Every Firefox setting, to go further",
+      "import.d": "Bookmarks, passwords and history from Chrome, Edge, Brave…",
+      "downloadsFolder.d": "Where downloaded files go",
+      "memoryPage.d": "How much each tab uses, live",
+      "aiPanel.d": "The assistant opens beside the page",
+      "lockNow.d": "Hides every window until you confirm it's you",
+      "installExt.d": "For extensions that are not in the stores",
+      "privacyAdvanced.d": "Cookies, permissions, passwords and more",
+      "syncAccount.d": "Sign in to sync bookmarks, passwords and history",
+      "exportSettings.d": "A .json file with all your Orbit settings",
+      "importSettings.d": "Bring the settings of another PC",
       horizontalTabs: "Tabs on top", "horizontalTabs.d": "A classic tab bar instead of the sidebar. Spaces and settings with Ctrl+K",
       splitGrid: "Split view as a grid", "splitGrid.d": "With 3 or 4 pages, a 2 × 2 grid instead of columns",
       lockPin: "Orbit PIN", "lockPin.d": "Unlocks without Windows. Required when your Windows account has no password",
@@ -391,7 +427,7 @@ var OrbitSettings = {
       for (const b of nav.children) b.toggleAttribute("active", b.dataset.id == id);
       setTitle(id);
       const section = this.SECTIONS.find(s => s.id == id);
-      body.replaceChildren(...this.group(section.items.map(item => this.render(item)).filter(Boolean)));
+      body.replaceChildren(...this.group(section.items.map(item => this.decorate(this.render(item), item, id)).filter(Boolean)));
       body.scrollTop = 0;
       if (!window.gReduceMotion) {
         body.animate([{ opacity: 0, transform: "translateY(8px)" }, { opacity: 1, transform: "none" }],
@@ -410,7 +446,8 @@ var OrbitSettings = {
       const out = [];
       for (const section of this.SECTIONS) {
         if (section.id == "about") continue;
-        const rows = section.items.map(item => this.render(item)).filter(el => el && norm(el.textContent).includes(needle));
+        const rows = section.items.map(item => this.decorate(this.render(item), item, section.id))
+          .filter(el => el && norm(el.textContent).includes(needle));
         if (rows.length) out.push(h("div", { class: "orbit-settings-group" }, this.t(section.id)), ...this.group(rows));
       }
       body.replaceChildren(...(out.length ? out : [h("div", { class: "orbit-setting-desc orbit-settings-empty" },
@@ -452,6 +489,27 @@ var OrbitSettings = {
     setTimeout(() => sheet.remove(), 180);
   },
 
+  // ---- row helpers ----------------------------------------------------------------
+  // A changed setting shows "Reset"; a whole toggle row is clickable.
+  decorate(el, item, sectionId) {
+    if (!el) return el;
+    if (item.kind == "toggle") {
+      el.classList.add("orbit-setting-clickable");
+      el.addEventListener("click", e => !e.target.closest(".orbit-switch, button, a") && el.querySelector(".orbit-switch")?.click());
+    }
+    if (item.pref && Services.prefs.prefHasUserValue(item.pref)) {
+      const reset = Orbit.h("button", { class: "orbit-setting-reset", title: Orbit.tr("Back to Orbit's default", "Revenir au réglage d'Orbit") },
+        Orbit.icon("rotate-ccw"), Orbit.tr("Reset", "Rétablir"));
+      reset.addEventListener("click", e => {
+        e.stopPropagation();
+        Services.prefs.clearUserPref(item.pref);
+        this.show(sectionId);
+      });
+      el.querySelector(".orbit-setting-label")?.append(reset);
+    }
+    return el;
+  },
+
   // ---- rows ---------------------------------------------------------------------
   row(control, labelKey, extra = null) {
     const h = Orbit.h.bind(Orbit);
@@ -482,7 +540,9 @@ var OrbitSettings = {
           Orbit.pref(item.pref, 0), v => p.setIntPref(item.pref, v)), item.label);
       case "link":
         return h("button", { class: "orbit-setting orbit-setting-link", onclick: () => { this.close(); item.action(); } },
-          h("div", { class: "orbit-setting-label" }, this.t(item.label)), Orbit.icon(item.icon ?? "chevron-right"));
+          h("div", { class: "orbit-setting-text" }, h("div", { class: "orbit-setting-label" }, this.t(item.label)),
+            this.t(`${item.label}.d`) != `${item.label}.d` ? h("div", { class: "orbit-setting-desc" }, this.t(`${item.label}.d`)) : null),
+          Orbit.icon(item.icon ?? "chevron-right"));
       case "choice-str":
         return this.row(this.segmented(item.options, Orbit.pref(item.pref, ""), v => p.setStringPref(item.pref, v)), item.label);
       case "info":
@@ -880,59 +940,118 @@ var OrbitSettings = {
     return h("div", {}, this.row(save, "sessionSave"), list);
   },
 
+  // Shortcuts page: search, Orbit's fixed keys, then every palette command by
+  // group, each one recordable. A custom shortcut wins over a built-in one.
   renderShortcuts() {
     const h = Orbit.h.bind(Orbit);
-    const fr = Orbit.lang() == "fr";
-    return h("div", { class: "orbit-shortcuts" }, ...this.SHORTCUTS.map(([keys, frLabel, enLabel]) =>
-      h("div", { class: "orbit-setting" },
-        h("div", { class: "orbit-setting-label" }, Orbit.tr(enLabel, frLabel)),
-        h("span", { class: "orbit-keys" }, ...(fr ? keys : keys.replace("Maj", "Shift")).split(" ").map(k => h("kbd", {}, k))))),
-      h("div", { class: "orbit-settings-group" }, Orbit.tr("Your shortcuts", "Tes raccourcis")),
-      h("div", { class: "orbit-setting-desc orbit-shortcuts-hint" }, Orbit.tr(
+    const tr = Orbit.tr.bind(Orbit);
+    const custom = OrbitPalette.custom();
+    const search = h("input", { class: "orbit-input orbit-sc-search", type: "search", spellcheck: "false",
+      placeholder: tr("Search a shortcut or an action", "Rechercher un raccourci ou une action") });
+    const resetAll = h("button", { class: "orbit-button", hidden: !Object.keys(custom).length },
+      Orbit.icon("rotate-ccw"), tr("Reset all", "Tout rétablir"));
+    resetAll.addEventListener("click", () => {
+      Services.prefs.clearUserPref("orbit.shortcuts");
+      this.show("shortcuts");
+    });
+    const groups = [
+      [tr("Orbit basics", "Les bases d'Orbit"), "command", this.SHORTCUTS.map(([keys, frLabel, enLabel]) => ({ label: tr(enLabel, frLabel), keys }))],
+      ...OrbitPalette.commands().map(([title, cmds]) => [title, null,
+        cmds.filter(c => c[4]).map(([icon, label, , keys, id]) => ({ icon, label, keys, id }))]),
+    ];
+    const sections = groups.map(([title, icon, rows]) => h("section", { class: "orbit-sc-group" },
+      h("div", { class: "orbit-sc-title" }, icon ? Orbit.icon(icon) : null, h("span", {}, title), h("span", { class: "orbit-sc-count" }, String(rows.length))),
+      h("div", { class: "orbit-sc-card" }, ...rows.map(r => this.shortcutRow(r)))));
+    const empty = h("div", { class: "orbit-setting-desc orbit-settings-empty", hidden: true }, tr("No shortcut matches.", "Aucun raccourci ne correspond."));
+    search.addEventListener("input", () => {
+      const norm = x => x.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+      const q = norm(search.value.trim());
+      let any = false;
+      for (const sec of sections) {
+        let shown = 0;
+        for (const row of sec.querySelectorAll(".orbit-sc-row")) {
+          row.hidden = !!q && !norm(row.textContent).includes(q);
+          shown += !row.hidden;
+        }
+        sec.hidden = !shown;
+        sec.querySelector(".orbit-sc-count").textContent = String(shown);
+        any ||= !!shown;
+      }
+      empty.hidden = any;
+    });
+    search.addEventListener("keydown", e => e.key == "Escape" && search.value && (e.stopPropagation(), (search.value = ""), search.dispatchEvent(new Event("input"))));
+    return h("div", { class: "orbit-sc" },
+      h("div", { class: "orbit-sc-head" }, h("label", { class: "orbit-sc-searchbox" }, Orbit.icon("search"), search), resetAll),
+      h("div", { class: "orbit-sc-hint" }, Orbit.icon("info"), tr(
         "Click a shortcut, then press the keys (with Ctrl or Alt). Backspace removes it, Esc cancels.",
         "Clique sur un raccourci puis appuie sur les touches (avec Ctrl ou Alt). Retour arrière le retire, Échap annule.")),
-      ...OrbitPalette.flat().map(c => this.shortcutRow(c)));
+      ...sections, empty);
   },
 
-  // One palette command and the button that records its shortcut.
-  shortcutRow([icon, label, , keys, id]) {
+  // Which action already answers these keys (to say what a new shortcut replaces).
+  shortcutOwner(keys, exceptId) {
+    const fixed = this.SHORTCUTS.find(([k]) => k == keys);
+    if (fixed) return Orbit.tr(fixed[2], fixed[1]);
+    return OrbitPalette.flat().find(c => c[3] == keys && c[4] != exceptId)?.[1] ?? null;
+  },
+
+  // One row: icon, action, keys. Palette commands record a new shortcut on click.
+  shortcutRow({ icon, label, keys, id }) {
     const h = Orbit.h.bind(Orbit);
-    const show = k => (k ? k.split(" ").map(x => h("kbd", {}, OrbitPalette.keyName(x))) : [h("span", { class: "orbit-keys-none" }, "—")]);
-    const custom = () => OrbitPalette.custom()[id];
-    const button = h("button", { class: "orbit-keys orbit-keys-edit", title: Orbit.tr("Change the shortcut", "Changer le raccourci") }, ...show(keys));
-    button.toggleAttribute("custom", !!custom());
+    const tr = Orbit.tr.bind(Orbit);
+    const show = k => (k ? k.split(" ").map(x => h("kbd", {}, OrbitPalette.keyName(x))) : [h("span", { class: "orbit-keys-none" }, tr("None", "Aucun"))]);
+    const isCustom = id && !!OrbitPalette.custom()[id];
+    const row = h("div", { class: "orbit-sc-row" },
+      icon ? Orbit.icon(icon) : h("span", { class: "orbit-sc-dot" }),
+      h("span", { class: "orbit-sc-label" }, label, isCustom ? h("span", { class: "orbit-sc-badge" }, tr("Custom", "Perso")) : null));
+    if (!id) {
+      row.append(h("span", { class: "orbit-keys orbit-sc-fixed", title: tr("Orbit's own shortcut", "Raccourci d'Orbit") }, ...show(keys)));
+      return row;
+    }
+    const button = h("button", { class: "orbit-keys orbit-keys-edit", title: tr("Change the shortcut", "Changer le raccourci") }, ...show(keys));
+    button.toggleAttribute("custom", isCustom);
+    if (isCustom) {
+      const reset = h("button", { class: "orbit-icon-button orbit-sc-reset", title: tr("Back to the default", "Revenir au réglage d'origine") }, Orbit.icon("rotate-ccw"));
+      reset.addEventListener("click", () => {
+        OrbitPalette.setCustom(id, null);
+        this.show("shortcuts");
+      });
+      row.append(reset);
+    }
+    row.append(button);
     button.addEventListener("click", () => {
       if (OrbitPalette.recording) return;
       OrbitPalette.recording = true;
-      button.setAttribute("recording", "true");
-      button.replaceChildren(Orbit.tr("Press the keys…", "Appuie sur les touches…"));
-      const done = () => {
+      row.setAttribute("recording", "true");
+      button.replaceChildren(tr("Press the keys…", "Appuie sur les touches…"));
+      const done = changed => {
         OrbitPalette.recording = false;
         window.removeEventListener("keydown", onKey, true);
-        button.removeAttribute("recording");
-        const now = OrbitPalette.flat().find(c => c[4] == id)?.[3];
-        button.replaceChildren(...show(now));
-        button.toggleAttribute("custom", !!custom());
+        row.removeAttribute("recording");
+        if (changed) return this.show("shortcuts");
+        button.replaceChildren(...show(keys));
       };
       const onKey = e => {
         e.preventDefault();
         e.stopPropagation();
-        if (e.key == "Escape") return done();
+        if (e.key == "Escape") return done(false);
         if (e.key == "Backspace" || e.key == "Delete") {
           OrbitPalette.setCustom(id, null);
-          return done();
+          return done(true);
         }
         const combo = OrbitPalette.combo(e);
         if (!combo) return;
+        const owner = this.shortcutOwner(combo, id);
         OrbitPalette.setCustom(id, combo);
-        done();
-        // Another command may have lost this shortcut: redraw the list.
-        this.show("shortcuts");
+        done(true);
+        OrbitNotify.show({ kind: "shortcut", icon: "command", tone: "ok", timeout: 3500,
+          title: `${label} · ${combo.split(" ").map(k => OrbitPalette.keyName(k)).join("+")}`,
+          text: owner ? tr("Saved. It now replaces “{x}”.", "Enregistré. Il remplace maintenant « {x} ».").replace("{x}", owner)
+            : tr("Shortcut saved.", "Raccourci enregistré.") });
       };
       window.addEventListener("keydown", onKey, true);
     });
-    return h("div", { class: "orbit-setting" },
-      h("div", { class: "orbit-setting-label" }, Orbit.icon(icon), label), button);
+    return row;
   },
 
   // ---- widgets ------------------------------------------------------------------

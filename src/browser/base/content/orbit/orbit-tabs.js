@@ -54,15 +54,26 @@ var OrbitTabs = {
     const tc = gBrowser.tabContainer;
     // "New tab" sits above the list in its own row. Moving it in the DOM (not
     // with CSS order) keeps Firefox's drag geometry right, so drags stay smooth.
-    const newTab = document.getElementById("tabs-newtab-button");
-    const header = document.getElementById("orbit-sidebar-header");
-    if (newTab && header) header.after(newTab);
+    this.placeNewTab();
+    Services.prefs.addObserver("sidebar.verticalTabs", this.placeNewTab);
+    window.addEventListener("unload", () => Services.prefs.removeObserver("sidebar.verticalTabs", this.placeNewTab), { once: true });
     // Only freshly opened tabs slide in; a tab moved by drag must not replay it.
     tc.addEventListener("TabOpen", e => {
       e.target.setAttribute("orbit-new", "true");
       setTimeout(() => e.target.removeAttribute("orbit-new"), 400);
     });
   },
+
+  // Vertical: under the space header. Tabs on top: after the last tab, where
+  // Firefox keeps it (setTimeout: Firefox moves the tabs on the same change).
+  placeNewTab: () => setTimeout(() => {
+    const newTab = document.getElementById("tabs-newtab-button");
+    const header = document.getElementById("orbit-sidebar-header");
+    const periphery = document.getElementById("tabbrowser-arrowscrollbox-periphery");
+    if (!newTab || !header) return;
+    if (Orbit.pref("sidebar.verticalTabs", true)) header.after(newTab);
+    else periphery?.prepend(newTab);
+  }, 0),
 
   // ---- Home page ----------------------------------------------------------------
   // orbit://home (resource://orbit/home.html) is a static, unprivileged page;

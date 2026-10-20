@@ -51,7 +51,7 @@ var OrbitPalette = {
   // (or is an F key), so typing in pages is never taken over.
   combo(e) {
     if (["Control", "Shift", "Alt", "Meta", "AltGraph"].includes(e.key) || e.getModifierState("AltGraph")) return null;
-    const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5)
+    const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.code == "Space" ? "Espace"
       : { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓" }[e.key] ?? (e.key.length == 1 ? e.key.toUpperCase() : e.key);
     const fKey = /^F\d{1,2}$/.test(key);
     if (!e.ctrlKey && !e.altKey && !fKey) return null;
@@ -228,7 +228,7 @@ var OrbitPalette = {
   // Key names as the UI language writes them (the lists use French names).
   keyName(k) {
     if (Orbit.lang() == "fr") return k;
-    return { Maj: "Shift", "Échap": "Esc", Suppr: "Del", "Entrée": "Enter" }[k] ?? k;
+    return { Maj: "Shift", "Échap": "Esc", Suppr: "Del", "Entrée": "Enter", Espace: "Space", clic: "click" }[k] ?? k;
   },
 
   // The palette as a single text field: Enter gives the text to onDone.

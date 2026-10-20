@@ -3959,28 +3959,140 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 .orbit-session-actions { display: flex; align-items: center; gap: 6px; }
 
 /* ==========================================================================
-   Horizontal tabs (sidebar.verticalTabs off): the tab strip under the toolbar
+   Tabs on top (sidebar.verticalTabs off): a Brave-like strip in Orbit's colors.
+   Row 1: tabs and window buttons. Row 2: the toolbar, the same color as the
+   selected tab, so the two read as one piece. Then the page card.
    ========================================================================== */
 @media not -moz-pref("sidebar.verticalTabs") {
   :root:not([customizing], [inDOMFullscreen]) {
-    & #TabsToolbar { display: flex !important; order: 2; min-height: 40px; padding-inline: 6px; background: transparent !important; }
-    /* Spaces, settings and the rest stay one Ctrl+K away. */
+    --orbit-hz-bar: color-mix(in srgb, var(--orbit-fg) 7%, color-mix(in srgb, var(--orbit-card) 82%, transparent));
+
     & :is(#sidebar-container, #sidebar-launcher-splitter, #orbit-sidebar-header) { display: none !important; }
-    & #tabbrowser-tabs #tabs-newtab-button {
-      flex: 0 0 auto !important;
-      width: auto !important;
-      order: 3;
-      margin: 0 0 0 4px !important;
-      padding: 0 8px !important;
-      border: none !important;
-    }
-    & #tabbrowser-tabs #tabs-newtab-button > :not(.toolbarbutton-icon) { display: none !important; }
-    & #tabbrowser-tabs #tabs-newtab-button::after { display: none !important; }
-    & #tabbrowser-tabs #tabs-newtab-button + * { border-top: none !important; padding-top: 0 !important; }
-    & #tabbrowser-tabs tab-split-view-wrapper { display: flex !important; flex-direction: row !important; align-items: stretch; }
-    & #tabbrowser-tabs :is(.tabbrowser-tab, tab-split-view-wrapper) { max-height: 40px; }
     & #tabbrowser-tabbox { margin-inline-start: var(--orbit-gap, 8px) !important; }
-    & #TabsToolbar :is(.titlebar-buttonbox-container, .titlebar-spacer) { display: none !important; }
+
+    & #TabsToolbar {
+      display: flex !important;
+      order: 0;
+      min-height: 0 !important;
+      padding: 6px 0 0 8px !important;
+      background: transparent !important;
+      -moz-window-dragging: drag;
+    }
+    & #TabsToolbar .titlebar-spacer[type="pre-tabs"] { display: none !important; }
+    & #TabsToolbar .titlebar-spacer[type="post-tabs"] { display: flex !important; width: 48px !important; }
+    & #TabsToolbar .titlebar-buttonbox-container { display: flex !important; align-self: stretch; margin-top: -6px; }
+    & #TabsToolbar .titlebar-button { padding-inline: 16px !important; }
+    & #TabsToolbar .titlebar-close:hover { background-color: #e5484d !important; }
+    & #nav-bar .titlebar-buttonbox-container { display: none !important; }
+    & #nav-bar {
+      order: 1;
+      background: var(--orbit-hz-bar) !important;
+      border-radius: 0 !important;
+      padding-inline-end: 8px !important;
+    }
+
+    & #tabbrowser-tabs[orient="horizontal"] {
+      --tab-min-height: 34px;
+      --tab-min-width: 56px;
+      --tab-max-width: 240px;
+      --tab-border-radius: 10px;
+      min-height: 36px !important;
+      align-items: flex-end;
+    }
+    & #tabbrowser-tabs[orient="horizontal"] .tabbrowser-tab {
+      padding: 0 !important;
+      margin: 0 !important;
+      min-height: 36px !important;
+      max-height: 36px;
+      position: relative;
+
+      & .tab-stack { position: relative; padding-inline: 1px; }
+      & .tab-background {
+        margin: 2px 0 0 !important;
+        border-radius: 10px 10px 0 0 !important;
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+      }
+      &:hover:not([selected]) .tab-background { background: var(--orbit-hover) !important; margin-bottom: 4px !important; border-radius: 9px !important; }
+      &[selected] .tab-background { background: var(--orbit-hz-bar) !important; }
+      /* Rounded feet joining the selected tab to the toolbar, like Chrome and Brave. */
+      &[selected] .tab-stack::before, &[selected] .tab-stack::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        width: 10px;
+        height: 10px;
+        pointer-events: none;
+      }
+      &[selected] .tab-stack::before { left: -9px; background: radial-gradient(circle at 0 0, transparent 9.5px, var(--orbit-hz-bar) 10px); }
+      &[selected] .tab-stack::after { right: -9px; background: radial-gradient(circle at 100% 0, transparent 9.5px, var(--orbit-hz-bar) 10px); }
+
+      & .tab-content { padding-inline: 12px 8px !important; gap: 8px; font-size: 12.5px; }
+      & .tab-label { color: var(--orbit-fg-dim); }
+      &[selected] .tab-label { color: var(--orbit-fg); font-weight: 500; }
+      & .tab-close-button {
+        width: 20px !important;
+        height: 20px !important;
+        padding: 4px !important;
+        border-radius: 6px !important;
+        opacity: .7;
+        &:hover { background: var(--orbit-active) !important; opacity: 1; }
+      }
+      &:not([selected], :hover) .tab-close-button { opacity: 0; }
+      /* Thin separators between tabs that are neither selected nor hovered. */
+      &::after {
+        content: "";
+        position: absolute;
+        inset-inline-end: 0;
+        top: 12px;
+        height: 16px;
+        width: 1px;
+        background: var(--orbit-border);
+      }
+      &:is([selected], :hover)::after,
+      &:has(+ .tabbrowser-tab:is([selected], :hover))::after { opacity: 0; }
+    }
+
+    /* The new tab "+" right after the last tab. */
+    & #tabbrowser-arrowscrollbox #tabs-newtab-button {
+      width: 30px !important;
+      height: 30px !important;
+      margin: 3px 0 1px 6px !important;
+      padding: 7px !important;
+      border: none !important;
+      border-radius: 8px !important;
+      background: none !important;
+      & > :not(.toolbarbutton-icon) { display: none !important; }
+      &::after { display: none !important; }
+      &:hover { background: var(--orbit-hover) !important; }
+    }
+
+    /* Split views: one pill holding its 2 to 4 tabs. */
+    & #tabbrowser-tabs[orient="horizontal"] tab-split-view-wrapper {
+      display: grid !important;
+      grid-auto-flow: column;
+      grid-template-columns: none !important;
+      grid-auto-columns: minmax(0, 1fr);
+      gap: 2px;
+      margin: 2px 4px 5px !important;
+      padding: 2px !important;
+      max-height: 30px;
+      border-radius: 9px !important;
+      background: var(--orbit-tile) !important;
+      box-shadow: inset 0 0 0 1px var(--orbit-border);
+      /* Grows like as many tabs as it holds. */
+      flex: 200 200 !important;
+      min-width: calc(var(--tab-min-width) * 2 + 6px) !important;
+      max-width: calc(var(--tab-max-width) * 2) !important;
+      &:has(> .tabbrowser-tab:nth-child(3)) { flex: 300 300 !important; min-width: calc(var(--tab-min-width) * 3 + 8px) !important; max-width: calc(var(--tab-max-width) * 3) !important; }
+      &:has(> .tabbrowser-tab:nth-child(4)) { flex: 400 400 !important; min-width: calc(var(--tab-min-width) * 4 + 10px) !important; max-width: calc(var(--tab-max-width) * 4) !important; }
+      & .tabbrowser-tab .tab-content { padding-inline: 8px 4px !important; }
+      & .tabbrowser-tab { min-width: 0 !important; max-height: 26px; min-height: 26px !important; border-inline: none !important; }
+      & .tabbrowser-tab .tab-background { margin: 0 !important; border-radius: 7px !important; }
+      & .tabbrowser-tab[selected] .tab-background { background: var(--orbit-active) !important; }
+      & .tabbrowser-tab .tab-stack::before, & .tabbrowser-tab .tab-stack::after, & .tabbrowser-tab::after { display: none; }
+    }
   }
 }
 
@@ -4022,3 +4134,90 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 }
 .orbit-keys-none { opacity: .4; }
 .orbit-lock-pin { width: 240px; text-align: center; letter-spacing: .2em; }
+
+/* ==========================================================================
+   Settings: reset buttons, clickable rows
+   ========================================================================== */
+.orbit-setting-clickable { transition: background-color .15s; }
+.orbit-setting-clickable:hover { background: color-mix(in srgb, var(--orbit-accent) 7%, var(--orbit-field)); }
+.orbit-setting-clickable { cursor: pointer; }
+.orbit-setting-label { display: flex; align-items: center; gap: 8px; }
+.orbit-setting-reset {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--orbit-accent) 14%, transparent);
+  color: var(--orbit-accent);
+  font: 500 11px var(--orbit-font), sans-serif;
+  cursor: pointer;
+  & .orbit-icon { width: 11px; height: 11px; }
+  &:hover { background: color-mix(in srgb, var(--orbit-accent) 24%, transparent); }
+}
+
+/* ==========================================================================
+   Settings: shortcuts page
+   ========================================================================== */
+.orbit-sc { display: flex; flex-direction: column; gap: 14px; }
+.orbit-sc-head { display: flex; align-items: center; gap: 10px; position: sticky; top: -1px; z-index: 2; padding-block: 2px 6px; background: var(--orbit-panel); }
+.orbit-sc-searchbox {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: var(--orbit-field);
+  box-shadow: inset 0 0 0 1px var(--orbit-border);
+  &:focus-within { box-shadow: inset 0 0 0 1.5px var(--orbit-accent); }
+  & .orbit-icon { width: 15px; height: 15px; opacity: .55; }
+}
+.orbit-sc-search { flex: 1; min-width: 0; height: auto !important; padding: 0 !important; border: none !important; background: none !important; box-shadow: none !important; outline: none; }
+.orbit-sc-hint { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--orbit-fg-dim); & .orbit-icon { width: 13px; height: 13px; opacity: .7; } }
+.orbit-sc-group { display: flex; flex-direction: column; gap: 6px; &[hidden] { display: none; } }
+.orbit-sc-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--orbit-fg-dim);
+  & .orbit-icon { width: 13px; height: 13px; }
+}
+.orbit-sc-count { padding: 0 6px; border-radius: 6px; background: var(--orbit-field); font-size: 10.5px; letter-spacing: 0; }
+.orbit-sc-card {
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  border-radius: var(--orbit-radius-lg);
+  background: var(--orbit-field);
+  box-shadow: inset 0 0 0 1px var(--orbit-border);
+}
+.orbit-sc-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 0 6px 0 12px;
+  border-radius: 8px;
+  &[hidden] { display: none; }
+  &:hover { background: var(--orbit-hover); }
+  & + .orbit-sc-row:not(:hover) { box-shadow: 0 -1px 0 var(--orbit-border); }
+  &:hover + .orbit-sc-row { box-shadow: none; }
+  & > .orbit-icon { width: 15px; height: 15px; opacity: .6; flex-shrink: 0; }
+  &[recording] { background: color-mix(in srgb, var(--orbit-accent) 10%, transparent); }
+}
+.orbit-sc-dot { width: 15px; height: 15px; flex-shrink: 0; display: grid; place-items: center; &::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--orbit-fg-dim); } }
+.orbit-sc-label { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orbit-sc-badge { padding: 1px 6px; border-radius: 5px; font-size: 10.5px; font-weight: 600; color: var(--orbit-accent); background: color-mix(in srgb, var(--orbit-accent) 14%, transparent); }
+.orbit-sc-fixed { padding-inline-end: 6px; opacity: .85; }
+.orbit-sc-reset { width: 26px !important; height: 26px !important; & .orbit-icon { width: 13px; height: 13px; } }
+

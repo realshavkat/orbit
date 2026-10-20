@@ -14,8 +14,8 @@ import vm from "node:vm";
 const dir = resolve(import.meta.dirname, "../src/browser/base/content/orbit");
 const strings = new Set();
 
-// 1. Orbit.tr("English", ...) (or its local alias T) with a plain string literal.
-const TR = /(?:Orbit\.tr|\bT)\(\s*"((?:[^"\\]|\\.)*)"/g;
+// 1. Orbit.tr("English", ...) (or its local aliases T and tr) with a plain string literal.
+const TR = /(?:Orbit\.tr|\bT|\btr)\(\s*"((?:[^"\\]|\\.)*)"/g;
 for (const f of readdirSync(dir).filter(f => f.endsWith(".js"))) {
   for (const m of readFileSync(join(dir, f), "utf8").matchAll(TR)) strings.add(JSON.parse(`"${m[1]}"`));
 }

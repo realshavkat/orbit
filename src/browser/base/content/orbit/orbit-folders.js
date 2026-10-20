@@ -136,10 +136,12 @@ var OrbitFolders = {
       !g.hasAttribute("orbit-folder-hidden"));
     const last = pinned.at(-1);
     document.documentElement.toggleAttribute("orbit-has-pinned-folders", !!last);
+    // With tabs on top, "+" lives after the last tab (OrbitTabs.placeNewTab).
+    const moved = Orbit.pref("sidebar.verticalTabs", true) ? [header, newTab] : [header];
     if (last) {
-      if (last.nextElementSibling != header) last.after(header, newTab);
+      if (last.nextElementSibling != header) last.after(...moved);
     } else if (header.parentNode == list) {
-      list.before(header, newTab);
+      list.before(...moved);
     }
   },
 
