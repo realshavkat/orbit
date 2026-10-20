@@ -84,7 +84,7 @@ var OrbitSpaces = {
     return this.byId(this.activeId) ?? this.spaces[0];
   },
   theme(space) {
-    if (space.theme == "custom" && space.c1 && space.c2) return { id: "custom", c1: space.c1, c2: space.c2 };
+    if (space.theme == "custom" && space.c1 && space.c2) return { id: "custom", c1: space.c1, c2: space.c2, c3: space.c3 };
     return this.THEMES.find(t => t.id == space.theme) ?? this.THEMES[0];
   },
 
@@ -244,6 +244,7 @@ var OrbitSpaces = {
     const root = document.documentElement;
     root.style.setProperty("--orbit-c1", theme.c1);
     root.style.setProperty("--orbit-c2", theme.c2);
+    root.style.setProperty("--orbit-c3", theme.c3 ?? theme.c2);
     this.render();
     if (animate && !window.gReduceMotion) {
       // Tabs of the new space cascade in from the side we're moving towards.
@@ -268,6 +269,8 @@ var OrbitSpaces = {
     header.replaceChildren(
       h("div", { id: "orbit-space-title", ondblclick: () => this.edit(space) },
         h("span", { class: "orbit-space-name", title: t("space.collapse"), onclick: () => this.toggleEssentials() }, space.name),
+        h("button", { id: "orbit-space-colors", class: "orbit-icon-button", title: Orbit.tr("Colors", "Couleurs"),
+          onclick: e => OrbitColors.toggle(e.currentTarget) }, icon("palette")),
         h("button", { id: "orbit-space-edit", class: "orbit-icon-button", title: t("space.edit"), onclick: () => this.edit(space) },
           icon("pencil")),
         h("button", {

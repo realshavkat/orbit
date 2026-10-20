@@ -196,7 +196,10 @@ var OrbitExtras = {
     }
     if (!pill) {
       pill = Orbit.h("span", { class: "orbit-tab-tag" });
-      tab.querySelector(".tab-content")?.append(pill);
+      // Before the close button, so the × stays at the far right.
+      const close = tab.querySelector(".tab-content > .tab-close-button");
+      if (close) close.before(pill);
+      else tab.querySelector(".tab-content")?.append(pill);
     }
     pill.textContent = tag.text;
     pill.style.background = tag.color;
@@ -246,6 +249,10 @@ var OrbitExtras = {
     const tabMenu = document.getElementById("tabContextMenu");
     // Tidy once every Orbit item exists (other modules add theirs at init).
     tabMenu?.addEventListener("popupshowing", e => e.target == tabMenu && this.organizeTabMenu(tabMenu), true);
+    // Items other modules add later get their icon when a menu opens.
+    for (const id of ["tabContextMenu", "contentAreaContextMenu"]) {
+      document.getElementById(id)?.addEventListener("popupshowing", () => this.menuIcons(), true);
+    }
     if (tabMenu) {
       const rename = h("xul:menuitem", { id: "orbit-tab-rename", label: this.t("rename"),
         oncommand: () => this.rename(TabContextMenu.contextTab) });
@@ -304,6 +311,36 @@ var OrbitExtras = {
           this._refCtx = { url: media[1], title: media[0] == "refPage" ? gBrowser.selectedTab.label : "", icon: gBrowser.selectedTab.getAttribute("image") };
         }
       });
+    }
+  },
+
+  // Icons on the native menus' main items, so every menu reads like Orbit's.
+  MENU_ICONS: {
+    context_openANewTab: "plus", context_reloadTab: "rotate-cw", context_reloadSelectedTabs: "rotate-cw",
+    context_duplicateTab: "copy", context_duplicateTabs: "copy", context_toggleMuteTab: "volume-x",
+    context_toggleMuteSelectedTabs: "volume-x", "orbit-tab-rename": "pencil", "orbit-tab-reset-name": "rotate-ccw",
+    "orbit-tab-tag": "tag", "orbit-tab-untag": "x", "orbit-tab-copy": "link", "orbit-tab-keep": "pin",
+    context_pinTab: "pin", context_unpinTab: "pin", context_pinSelectedTabs: "pin", context_unpinSelectedTabs: "pin",
+    context_moveTabToNewGroup: "folder", context_moveTabToGroup: "folder", context_ungroupTab: "folder",
+    context_moveTabToSplitView: "columns-2", "orbit-move-to-space": "layers", context_unloadTab: "moon",
+    "orbit-space-unload": "moon", "orbit-space-unload-others": "moon", context_closeTab: "x", context_undoCloseTab: "rotate-ccw",
+    "context-openlinkintab": "plus", "context-openlinkinusercontext-menu": "layers", "context-openlink": "app-window",
+    "orbit-context-glance": "eye", "orbit-context-reference": "picture-in-picture-2", "context-copylink": "link",
+    "context-bookmarklink": "bookmark", "context-savelink": "download", "context-copyimage-contents": "copy",
+    "context-copyimage": "link", "context-saveimage": "download", "context-viewimage": "image", "context-copy": "copy",
+    "context-cut": "copy", "context-paste": "copy", "context-viewsource": "code-xml", "context-inspect": "code",
+    "context-take-screenshot": "camera", "context-savepage": "download", "context-searchselect": "search",
+    "context-video-pictureinpicture": "picture-in-picture-2", "context-print-selection": "printer",
+    "context-sendpagetodevice": "external-link", "context-selectall": "type",
+  },
+
+  menuIcons() {
+    for (const [id, icon] of Object.entries(this.MENU_ICONS)) {
+      const el = document.getElementById(id);
+      if (!el || el.hasAttribute("orbit-icon")) continue;
+      el.classList.add(el.localName == "menu" ? "menu-iconic" : "menuitem-iconic");
+      el.setAttribute("image", `${Orbit.BASE}icons/${icon}.svg`);
+      el.setAttribute("orbit-icon", "");
     }
   },
 

@@ -138,7 +138,7 @@
   mask-image: url("chrome://orbit/content/liquid-a.svg");
 }
 #orbit-liquid::after {
-  background: linear-gradient(225deg, color-mix(in oklch, var(--orbit-c1) 75%, white), color-mix(in oklch, var(--orbit-c2) 85%, #2a10ff) 55%);
+  background: linear-gradient(225deg, color-mix(in oklch, var(--orbit-c1) 75%, white), color-mix(in oklch, var(--orbit-c3, var(--orbit-c2)) 85%, #2a10ff) 55%);
   mask-image: url("chrome://orbit/content/liquid-b.svg");
   animation-duration: 36s;
   animation-direction: alternate-reverse;
@@ -159,16 +159,16 @@
 }
 #orbit-grain {
   inset: 0;
-  opacity: .16;
+  opacity: var(--orbit-grain, .16);
   mix-blend-mode: overlay;
   background: url("chrome://orbit/content/grain.svg") repeat;
-  background-size: 200px 200px;
+  background-size: var(--orbit-grain-size, 200px) var(--orbit-grain-size, 200px);
 }
 :root[orbit-no-grain] #orbit-grain { display: none; }
 :root[customizing] :is(#orbit-liquid, #orbit-grain) { display: none; }
 @media (prefers-color-scheme: light) {
   #orbit-liquid { opacity: calc(var(--orbit-intensity, .34) * .7); }
-  #orbit-grain { opacity: .1; mix-blend-mode: multiply; }
+  #orbit-grain { opacity: calc(var(--orbit-grain, .16) * .6); mix-blend-mode: multiply; }
 }
 
 :root:not([customizing]) :is(body, #navigator-toolbox, #nav-bar, #browser,
@@ -3506,3 +3506,121 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #orbit-ai-button { list-style-image: url("chrome://orbit/content/icons/bot.svg"); }
 #orbit-ref-button { list-style-image: url("chrome://orbit/content/icons/picture-in-picture-2.svg"); }
 :is(#orbit-ai-button, #orbit-ref-button) { -moz-context-properties: fill, stroke; stroke: currentColor; fill: none; }
+
+/* About v2: hero, live updater card, links. */
+.orbit-about { align-items: stretch !important; text-align: start !important; gap: 14px !important; padding: 4px 0 10px !important; }
+.orbit-about-hero { display: flex; align-items: center; gap: 18px; padding: 6px 2px 8px;
+  & .orbit-about-logo { width: 72px; height: 72px; }
+  & .orbit-about-name { margin: 0; font-size: 24px; } }
+.orbit-about-author, .orbit-about-fine { align-self: center; text-align: center; }
+.orbit-upd { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px;
+  & .orbit-update-bar { margin: 0 !important; } }
+.orbit-upd-row { display: flex; align-items: center; gap: 14px; }
+.orbit-upd-icon { width: 38px; height: 38px; flex-shrink: 0; display: grid; place-items: center; border-radius: 10px;
+  background: color-mix(in srgb, var(--orbit-accent) 16%, transparent); & .orbit-icon { width: 18px; height: 18px; } }
+.orbit-upd[data-state="checking"] .orbit-upd-icon .orbit-icon,
+.orbit-upd[data-state="downloading"] .orbit-upd-icon .orbit-icon { animation: orbit-upd-spin 1s linear infinite; }
+@keyframes orbit-upd-spin { to { transform: rotate(360deg); } }
+.orbit-upd[data-state="ok"] .orbit-upd-icon { background: color-mix(in srgb, #3ddc97 18%, transparent); }
+.orbit-upd[data-state="ready"] .orbit-upd-icon { background: color-mix(in srgb, #3ddc97 28%, transparent); }
+.orbit-upd[data-state="error"] .orbit-upd-icon { background: color-mix(in srgb, #ff5d5d 20%, transparent); }
+.orbit-upd-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  & b { font-size: 14px; font-weight: 600; } & span { font-size: 12.5px; color: var(--orbit-fg-dim); } & span:empty { display: none; } }
+.orbit-upd .orbit-button[hidden] { display: none; }
+
+/* ==========================================================================
+   Quick colors (OrbitColors)
+   ========================================================================== */
+#orbit-colors { width: 340px; min-width: 0 !important; padding: 10px !important; display: flex; flex-direction: column; gap: 10px; transform-origin: top left; }
+.oc-box { position: relative; height: 300px; border-radius: 12px; overflow: hidden;
+  background: radial-gradient(circle, color-mix(in srgb, var(--orbit-fg) 14%, transparent) 1px, transparent 1.4px) 0 0 / 10px 10px, var(--orbit-tile);
+  box-shadow: inset 0 0 0 1px var(--orbit-border); }
+.oc-field { position: absolute; inset: 44px 14px 44px; cursor: crosshair; }
+.oc-hint { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; font-weight: 500; color: var(--orbit-fg-dim); pointer-events: none;
+  &[hidden] { display: none; } }
+.oc-dot { position: absolute; width: 22px; height: 22px; margin: -11px; border-radius: 50%; background: var(--c);
+  box-shadow: 0 0 0 3px var(--orbit-panel), 0 4px 12px rgb(0 0 0 / .35); cursor: grab; touch-action: none;
+  transition: transform .15s var(--orbit-spring);
+  &[primary] { width: 30px; height: 30px; margin: -15px; }
+  &:hover { transform: scale(1.1); } &:active { cursor: grabbing; } }
+.oc-modes, .oc-actions { position: absolute; left: 0; right: 0; display: flex; justify-content: center; gap: 14px; }
+.oc-modes { top: 8px; } .oc-actions { bottom: 8px; }
+.oc-modes .orbit-icon-button[active] { background: var(--orbit-active); }
+.oc-row { display: flex; align-items: center; gap: 6px; }
+.oc-prev { transform: scaleX(-1); }
+.oc-presets { flex: 1; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 3px; }
+.oc-preset { appearance: none; border: none; flex: none; width: 28px; height: 28px; padding: 0; border-radius: 50%; cursor: pointer;
+  background: linear-gradient(135deg, var(--a) 50%, var(--b) 50%); box-shadow: inset 0 0 0 1px rgb(0 0 0 / .12);
+  transition: transform .15s var(--orbit-spring); &:hover { transform: scale(1.12); } }
+.oc-bottom { gap: 16px; padding: 4px 6px 2px; }
+.oc-wave { flex: 1; height: 44px; cursor: ew-resize; outline: none; border-radius: 10px; padding: 0 6px; background: var(--orbit-tile);
+  & svg { width: 100%; height: 100%; overflow: visible; }
+  & path { fill: none; stroke-width: 4; stroke-linecap: round; }
+  & .oc-wave-back { stroke: var(--orbit-border); }
+  & .oc-wave-front { stroke: color-mix(in srgb, var(--orbit-fg) 70%, transparent); }
+  &:focus-visible { box-shadow: 0 0 0 2px var(--orbit-accent); } }
+.oc-knob { position: relative; width: 52px; height: 52px; flex: none; cursor: ns-resize; outline: none; border-radius: 50%;
+  & b { position: absolute; left: 50%; top: 50%; width: 2px; height: 2px; margin: -1px; border-radius: 50%; background: var(--orbit-fg-dim);
+    transform: rotate(var(--a)) translateY(-25px); }
+  &:focus-visible { box-shadow: 0 0 0 2px var(--orbit-accent); } }
+.oc-knob-cap { position: absolute; inset: 9px; border-radius: 50%; background: var(--orbit-field); box-shadow: inset 0 0 0 1px var(--orbit-border), 0 4px 10px rgb(0 0 0 / .3);
+  & i { position: absolute; left: 50%; top: 4px; width: 3px; height: 8px; margin-left: -1.5px; border-radius: 2px; background: var(--orbit-fg); } }
+
+/* ==========================================================================
+   Mods page; Zen's variables so Zen mods find their colors
+   ========================================================================== */
+:root {
+  --zen-primary-color: var(--orbit-accent);
+  --zen-colors-primary: var(--orbit-accent);
+  --zen-colors-secondary: var(--orbit-hover);
+  --zen-colors-tertiary: var(--orbit-field);
+  --zen-colors-border: var(--orbit-border);
+  --zen-colors-border-contrast: var(--orbit-border);
+  --zen-border-radius: var(--orbit-radius);
+  --zen-webview-border-radius: var(--orbit-radius-lg, 10px);
+  --zen-element-separation: var(--orbit-gap, 8px);
+  --zen-main-browser-background: var(--orbit-base);
+  --zen-themed-toolbar-bg: var(--orbit-base);
+  --zen-dialog-background: var(--orbit-panel);
+}
+.orbit-mods-page { display: flex; flex-direction: column; gap: 14px; }
+.orbit-mods-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.orbit-mods { display: flex; flex-direction: column; gap: 10px; }
+.orbit-mods-empty { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 36px 0; color: var(--orbit-fg-dim);
+  & .orbit-icon { width: 26px; height: 26px; } & b { color: var(--orbit-fg); font-size: 14px; } & span { font-size: 12.5px; } }
+.orbit-mod { padding: 12px 14px; }
+.orbit-mod-row { display: flex; align-items: center; gap: 12px; }
+.orbit-mod-img { width: 64px; height: 40px; flex-shrink: 0; display: grid; place-items: center; border-radius: 8px; overflow: hidden; background: var(--orbit-field);
+  & img:not(.orbit-icon) { width: 100%; height: 100%; object-fit: cover; } & .orbit-icon { width: 18px; height: 18px; } }
+.orbit-mod-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  & b { font-size: 13.5px; font-weight: 500; } & small { font-weight: 400; color: var(--orbit-fg-dim); }
+  & span { font-size: 12px; color: var(--orbit-fg-dim); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; } }
+.orbit-mod-prefs { margin-top: 10px; border-top: 1px solid var(--orbit-border); &[hidden] { display: none; }
+  & .orbit-setting { margin: 0 !important; padding: 10px 2px !important; min-height: 0 !important; background: none !important; box-shadow: none !important; }
+  & .orbit-input { width: 180px; } }
+
+/* ==========================================================================
+   Orbit menu v2: sections, checks, shortcuts, submenu. Native menus (tabs,
+   pages, toolbar) get the same rhythm and icons (OrbitExtras.menuIcons).
+   ========================================================================== */
+#orbit-ctx { min-width: 250px !important; padding: 6px !important; }
+.orbit-menu-section { padding: 8px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--orbit-fg-dim);
+  &:empty { display: none; } }
+.orbit-menu-item { height: 32px !important; position: relative; }
+.orbit-menu-check { width: 28px; height: 16px; flex-shrink: 0; border-radius: 8px; background: var(--orbit-field); box-shadow: inset 0 0 0 1px var(--orbit-border); position: relative;
+  &::after { content: ""; position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--orbit-fg-dim); transition: transform .2s var(--orbit-spring), background-color .2s; }
+  &[on] { background: var(--orbit-accent); box-shadow: none; &::after { transform: translateX(12px); background: #fff; } } }
+.orbit-menu-more { width: 14px !important; height: 14px !important; }
+.orbit-ctx-sub { display: none; position: absolute !important; top: -6px; left: calc(100% + 4px); min-width: 200px !important; animation: none !important; z-index: 1;
+  &[left] { left: auto; right: calc(100% + 4px); } }
+.orbit-menu-parent:is(:hover, :focus-within) > .orbit-ctx-sub { display: block; }
+.orbit-menu-parent:is(:hover, :focus-within) { background: var(--orbit-hover); }
+
+/* Native menus with Orbit's rhythm. */
+menupopup:not(.in-menulist) > :is(menuitem, menu) { min-height: 32px !important; padding-inline: 10px !important; font-size: 13px; }
+menupopup:not(.in-menulist) > menuseparator { margin: 5px 8px !important; padding: 0 !important; border-top: 1px solid var(--orbit-border) !important; }
+menupopup:not(.in-menulist) { --panel-padding: 6px !important; }
+menupopup > :is(menuitem, menu)[orbit-icon] .menu-icon {
+  width: 16px; height: 16px; margin-inline-end: 10px !important;
+  -moz-context-properties: stroke; stroke: var(--orbit-fg-dim); fill: none;
+}

@@ -301,8 +301,10 @@ var OrbitDnD = {
     if (el.closest("#pinned-tabs-container")) {
       const rows = this.keptRows();
       const tile = el.closest(".tabbrowser-tab");
-      const firstRow = rows[0] && this.rect(rows[0]);
-      const inRows = OrbitKept.isKept(tile) || (firstRow && y >= firstRow.top - 3) || drag.isGroup;
+      // Where the rows start without the gap: the gap must not move this line,
+      // or the target flips between the grid and the rows at every frame.
+      const rowsTop = rows[0] ? this.nat.get(rows[0])?.top ?? this.rect(rows[0]).top : null;
+      const inRows = OrbitKept.isKept(tile) || (rowsTop != null && y >= rowsTop - 3) || drag.isGroup;
       if (!inRows) {
         const label = drag.kind == "essential" ? this.t("moveEssential") : this.t("essentials");
         if (!tile || this.isMoving(tile)) return { type: "essentials", label, zone: pinnedBox };

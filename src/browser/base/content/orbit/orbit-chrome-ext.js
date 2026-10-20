@@ -20,15 +20,19 @@ var OrbitChromeExt = {
 
   init() {
     this.migrateSignatures();
-    if (!this._window) {
-      this._window = true;
-      const check = () => this.offer(gBrowser.currentURI?.spec ?? "");
-      gBrowser.addProgressListener({
-        onLocationChange: (webProgress, _req, _loc, flags) => webProgress.isTopLevel && check(),
-        QueryInterface: ChromeUtils.generateQI(["nsIWebProgressListener", "nsISupportsWeakReference"]),
+    // Store pages get an "Add to Orbit" button (actors/OrbitStore*). App-wide:
+    // later windows get "already registered".
+    try {
+      ChromeUtils.registerWindowActor("OrbitStore", {
+        parent: { esModuleURI: "resource://orbit/actors/OrbitStoreParent.sys.mjs" },
+        child: { esModuleURI: "resource://orbit/actors/OrbitStoreChild.sys.mjs", events: { DOMContentLoaded: {} } },
+        matches: ["https://chromewebstore.google.com/*", "https://chrome.google.com/webstore/*",
+          "https://addons.mozilla.org/*", "https://zen-browser.app/*"],
+        messageManagerGroups: ["browsers"],
+        // The parent checks the page's address and the id of every request.
+        safeForUntrustedWebProcess: true,
       });
-      gBrowser.tabContainer.addEventListener("TabSelect", check);
-    }
+    } catch {}
     if (this._app) return;
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
       if (win != window && win.OrbitChromeExt?._app) return;
@@ -169,29 +173,6 @@ var OrbitChromeExt = {
     }
   },
 
-  // A toast with "Add to Orbit" while a store page is shown.
-  offer(url) {
-    const id = this.STORE.exec(url)?.[1];
-    document.getElementById("orbit-chrome-offer")?.remove();
-    if (!id) return;
-    const h = Orbit.h.bind(Orbit);
-    let stack = document.getElementById("orbit-toasts");
-    if (!stack) document.body.append(stack = h("div", { id: "orbit-toasts" }));
-    const btn = h("button", { class: "orbit-toast-b1", onclick: () => this.install(id, btn) }, Orbit.tr("Add to Orbit", "Ajouter à Orbit"));
-    stack.append(h("div", { id: "orbit-chrome-offer", class: "orbit-toast", role: "status" },
-      h("div", { class: "orbit-toast-main" },
-        h("span", { class: "orbit-toast-icon" }, Orbit.icon("puzzle")),
-        h("div", { class: "orbit-toast-text" },
-          h("b", {}, Orbit.tr("Chrome extension", "Extension Chrome")),
-          h("span", {}, Orbit.tr("Orbit can install it: most Chrome extensions work in Orbit.",
-            "Orbit peut l'installer : la plupart des extensions Chrome fonctionnent dans Orbit."))),
-        h("button", { class: "orbit-toast-close", "aria-label": Orbit.tr("Close", "Fermer"),
-          onclick: () => document.getElementById("orbit-chrome-offer")?.remove() }, Orbit.icon("x"))),
-      h("div", { class: "orbit-toast-actions" }, btn)));
-  },
-
-  // Chrome packages are not signed by Mozilla. Consent is per browser, not a
-  // global switch that lets every site install unsigned add-ons.
   allow() {
     if (Orbit.pref(this.ALLOW, false)) return true;
     const ok = Services.prompt.confirm(window, "Orbit", Orbit.tr(
@@ -215,7 +196,7 @@ var OrbitChromeExt = {
       const hash = await this.sha256(bytes);
       const xpi = await this.toXpi(bytes, id);
       await this.keep(id, xpi, hash);
-      document.getElementById("orbit-chrome-offer")?.remove();
+      return true;
     } catch (e) {
       console.error("Orbit: Chrome extension", e);
       if (btn) {
@@ -224,6 +205,7 @@ var OrbitChromeExt = {
       }
       OrbitNotify.show({ kind: "chrome-ext", icon: "puzzle", tone: "warm", title: Orbit.tr("Chrome extension", "Extension Chrome"),
         text: Orbit.tr("This extension could not be installed.", "Cette extension n'a pas pu être installée."), timeout: 5000 });
+      return false;
     }
   },
 

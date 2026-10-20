@@ -30,6 +30,8 @@ var OrbitUpdates = {
   },
 
   async init() {
+    // Firefox's About window becomes Orbit's About page (version and updates).
+    window.openAboutDialog = () => OrbitSettings.open("about");
     // One check per launch, from the first window.
     if ([...Services.wm.getEnumerator("navigator:browser")].length > 1) return;
     const first = !Orbit.pref(this.ASKED, false);

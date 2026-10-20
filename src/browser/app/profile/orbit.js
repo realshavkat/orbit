@@ -138,6 +138,8 @@ pref("extensions.autoDisableScopes", 11);
 
 // ---- Orbit appearance (Settings sheet: gear in the sidebar, Ctrl+,) -------
 pref("orbit.theme.intensity", 34);
+pref("orbit.theme.grain", 16);
+pref("orbit.theme.grain-size", 200);
 pref("orbit.theme.radius", 7);
 pref("orbit.view.gap", 8);
 pref("orbit.effects.glass", false);
@@ -224,3 +226,14 @@ pref("general.useragent.compatMode.firefox", true);
 
 // BrowserGlue reads it to offer an update when the build is old (unset: JS error at startup).
 pref("app.update.checkInstallTime.days", 63);
+
+// Speed: paint as soon as content arrives, no blocking OCSP round trip
+// (CRLite already checks revocation, enforced above), bigger GPU canvas
+// cache, more parallel urgent requests, compressed JS bytecode cache.
+pref("nglayout.initialpaint.delay", 0);
+pref("nglayout.initialpaint.delay_in_oopif", 0);
+pref("security.OCSP.enabled", 0);
+pref("network.http.max-urgent-start-excessive-connections-per-host", 5);
+pref("gfx.canvas.accelerated.cache-items", 4096);
+pref("gfx.canvas.accelerated.cache-size", 512);
+pref("browser.cache.jsbc_compression_level", 3);

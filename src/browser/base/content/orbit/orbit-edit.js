@@ -104,10 +104,9 @@ var OrbitEdit = {
   // "New container tab" entries, one per container, with its color.
   containerItems(item) {
     if (!Orbit.pref("privacy.userContext.enabled", false)) return [];
-    const fr = Orbit.lang() == "fr";
     return ContextualIdentityService.getPublicIdentities().map(identity => {
       const name = ContextualIdentityService.getUserContextLabel(identity.userContextId);
-      const el = item("plus", `${Orbit.tr("Tab", "Onglet")} ${name}`, () => {
+      const el = item("circle-dot", name, () => {
         const tab = gBrowser.addTrustedTab(OrbitTabs.homeURL(), { userContextId: identity.userContextId, inBackground: false });
         OrbitSpaces.setTabSpace(tab, OrbitSpaces.activeId);
       });
@@ -132,39 +131,75 @@ var OrbitEdit = {
     }
   },
 
-  // Small Orbit-styled context menu at the pointer.
+  // Orbit's sidebar menu, sorted in sections: create, this space, display,
+  // then Orbit itself. Toggles show their state; containers open a submenu.
   menu(_sx, _sy, x, y) {
     document.getElementById("orbit-ctx")?.remove();
     const h = Orbit.h.bind(Orbit);
-    const item = (icon, label, run) => h("button", {
-      class: "orbit-menu-item", role: "menuitem",
+    const p = Services.prefs;
+    const item = (icon, label, run, { key = "", checked = null } = {}) => h("button", {
+      class: "orbit-menu-item", role: checked == null ? "menuitem" : "menuitemcheckbox", "aria-checked": checked == null ? null : String(checked),
       onclick: () => { close(); run(); },
-    }, Orbit.icon(icon), h("span", { class: "orbit-menu-label" }, label));
+    }, Orbit.icon(icon), h("span", { class: "orbit-menu-label" }, label),
+    checked != null ? h("span", { class: "orbit-menu-check", on: checked }) : key ? h("span", { class: "orbit-menu-key" }, key) : null);
+    const section = label => h("div", { class: "orbit-menu-section" }, label);
+    const sep = () => h("div", { class: "orbit-menu-sep" });
+    const space = OrbitSpaces.active;
+    const containers = this.containerItems(item);
+    const sub = containers.length ? h("div", { class: "orbit-ctx orbit-ctx-sub", role: "menu" }, ...containers) : null;
+    const containerMenu = sub && h("div", { class: "orbit-menu-item orbit-menu-parent", role: "menuitem", tabindex: 0, "aria-haspopup": "true" },
+      Orbit.icon("layers"), h("span", { class: "orbit-menu-label" }, Orbit.tr("Tab in a container", "Onglet dans un conteneur")),
+      Orbit.icon("chevron-right", "orbit-icon orbit-menu-more"), sub);
     const menu = h("div", { id: "orbit-ctx", class: "orbit-ctx", role: "menu" },
-      item("pencil", this.t("edit"), () => this.enter()),
-      h("div", { class: "orbit-menu-sep" }),
-      item("plus", this.t("newSpace"), () => OrbitSpaces.edit(null)),
+      section(Orbit.tr("New", "Créer")),
+      item("plus", Orbit.tr("New tab", "Nouvel onglet"), () => OrbitTabs.openCommandBar(), { key: "Ctrl T" }),
       item("folder", OrbitFolders.t("newFolder"), () => {
         const tab = OrbitSpaces.openTab();
         gBrowser.addTabGroup([tab], { label: OrbitFolders.t("newFolder") });
       }),
-      ...this.containerItems(item),
-      item("panel-left", this.t("compact"), () => OrbitLayout.toggleCompact()),
-      item("columns-2", this.t("side"), () => Services.prefs.setBoolPref("sidebar.position_start", !Orbit.pref("sidebar.position_start", true))),
-      item("settings-2", this.t("layout"), () => OrbitSettings.open("layout")));
+      item("layers", this.t("newSpace"), () => OrbitSpaces.edit(null)),
+      containerMenu,
+      sep(),
+      section(space?.name ?? ""),
+      item("palette", Orbit.tr("Quick colors", "Couleurs rapides"), () => OrbitColors.open(document.getElementById("orbit-space-title"))),
+      item("pencil", Orbit.tr("Edit space", "Modifier l'espace"), () => OrbitSpaces.edit(space)),
+      item("moon", Orbit.tr("Put space to sleep", "Mettre l'espace en veille"), () => OrbitExtras.unloadSpace(OrbitSpaces.activeId)),
+      sep(),
+      section(Orbit.tr("Display", "Affichage")),
+      item("panel-left", this.t("compact"), () => OrbitLayout.toggleCompact(), { checked: Orbit.pref("orbit.view.compact", false) }),
+      item("columns-2", this.t("side"), () => p.setBoolPref("sidebar.position_start", !Orbit.pref("sidebar.position_start", true)),
+        { checked: !Orbit.pref("sidebar.position_start", true) }),
+      sep(),
+      item("wand-sparkles", this.t("edit"), () => this.enter()),
+      item("settings-2", Orbit.tr("Settings", "Paramètres"), () => OrbitSettings.open(), { key: "Ctrl ," }));
     document.body.append(menu);
     menu.style.left = `${Math.min(x, innerWidth - menu.offsetWidth - 8)}px`;
     menu.style.top = `${Math.min(y, innerHeight - menu.offsetHeight - 8)}px`;
+    // The submenu opens on the side with room.
+    if (sub) {
+      const r = menu.getBoundingClientRect();
+      sub.toggleAttribute("left", r.right + 240 > innerWidth);
+    }
+    const items = () => [...menu.querySelectorAll(":scope > .orbit-menu-item")];
     const close = () => {
       menu.remove();
       window.removeEventListener("mousedown", outside, true);
       window.removeEventListener("keydown", key, true);
     };
     const outside = e => !menu.contains(e.target) && close();
-    const key = e => e.key == "Escape" && close();
+    const key = e => {
+      if (e.key == "Escape") return close();
+      // Arrow keys move through the items, like a native menu.
+      const list = items();
+      const i = list.indexOf(document.activeElement);
+      if (e.key == "ArrowDown" || e.key == "ArrowUp") {
+        e.preventDefault();
+        list[(i + (e.key == "ArrowDown" ? 1 : -1) + list.length) % list.length]?.focus();
+      }
+    };
     window.addEventListener("mousedown", outside, true);
     window.addEventListener("keydown", key, true);
-    menu.querySelector("button").focus();
+    items()[0]?.focus();
   },
 
   // ---- edit mode ------------------------------------------------------------------

@@ -184,6 +184,8 @@ var OrbitLayout = {
     flag("orbit-no-motion", "orbit.effects.animations");
     root.toggleAttribute("orbit-sidebar-end", !Orbit.pref("sidebar.position_start", true));
     root.style.setProperty("--orbit-intensity", Orbit.pref("orbit.theme.intensity", 34) / 100);
+    root.style.setProperty("--orbit-grain", Orbit.pref("orbit.theme.grain", 16) / 100);
+    root.style.setProperty("--orbit-grain-size", `${Orbit.pref("orbit.theme.grain-size", 200)}px`);
     root.style.setProperty("--orbit-radius", `${Orbit.pref("orbit.theme.radius", 7)}px`);
     root.style.setProperty("--orbit-gap", `${Orbit.pref("orbit.view.gap", 8)}px`);
     this.setWidth(Orbit.pref("orbit.view.sidebar-width", 240));

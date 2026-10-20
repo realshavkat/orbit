@@ -25,7 +25,10 @@ var OrbitSettings = {
         { kind: "scheme" },
         { kind: "spacecolors" },
         { kind: "background" },
+        { kind: "link", label: "quickColors", icon: "palette", action: () => OrbitColors.open(document.getElementById("orbit-space-title")) },
         { kind: "range", pref: "orbit.theme.intensity", label: "intensity", min: 0, max: 80, unit: "%" },
+        { kind: "range", pref: "orbit.theme.grain", label: "grainAmount", min: 0, max: 100, unit: "%" },
+        { kind: "range", pref: "orbit.theme.grain-size", label: "grainSize", min: 60, max: 600, unit: "px" },
         { kind: "range", pref: "orbit.theme.radius", label: "radius", min: 0, max: 14, unit: "px" },
       ],
     },
@@ -36,10 +39,10 @@ var OrbitSettings = {
         { kind: "toggle", pref: "orbit.effects.nebula", label: "nebula" },
         { kind: "toggle", pref: "orbit.effects.grain", label: "grain" },
         { kind: "toggle", pref: "orbit.effects.animations", label: "animations" },
-        { kind: "mods" },
         { kind: "link", label: "themes", icon: "palette", action: () => BrowserAddonUI.openAddonsMgr("addons://list/theme") },
       ],
     },
+    { id: "mods", icon: "sparkles", items: [{ kind: "mods" }] },
     {
       id: "layout", icon: "panel-left",
       items: [
@@ -131,7 +134,7 @@ var OrbitSettings = {
       turboConn: "Connexions par téléchargement", "turboConn.d": "Plus de connexions va plus vite sur les serveurs bridés, au prix d'un peu plus de charge",
       turboBelow: "Activer sous cette vitesse", "turboBelow.d": "Turbo ne s'active que si le téléchargement normal est plus lent. 0 = toujours",
       turboMin: "Taille minimale", "turboMin.d": "Les fichiers plus petits se téléchargent normalement",
-      downloads: "Téléchargements", downloadsFolder: "Dossier de téléchargement",
+      downloads: "Téléchargements", downloadsFolder: "Dossier de téléchargement", mods: "Mods",
       autostart: "Lancer Orbit au démarrage de l'ordinateur", "autostart.d": "Orbit s'ouvre quand tu te connectes à Windows",
       "scheme.d": "Clair, sombre ou comme Windows. S'applique aussi aux sites qui le gèrent",
       updates: "Mises à jour", "updates.d": "Automatiques : installées au redémarrage. Me demander : une fenêtre présente les nouveautés au lancement",
@@ -164,6 +167,7 @@ var OrbitSettings = {
       spaceColors: "Couleurs de l'espace", custom: "Personnalisées",
       scheme: "Thème", "scheme.dark": "Sombre", "scheme.light": "Clair", "scheme.system": "Système",
       intensity: "Intensité du fond", radius: "Arrondi des coins",
+      quickColors: "Couleurs rapides (comme Zen)", grainAmount: "Quantité de grain", grainSize: "Taille du grain", "grainSize.d": "Petit = grain fin, grand = grain large",
       glass: "Verre liquide", "glass.d": "Reflets et transparence sur les onglets et les barres",
       nebula: "Mouvement du fond", "nebula.d": "Les rubans de couleur dérivent lentement (en pause quand la fenêtre est inactive)",
       grain: "Grain", "grain.d": "Texture fine sur l'arrière-plan",
@@ -192,7 +196,7 @@ var OrbitSettings = {
       turboConn: "Connections per download", "turboConn.d": "More connections are faster on throttled servers, at a slightly higher load",
       turboBelow: "Turn on below this speed", "turboBelow.d": "Turbo only steps in when the normal download is slower. 0 = always",
       turboMin: "Minimum size", "turboMin.d": "Smaller files download normally",
-      downloads: "Downloads", downloadsFolder: "Download folder",
+      downloads: "Downloads", downloadsFolder: "Download folder", mods: "Mods",
       autostart: "Start Orbit when the computer starts", "autostart.d": "Orbit opens when you sign in to Windows",
       "scheme.d": "Light, dark or like Windows. Also applies to sites that support it",
       updates: "Updates", "updates.d": "Automatic: installed on restart. Ask me: a window shows what's new at launch",
@@ -225,6 +229,7 @@ var OrbitSettings = {
       spaceColors: "Space colors", custom: "Custom",
       scheme: "Theme", "scheme.dark": "Dark", "scheme.light": "Light", "scheme.system": "System",
       intensity: "Background intensity", radius: "Corner radius",
+      quickColors: "Quick colors (like Zen)", grainAmount: "Grain amount", grainSize: "Grain size", "grainSize.d": "Small = fine grain, large = coarse grain",
       glass: "Liquid glass", "glass.d": "Highlights and translucency on tabs and bars",
       nebula: "Background motion", "nebula.d": "Color ribbons drift slowly (paused when the window is inactive)",
       grain: "Grain", "grain.d": "Fine texture on the background",
@@ -252,7 +257,7 @@ var OrbitSettings = {
 
   // Navigation groups and one line under each section title.
   GROUPS: [
-    ["personal", ["general", "look", "effects", "layout"]],
+    ["personal", ["general", "look", "effects", "mods", "layout"]],
     ["web", ["browsing", "downloads", "ai"]],
     ["protection", ["privacy", "memory"]],
     ["system", ["notify", "shortcuts"]],
@@ -273,6 +278,7 @@ var OrbitSettings = {
       memory: Orbit.tr("Performance presets and sleeping tabs.", "Préréglages de performances et mise en veille des onglets."),
       notify: Orbit.tr("What Orbit may tell you about.", "Ce qu'Orbit peut te signaler."),
       shortcuts: Orbit.tr("Keyboard shortcuts.", "Les raccourcis clavier."),
+      mods: Orbit.tr("Change anything in Orbit's look.", "Change tout le style d'Orbit."),
       about: "",
     };
   },
@@ -634,24 +640,78 @@ var OrbitSettings = {
 
   renderMods() {
     const h = Orbit.h.bind(Orbit);
-    const fr = Orbit.lang() == "fr";
-    const list = h("div", { class: "orbit-mods-list" });
+    const list = h("div", { class: "orbit-mods" });
     const fill = async () => {
-      const names = await OrbitMods.list();
+      const mods = await OrbitMods.list();
       const off = OrbitMods.disabled();
-      list.replaceChildren(...(names.length ? names.map(n => h("div", { class: "orbit-mods-item" },
-        h("span", {}, n), this.switch(!off.has(n), on => OrbitMods.toggle(n, on))))
-        : [h("div", { class: "orbit-setting-desc" }, Orbit.tr("No mods yet.", "Aucun mod pour l'instant."))]));
+      list.replaceChildren(...(mods.length ? mods.map(m => this.modCard(m, !off.has(m.id), fill))
+        : [h("div", { class: "orbit-mods-empty" }, Orbit.icon("sparkles"),
+          h("b", {}, Orbit.tr("No mods yet", "Aucun mod pour l'instant")),
+          h("span", {}, Orbit.tr("Browse Zen's mods or make your own.", "Parcours les mods de Zen ou crée le tien.")))]));
     };
     fill();
-    return h("div", { class: "orbit-setting orbit-setting-col" },
-      h("div", { class: "orbit-setting-text" },
-        h("div", { class: "orbit-setting-label" }, Orbit.tr("Mods", "Mods")),
-        h("div", { class: "orbit-setting-desc" }, Orbit.tr(".css files that change Orbit's interface: colors, sizes, animations. userChrome.css works too.", "Des fichiers .css qui changent l'interface d'Orbit : couleurs, tailles, animations. userChrome.css fonctionne aussi."))),
-      list,
+    const open = url => { this.close(); gBrowser.selectedTab = gBrowser.addTrustedTab(url); };
+    return h("div", { class: "orbit-mods-page" },
       h("div", { class: "orbit-mods-actions" },
-        h("button", { class: "orbit-button", onclick: () => OrbitMods.openFolder() }, Orbit.icon("external-link"), Orbit.tr("Open folder", "Ouvrir le dossier")),
-        h("button", { class: "orbit-button", onclick: async () => { await OrbitMods.apply(); fill(); } }, Orbit.icon("refresh-cw"), Orbit.tr("Reload", "Recharger"))));
+        h("button", { class: "orbit-button primary", onclick: () => open("https://zen-browser.app/mods/") },
+          Orbit.icon("sparkles"), Orbit.tr("Browse mods", "Parcourir les mods")),
+        h("button", { class: "orbit-button", onclick: async () => {
+          const name = { value: Orbit.tr("My mod", "Mon mod") };
+          if (!Services.prompt.prompt(window, "Orbit", Orbit.tr("Name of the new mod:", "Nom du nouveau mod :"), name, null, {})) return;
+          await OrbitMods.create(name.value.trim() || "Mod");
+          fill();
+        } }, Orbit.icon("plus"), Orbit.tr("Create a mod", "Créer un mod")),
+        h("button", { class: "orbit-button", onclick: () => OrbitMods.openFolder() }, Orbit.icon("external-link"), Orbit.tr("Folder", "Dossier")),
+        h("button", { class: "orbit-button", onclick: async () => { await OrbitMods.apply(); fill(); } },
+          Orbit.icon("refresh-cw"), Orbit.tr("Reload", "Recharger"))),
+      list);
+  },
+
+  // One installed mod: picture, name, switch; its preferences unfold below.
+  modCard(m, on, refresh) {
+    const h = Orbit.h.bind(Orbit);
+    const prefs = h("div", { class: "orbit-mod-prefs", hidden: true }, ...m.prefs.map(p => this.modPref(p)));
+    const img = /^https:\/\/raw\.githubusercontent\.com\//.test(m.image) ? h("img", { src: m.image, alt: "" }) : Orbit.icon("sparkles");
+    return h("div", { class: "orbit-card orbit-mod" },
+      h("div", { class: "orbit-mod-row" },
+        h("span", { class: "orbit-mod-img" }, img),
+        h("div", { class: "orbit-mod-text" },
+          h("b", {}, m.name, m.version ? h("small", {}, ` ${m.version}`) : null),
+          h("span", {}, m.description || (m.author ? Orbit.tr("by ", "par ") + m.author : m.file ? ".css" : ""))),
+        m.prefs.length ? h("button", { class: "orbit-icon-button", title: Orbit.tr("Settings", "Réglages"), onclick: () => (prefs.hidden = !prefs.hidden) },
+          Orbit.icon("settings-2")) : null,
+        m.zen ? h("button", { class: "orbit-icon-button", title: Orbit.tr("Update", "Mettre à jour"), onclick: async e => {
+          const b = e.currentTarget;
+          b.disabled = true;
+          const updated = await OrbitMods.update(m.id).catch(() => false);
+          b.disabled = false;
+          OrbitNotify.show({ kind: "mod", icon: "sparkles", title: m.name, timeout: 2500,
+            text: updated ? Orbit.tr("Updated.", "Mis à jour.") : Orbit.tr("Already up to date.", "Déjà à jour.") });
+          if (updated) refresh();
+        } }, Orbit.icon("refresh-cw")) : null,
+        h("button", { class: "orbit-icon-button", title: Orbit.tr("Remove", "Retirer"), onclick: async () => {
+          if (!Services.prompt.confirm(window, m.name, Orbit.tr("Remove this mod?", "Retirer ce mod ?"))) return;
+          await OrbitMods.remove(m.id);
+          refresh();
+        } }, Orbit.icon("trash-2")),
+        this.switch(on, v => OrbitMods.toggle(m.id, v))),
+      prefs);
+  },
+
+  modPref(p) {
+    const h = Orbit.h.bind(Orbit);
+    const v = OrbitMods.prefValue(p);
+    let control;
+    if (p.type == "checkbox") control = this.switch(!!v, x => OrbitMods.setPref(p, x));
+    else if (p.type == "dropdown") {
+      const options = (p.options ?? []).map(o => ({ value: String(o.value), label: o.label ?? String(o.value) }));
+      if (p.placeholder) options.unshift({ value: "none", label: p.placeholder });
+      control = this.dropdown(options, String(v || "none"), x => OrbitMods.setPref(p, x));
+    } else {
+      const input = h("input", { class: "orbit-input", value: v, spellcheck: "false", onchange: () => OrbitMods.setPref(p, input.value) });
+      control = input;
+    }
+    return h("div", { class: "orbit-setting" }, h("div", { class: "orbit-setting-text" }, h("div", { class: "orbit-setting-label" }, p.label ?? p.property)), control);
   },
 
   renderVPN() {
@@ -902,18 +962,98 @@ var OrbitSettings = {
     const h = Orbit.h.bind(Orbit);
     const repo = "https://github.com/realshavkat/orbit";
     const open = url => { this.close(); gBrowser.selectedTab = gBrowser.addTrustedTab(url); };
+    const version = Services.appinfo.version;
     return h("div", { class: "orbit-about" },
-      h("img", { class: "orbit-about-logo", src: "chrome://branding/content/about-logo@2x.png", alt: "" }),
-      h("div", { class: "orbit-about-name" }, "Orbit"),
-      h("div", { class: "orbit-about-version" }, `Version ${Services.appinfo.version}`),
-      h("div", { class: "orbit-about-tagline" }, this.t("about.tagline")),
+      h("div", { class: "orbit-about-hero" },
+        h("img", { class: "orbit-about-logo", src: "chrome://branding/content/about-logo@2x.png", alt: "" }),
+        h("div", {},
+          h("div", { class: "orbit-about-name" }, "Orbit"),
+          h("div", { class: "orbit-about-version" }, `${Orbit.tr("Version", "Version")} ${version} · ${Services.appinfo.XPCOMABI.includes("64") ? "64 bits" : "32 bits"}`),
+          h("div", { class: "orbit-about-tagline" }, this.t("about.tagline")))),
+      this.renderUpdater(),
+      h("div", { class: "orbit-card orbit-about-links" },
+        h("button", { class: "orbit-setting orbit-setting-link", onclick: () => open(`${repo}/releases/tag/${version}`) },
+          h("div", { class: "orbit-setting-label" }, Orbit.tr("Release notes", "Notes de version")), Orbit.icon("external-link")),
+        h("button", { class: "orbit-setting orbit-setting-link", onclick: () => open(repo) },
+          h("div", { class: "orbit-setting-label" }, this.t("about.source")), Orbit.icon("code-xml"))),
       h("div", { class: "orbit-about-author" }, this.t("about.by"), " ", h("strong", {}, "shavkat"), " ",
         Orbit.icon("heart", "orbit-icon orbit-about-heart")),
-      h("div", { class: "orbit-about-actions" },
-        h("button", { class: "orbit-button primary", onclick: () => { this.close(); openAboutDialog(); } },
-          Orbit.icon("refresh-cw"), this.t("about.update")),
-        h("button", { class: "orbit-button", onclick: () => open(repo) }, Orbit.icon("code-xml"), this.t("about.source"))),
       h("div", { class: "orbit-about-fine" }, this.t("about.engine")),
       h("div", { class: "orbit-about-fine" }, this.t("about.credits")));
+  },
+
+  // Live update status, the same steps as Firefox's About window, in Orbit's style.
+  renderUpdater() {
+    const h = Orbit.h.bind(Orbit);
+    const icon = h("span", { class: "orbit-upd-icon" }, Orbit.icon("refresh-cw"));
+    const title = h("b", {});
+    const sub = h("span", {});
+    const bar = h("div", { class: "orbit-update-bar", hidden: true }, h("i"));
+    const button = h("button", { class: "orbit-button primary", hidden: true });
+    const card = h("div", { class: "orbit-card orbit-upd" },
+      h("div", { class: "orbit-upd-row" }, icon, h("div", { class: "orbit-upd-text" }, title, sub), button), bar);
+    const set = (state, t, d = "", action = null, label = "") => {
+      card.dataset.state = state;
+      title.textContent = t;
+      sub.textContent = d;
+      button.hidden = !action;
+      button.textContent = label;
+      button.onclick = action;
+      if (state != "downloading") bar.hidden = true;
+    };
+    const { AppUpdater } = ChromeUtils.importESModule("resource://gre/modules/AppUpdater.sys.mjs");
+    const updater = new AppUpdater();
+    const S = AppUpdater.STATUS;
+    const check = () => updater.check();
+    const restart = () => Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit | Ci.nsIAppStartup.eRestart);
+    const listener = (status, ...args) => {
+      // Settings closed: stop following the updater.
+      if (!card.isConnected && card.dataset.state) return updater.removeListener(listener);
+      const v = updater.update?.displayVersion || updater.update?.appVersion || "";
+      switch (status) {
+        case S.CHECKING:
+          return set("checking", Orbit.tr("Checking for updates…", "Recherche de mises à jour…"));
+        case S.NO_UPDATES_FOUND:
+          return set("ok", Orbit.tr("Orbit is up to date", "Orbit est à jour"),
+            Orbit.tr("You have the latest version.", "Tu as la dernière version."), check, Orbit.tr("Check again", "Vérifier à nouveau"));
+        case S.DOWNLOAD_AND_INSTALL:
+          return set("offer", Orbit.tr("Orbit {v} is available", "Orbit {v} est disponible").replace("{v}", v), "",
+            () => updater.allowUpdateDownload(), Orbit.tr("Download and install", "Télécharger et installer"));
+        case S.DOWNLOADING: {
+          set("downloading", Orbit.tr("Downloading Orbit {v}…", "Téléchargement d'Orbit {v}…").replace("{v}", v));
+          const [cur, total] = args;
+          bar.hidden = false;
+          if (total > 0) {
+            bar.firstChild.style.transform = `scaleX(${cur / total})`;
+            sub.textContent = `${Math.round((cur / total) * 100)} %`;
+          }
+          return;
+        }
+        case S.STAGING:
+          return set("checking", Orbit.tr("Preparing the update…", "Préparation de la mise à jour…"));
+        case S.READY_FOR_RESTART:
+          return set("ready", Orbit.tr("Update ready", "Mise à jour prête"),
+            Orbit.tr("It applies when Orbit restarts.", "Elle s'applique au redémarrage d'Orbit."), restart, Orbit.tr("Restart Orbit", "Redémarrer Orbit"));
+        case S.DOWNLOAD_FAILED:
+        case S.CHECKING_FAILED:
+        case S.INTERNAL_ERROR:
+          return set("error", Orbit.tr("Could not update", "Mise à jour impossible"),
+            Orbit.tr("Check your connection and try again.", "Vérifie ta connexion et réessaie."), check, Orbit.tr("Try again", "Réessayer"));
+        case S.OTHER_INSTANCE_HANDLING_UPDATES:
+          return set("error", Orbit.tr("Another Orbit is updating", "Un autre Orbit fait la mise à jour"));
+        case S.UPDATE_DISABLED_BY_POLICY:
+        case S.NO_UPDATER:
+        case S.UNSUPPORTED_SYSTEM:
+          return set("off", Orbit.tr("Updates are off on this copy", "Les mises à jour sont désactivées sur cette copie"));
+        case S.MANUAL_UPDATE:
+          return set("offer", Orbit.tr("A new version is out", "Une nouvelle version est sortie"), "",
+            () => { this.close(); gBrowser.selectedTab = gBrowser.addTrustedTab("https://github.com/realshavkat/orbit/releases/latest"); },
+            Orbit.tr("Download", "Télécharger"));
+      }
+    };
+    updater.addListener(listener);
+    set("checking", Orbit.tr("Checking for updates…", "Recherche de mises à jour…"));
+    check();
+    return card;
   },
 };
