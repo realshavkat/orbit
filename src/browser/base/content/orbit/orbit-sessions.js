@@ -59,6 +59,44 @@ var OrbitSessions = {
     await this.write((await this.list()).filter(x => x.id != id));
   },
 
+  // ---- Firefox Sync: spaces and settings on every computer -------------------------
+  // Turning it on here also turns it on on the other computers (the control
+  // prefs travel with Sync). Tabs stay on their own computer.
+  SYNCED: [
+    "orbit.spaces.data",
+    "orbit.theme.intensity",
+    "orbit.theme.grain",
+    "orbit.theme.grain-size",
+    "orbit.theme.radius",
+    "orbit.theme.font",
+    "orbit.view.compact",
+    "orbit.view.sidebar-width",
+    "orbit.view.gap",
+    "orbit.effects.glass",
+    "orbit.effects.nebula",
+    "orbit.effects.grain",
+    "orbit.effects.animations",
+    "orbit.urlbar.replace-newtab",
+    "orbit.glance.enabled",
+    "orbit.media.sidebar-player",
+    "orbit.shortcuts",
+    "orbit.split.grid",
+    "orbit.downloads.turbo",
+    "orbit.notify.pin",
+    "orbit.notify.default",
+    "orbit.notify.update",
+    "orbit.notify.sleep",
+    "orbit.notify.tips",
+  ],
+
+  isSynced() {
+    return this.SYNCED.every(n => Orbit.pref(`services.sync.prefs.sync.${n}`, false));
+  },
+
+  setSynced(on) {
+    for (const n of this.SYNCED) Services.prefs.setBoolPref(`services.sync.prefs.sync.${n}`, on);
+  },
+
   // ---- settings export / import ---------------------------------------------------
   async pickFile(mode, title) {
     const fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
@@ -75,7 +113,8 @@ var OrbitSessions = {
     const p = Services.prefs;
     const prefs = {};
     for (const name of p.getChildList("orbit.")) {
-      if (!p.prefHasUserValue(name)) continue;
+      // The PIN's hash stays on this PC: a 4-digit PIN is quick to guess offline.
+      if (!p.prefHasUserValue(name) || name == "orbit.lock.pin") continue;
       const type = p.getPrefType(name);
       prefs[name] = type == p.PREF_BOOL ? p.getBoolPref(name) : type == p.PREF_INT ? p.getIntPref(name) : p.getStringPref(name);
     }
@@ -98,7 +137,7 @@ var OrbitSessions = {
     const p = Services.prefs;
     let n = 0;
     for (const [name, v] of Object.entries(data.prefs)) {
-      if (!name.startsWith("orbit.")) continue;
+      if (!name.startsWith("orbit.") || name == "orbit.lock.pin") continue;
       const type = p.getPrefType(name);
       if (typeof v == "boolean" && type != p.PREF_INT && type != p.PREF_STRING) p.setBoolPref(name, v);
       else if (Number.isInteger(v) && type != p.PREF_BOOL && type != p.PREF_STRING) p.setIntPref(name, v);

@@ -313,6 +313,14 @@ var OrbitExtras = {
         reset.hidden = !tab?.hasAttribute(this.RENAME_KEY);
         sleepSpace.hidden = !tab || tab.pinned;
         sleepOthers.hidden = OrbitSpaces.spaces.length < 2;
+        // Firefox stops "Open in split view" at 2 tabs; Orbit splits up to 4.
+        setTimeout(() => {
+          const item = document.getElementById("context_moveTabToSplitView");
+          const tabs = TabContextMenu.contextTabs ?? [];
+          if (item && !item.hidden && tabs.length > 2 && tabs.length <= OrbitTabs.SPLIT_MAX && !tabs.some(t => t.pinned)) {
+            item.disabled = false;
+          }
+        }, 0);
       });
     }
     const linkMenu = document.getElementById("contentAreaContextMenu");

@@ -9,7 +9,7 @@
 var OrbitPalette = {
   init() {
     window.addEventListener("keydown", e => {
-      if (e.getModifierState("AltGraph") || !e.ctrlKey || e.altKey) return;
+      if (this.recording || e.getModifierState("AltGraph") || !e.ctrlKey || e.altKey) return;
       if (!e.shiftKey && e.code == "KeyK") {
         e.preventDefault();
         e.stopPropagation();
@@ -28,13 +28,72 @@ var OrbitPalette = {
     if (c && !c.hasAttribute("disabled")) c.doCommand();
   },
 
-  // [icon, label, run, keys?] grouped by section.
+  // ---- custom shortcuts: {command id: "Ctrl Maj K"} in orbit.shortcuts -----------
+  recording: false,
+
+  custom() {
+    try {
+      return JSON.parse(Orbit.pref("orbit.shortcuts", "") || "{}");
+    } catch {
+      return {};
+    }
+  },
+
+  setCustom(id, keys) {
+    const map = this.custom();
+    for (const [k, v] of Object.entries(map)) if (v == keys) delete map[k];
+    if (keys) map[id] = keys;
+    else delete map[id];
+    Services.prefs.setStringPref("orbit.shortcuts", JSON.stringify(map));
+  },
+
+  // "Ctrl Maj K" for a key press, or null. A shortcut needs Ctrl or Alt
+  // (or is an F key), so typing in pages is never taken over.
+  combo(e) {
+    if (["Control", "Shift", "Alt", "Meta", "AltGraph"].includes(e.key) || e.getModifierState("AltGraph")) return null;
+    const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5)
+      : { ArrowLeft: "←", ArrowRight: "→", ArrowUp: "↑", ArrowDown: "↓" }[e.key] ?? (e.key.length == 1 ? e.key.toUpperCase() : e.key);
+    const fKey = /^F\d{1,2}$/.test(key);
+    if (!e.ctrlKey && !e.altKey && !fKey) return null;
+    return [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Maj", key].filter(Boolean).join(" ");
+  },
+
+  // Every command that has an id (the per-space entries have none).
+  flat() {
+    return this.commands().flatMap(([, cmds]) => cmds).filter(c => c[4]);
+  },
+
+  // Called first by OrbitLayout's key handler: a custom shortcut wins.
+  runShortcut(e) {
+    if (this.recording || window.OrbitLock?.locked) return false;
+    const map = this.custom();
+    if (!Object.keys(map).length) return false;
+    const keys = this.combo(e);
+    const id = keys && Object.keys(map).find(k => map[k] == keys);
+    const command = id && this.flat().find(c => c[4] == id);
+    if (!command) return false;
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      command[2]();
+    } catch (err) {
+      console.error("Orbit shortcut", err);
+    }
+    return true;
+  },
+
+  // [icon, label, run, keys?, id] grouped by section; id is the English label.
   commands() {
-    const T = (en, fr) => Orbit.tr(en, fr);
+    const ids = new Map();
+    const T = (en, fr) => {
+      const label = Orbit.tr(en, fr);
+      ids.set(label, en);
+      return label;
+    };
     const tab = () => gBrowser.selectedTab;
     const go = url => switchToTabHavingURI(url, true);
     const settings = id => () => OrbitSettings.open(id);
-    return [
+    const groups = [
       [T("Tabs", "Onglets"), [
         ["plus", T("New tab", "Nouvel onglet"), () => OrbitTabs.openCommandBar(), "Ctrl T"],
         ["app-window", T("New window", "Nouvelle fenêtre"), () => OpenBrowserWindow(), "Ctrl N"],
@@ -43,10 +102,14 @@ var OrbitPalette = {
         ["copy", T("Duplicate tab", "Dupliquer l'onglet"), () => (gBrowser.selectedTab = gBrowser.duplicateTab(tab()))],
         ["layers", T("Close duplicate tabs", "Fermer les onglets en double"), () => gBrowser.removeDuplicateTabs(tab())],
         ["columns-2", T("Split view with another tab", "Vue partagée avec un autre onglet"), () => this.cmd("Browser:AddTabSplitView")],
+        ["columns-2", T("Split the selected tabs (up to 4)", "Partager l'écran entre les onglets sélectionnés (jusqu'à 4)"), () => OrbitTabs.splitSelected()],
+        ["plus", T("Add a page to this split view", "Ajouter une page à la vue partagée"), () => OrbitTabs.addToSplit()],
+        ["layers", T("Split view: grid or columns", "Vue partagée : grille ou colonnes"), () => OrbitTabs.toggleSplitGrid()],
         ["pin", T("Pin tab in this space", "Épingler l'onglet dans l'espace"), () => OrbitKept.set(tab(), true)],
         ["star", T("Add to Essentials", "Ajouter aux favoris"), () => gBrowser.pinTab(tab())],
         ["tag", T("Tag this tab", "Mettre un tag sur l'onglet"), () => OrbitExtras.editTag(tab())],
         ["pencil", T("Rename tab", "Renommer l'onglet"), () => OrbitExtras.rename(tab())],
+        ["book-open", T("Note on this tab", "Note sur cet onglet"), () => document.getElementById("tab-note-menu")?.openPanel(tab())],
         ["volume-x", T("Mute or unmute tab", "Couper ou remettre le son"), () => tab().toggleMuteAudio(), "Ctrl M"],
         ["moon", T("Put other tabs to sleep", "Mettre les autres onglets en veille"), () => OrbitMemory.sleepAll()],
         ["zap", T("Free memory now", "Libérer la mémoire maintenant"), () => OrbitMemory.freeNow()],
@@ -75,6 +138,8 @@ var OrbitPalette = {
       ]],
       [T("Orbit", "Orbit"), [
         ["layers", T("New space", "Nouvel espace"), () => OrbitSpaces.edit(null)],
+        ...OrbitSpaces.spaces.map((s, i) => ["layers", `${T("Go to space", "Aller à l'espace")} ${s.name}`,
+          () => OrbitSpaces.switchTo(s.id), i < 9 ? `Alt ${i + 1}` : undefined]),
         ["pipette", T("Color picker (pipette)", "Pipette à couleurs"), () => OrbitPicker.start()],
         ["palette", T("Quick colors", "Couleurs rapides"), () => OrbitColors.open(document.getElementById("orbit-space-title"))],
         ["eye", T("Focus mode", "Mode concentration"), () => OrbitLayout.toggleFocus(), "Ctrl Maj F"],
@@ -102,6 +167,11 @@ var OrbitPalette = {
         ["code", T("Developer tools", "Outils de développement"), () => document.getElementById("key_toggleToolbox")?.doCommand?.() ?? this.cmd("View:PageSource"), "F12"],
       ]],
     ];
+    const custom = this.custom();
+    return groups.map(([title, cmds]) => [title, cmds.map(([icon, label, run, keys]) => {
+      const id = ids.get(label);
+      return [icon, label, run, custom[id] ?? keys, id];
+    })]);
   },
 
   // The tabs an action on "selected tabs" works on: the Ctrl+click selection,
@@ -162,15 +232,16 @@ var OrbitPalette = {
   },
 
   // The palette as a single text field: Enter gives the text to onDone.
-  ask(placeholder, onDone) {
-    this.open({ placeholder, onDone });
+  ask(placeholder, onDone, { secret = false } = {}) {
+    this.open({ placeholder, onDone, secret });
   },
 
-  open({ placeholder, onDone } = {}) {
+  open({ placeholder, onDone, secret } = {}) {
     document.getElementById("orbit-palette")?.remove();
     const h = Orbit.h.bind(Orbit);
     const input = h("input", { class: "op-input", placeholder: placeholder ?? Orbit.tr("Search actions, tabs, bookmarks, history…",
-      "Rechercher une action, un onglet, un favori, l'historique…"), spellcheck: "false", "aria-label": placeholder ?? "Orbit" });
+      "Rechercher une action, un onglet, un favori, l'historique…"), spellcheck: "false", "aria-label": placeholder ?? "Orbit",
+      type: secret ? "password" : "text" });
     const list = h("div", { class: "op-list", role: "listbox" });
     const root = h("div", { id: "orbit-palette", onmousedown: e => e.target == root && this.close() },
       h("div", { class: "op-card", role: "dialog" },

@@ -39,6 +39,35 @@ pref("browser.tabs.splitView.enabled", true);
 pref("browser.tabs.groups.enabled", true);
 // Notes on tabs (native feature, off by default upstream).
 pref("browser.tabs.notes.enabled", true);
+// Split views of 3-4 pages: 2x2 grid (false = side by side columns).
+pref("orbit.split.grid", true);
+pref("orbit.shortcuts", "");
+// Firefox Sync may carry these Orbit prefs once the user turns it on in
+// Orbit's settings (the control prefs must exist to be accepted from Sync).
+pref("services.sync.prefs.sync.orbit.spaces.data", false);
+pref("services.sync.prefs.sync.orbit.theme.intensity", false);
+pref("services.sync.prefs.sync.orbit.theme.grain", false);
+pref("services.sync.prefs.sync.orbit.theme.grain-size", false);
+pref("services.sync.prefs.sync.orbit.theme.radius", false);
+pref("services.sync.prefs.sync.orbit.theme.font", false);
+pref("services.sync.prefs.sync.orbit.view.compact", false);
+pref("services.sync.prefs.sync.orbit.view.sidebar-width", false);
+pref("services.sync.prefs.sync.orbit.view.gap", false);
+pref("services.sync.prefs.sync.orbit.effects.glass", false);
+pref("services.sync.prefs.sync.orbit.effects.nebula", false);
+pref("services.sync.prefs.sync.orbit.effects.grain", false);
+pref("services.sync.prefs.sync.orbit.effects.animations", false);
+pref("services.sync.prefs.sync.orbit.urlbar.replace-newtab", false);
+pref("services.sync.prefs.sync.orbit.glance.enabled", false);
+pref("services.sync.prefs.sync.orbit.media.sidebar-player", false);
+pref("services.sync.prefs.sync.orbit.shortcuts", false);
+pref("services.sync.prefs.sync.orbit.split.grid", false);
+pref("services.sync.prefs.sync.orbit.downloads.turbo", false);
+pref("services.sync.prefs.sync.orbit.notify.pin", false);
+pref("services.sync.prefs.sync.orbit.notify.default", false);
+pref("services.sync.prefs.sync.orbit.notify.update", false);
+pref("services.sync.prefs.sync.orbit.notify.sleep", false);
+pref("services.sync.prefs.sync.orbit.notify.tips", false);
 pref("browser.tabs.hoverPreview.enabled", false);
 pref("browser.compactmode.show", true);
 pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);

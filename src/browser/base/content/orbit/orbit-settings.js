@@ -48,6 +48,8 @@ var OrbitSettings = {
       items: [
         { kind: "toggle", pref: "orbit.view.compact", label: "compact", def: false },
         { kind: "toggle", pref: "sidebar.position_start", label: "sidebarRight", invert: true },
+        { kind: "toggle", pref: "sidebar.verticalTabs", label: "horizontalTabs", invert: true },
+        { kind: "toggle", pref: "orbit.split.grid", label: "splitGrid" },
         { kind: "range", pref: "orbit.view.sidebar-width", label: "sidebarWidth", min: 180, max: 480, unit: "px" },
         { kind: "range", pref: "orbit.view.gap", label: "gap", min: 0, max: 20, unit: "px" },
       ],
@@ -110,6 +112,7 @@ var OrbitSettings = {
         { kind: "link", label: "lockNow", icon: "lock", action: () => OrbitLock.lockAll() },
         { kind: "choice", pref: "orbit.lock.idle-minutes", label: "lockIdle", options: [[0, "lockIdle.off"], [5, "lockIdle.5"], [15, "lockIdle.15"], [60, "lockIdle.60"]] },
         { kind: "toggle", pref: "orbit.lock.on-start", label: "lockStart", def: false },
+        { kind: "lockPin" },
         { kind: "addon", id: "orbit-blocker@orbit.app", label: "blocker" },
         { kind: "strict", label: "strict" },
         { kind: "toggle", pref: "privacy.query_stripping.enabled", label: "stripping" },
@@ -131,6 +134,8 @@ var OrbitSettings = {
       id: "sessions", icon: "history",
       items: [
         { kind: "sessions" },
+        { kind: "sync" },
+        { kind: "link", label: "syncAccount", icon: "refresh-cw", action: () => openPreferences("sync") },
         { kind: "link", label: "exportSettings", icon: "upload", action: () => OrbitSessions.exportSettings() },
         { kind: "link", label: "importSettings", icon: "download", action: () => OrbitSessions.importSettings() },
       ],
@@ -164,11 +169,16 @@ var OrbitSettings = {
       stripping: "Nettoyer les liens", "stripping.d": "Retire les paramètres de pistage des adresses (utm, fbclid…)",
       https: "HTTPS partout", "https.d": "Toujours une connexion chiffrée, avertissement sinon",
       fingerprint: "Anti-empreinte numérique", "fingerprint.d": "Brouille les informations qui permettent de te reconnaître",
+      sync: "Synchroniser les espaces et réglages", "sync.d": "Avec Firefox Sync : tes espaces, ton thème, tes raccourcis et tes réglages sur tous tes PC. Les onglets restent sur chaque PC",
+      syncAccount: "Compte de synchronisation",
       sessions: "Sessions", sessionSave: "Enregistrer cette fenêtre", "sessionSave.d": "Ses onglets, espaces et favoris, restaurés dans une nouvelle fenêtre",
       exportSettings: "Exporter les réglages d'Orbit", importSettings: "Importer des réglages d'Orbit",
       lockNow: "Verrouiller Orbit maintenant (Ctrl+Alt+L)",
       lockIdle: "Verrouiller après une inactivité", "lockIdle.d": "Windows (code PIN, visage ou mot de passe) déverrouille Orbit",
       "lockIdle.off": "Jamais", "lockIdle.5": "5 min", "lockIdle.15": "15 min", "lockIdle.60": "1 h",
+      horizontalTabs: "Onglets en haut", "horizontalTabs.d": "Une barre d'onglets classique au lieu de la barre latérale. Espaces et réglages avec Ctrl+K",
+      splitGrid: "Vue partagée en grille", "splitGrid.d": "À 3 ou 4 pages, une grille 2 × 2 au lieu de colonnes",
+      lockPin: "Code PIN Orbit", "lockPin.d": "Déverrouille sans Windows. Obligatoire si ton compte Windows n'a pas de mot de passe",
       lockStart: "Verrouiller au démarrage", "lockStart.d": "Orbit s'ouvre verrouillé",
       doh: "DNS sécurisé", "doh.d": "Chiffre les requêtes DNS (Cloudflare)", "doh.off": "Désactivé", "doh.on": "Activé", "doh.max": "Strict",
       privacyAdvanced: "Tous les réglages de vie privée",
@@ -240,11 +250,16 @@ var OrbitSettings = {
       stripping: "Clean links", "stripping.d": "Removes tracking parameters from addresses (utm, fbclid…)",
       https: "HTTPS everywhere", "https.d": "Always an encrypted connection, warns otherwise",
       fingerprint: "Anti-fingerprinting", "fingerprint.d": "Blurs the details that can identify you",
+      sync: "Sync spaces and settings", "sync.d": "With Firefox Sync: your spaces, theme, shortcuts and settings on all your PCs. Tabs stay on each PC",
+      syncAccount: "Sync account",
       sessions: "Sessions", sessionSave: "Save this window", "sessionSave.d": "Its tabs, spaces and essentials, restored in a new window",
       exportSettings: "Export Orbit's settings", importSettings: "Import Orbit settings",
       lockNow: "Lock Orbit now (Ctrl+Alt+L)",
       lockIdle: "Lock after inactivity", "lockIdle.d": "Windows (PIN, face or password) unlocks Orbit",
       "lockIdle.off": "Never", "lockIdle.5": "5 min", "lockIdle.15": "15 min", "lockIdle.60": "1 h",
+      horizontalTabs: "Tabs on top", "horizontalTabs.d": "A classic tab bar instead of the sidebar. Spaces and settings with Ctrl+K",
+      splitGrid: "Split view as a grid", "splitGrid.d": "With 3 or 4 pages, a 2 × 2 grid instead of columns",
+      lockPin: "Orbit PIN", "lockPin.d": "Unlocks without Windows. Required when your Windows account has no password",
       lockStart: "Lock at startup", "lockStart.d": "Orbit opens locked",
       doh: "Secure DNS", "doh.d": "Encrypts DNS lookups (Cloudflare)", "doh.off": "Off", "doh.on": "On", "doh.max": "Strict",
       privacyAdvanced: "All privacy settings",
@@ -412,7 +427,7 @@ var OrbitSettings = {
     this.show(sectionId);
     if (sectionId == "general") search.focus();
     this._onKey = e => {
-      if (e.key != "Escape") return;
+      if (e.key != "Escape" || OrbitPalette.recording) return;
       e.preventDefault();
       if (search.value) return this.filter((search.value = ""));
       if (!this.closeMenus()) this.close();
@@ -505,6 +520,29 @@ var OrbitSettings = {
       }
       case "sessions":
         return this.renderSessions();
+      case "lockPin": {
+        const label = () => (OrbitLock.hasPin() ? Orbit.tr("Change", "Changer") : Orbit.tr("Set", "Définir"));
+        const set = h("button", { class: "orbit-button" }, label());
+        const remove = h("button", { class: "orbit-icon-button", title: Orbit.tr("Remove the PIN", "Retirer le code PIN"), hidden: !OrbitLock.hasPin() },
+          Orbit.icon("trash-2"));
+        const refresh = () => {
+          set.textContent = label();
+          remove.hidden = !OrbitLock.hasPin();
+        };
+        set.addEventListener("click", () => OrbitPalette.ask(Orbit.tr("New Orbit PIN (4 characters or more)", "Nouveau code PIN Orbit (4 caractères ou plus)"),
+          async pin => {
+            if (pin.length < 4) return;
+            await OrbitLock.setPin(pin);
+            refresh();
+          }, { secret: true }));
+        remove.addEventListener("click", async () => {
+          await OrbitLock.setPin(null);
+          refresh();
+        });
+        return this.row(h("div", { class: "orbit-session-actions" }, remove, set), "lockPin");
+      }
+      case "sync":
+        return this.row(this.switch(OrbitSessions.isSynced(), on => OrbitSessions.setSynced(on)), "sync");
       case "vault":
         return this.renderVault();
       case "mods":
@@ -848,7 +886,53 @@ var OrbitSettings = {
     return h("div", { class: "orbit-shortcuts" }, ...this.SHORTCUTS.map(([keys, frLabel, enLabel]) =>
       h("div", { class: "orbit-setting" },
         h("div", { class: "orbit-setting-label" }, Orbit.tr(enLabel, frLabel)),
-        h("span", { class: "orbit-keys" }, ...(fr ? keys : keys.replace("Maj", "Shift")).split(" ").map(k => h("kbd", {}, k))))));
+        h("span", { class: "orbit-keys" }, ...(fr ? keys : keys.replace("Maj", "Shift")).split(" ").map(k => h("kbd", {}, k))))),
+      h("div", { class: "orbit-settings-group" }, Orbit.tr("Your shortcuts", "Tes raccourcis")),
+      h("div", { class: "orbit-setting-desc orbit-shortcuts-hint" }, Orbit.tr(
+        "Click a shortcut, then press the keys (with Ctrl or Alt). Backspace removes it, Esc cancels.",
+        "Clique sur un raccourci puis appuie sur les touches (avec Ctrl ou Alt). Retour arrière le retire, Échap annule.")),
+      ...OrbitPalette.flat().map(c => this.shortcutRow(c)));
+  },
+
+  // One palette command and the button that records its shortcut.
+  shortcutRow([icon, label, , keys, id]) {
+    const h = Orbit.h.bind(Orbit);
+    const show = k => (k ? k.split(" ").map(x => h("kbd", {}, OrbitPalette.keyName(x))) : [h("span", { class: "orbit-keys-none" }, "—")]);
+    const custom = () => OrbitPalette.custom()[id];
+    const button = h("button", { class: "orbit-keys orbit-keys-edit", title: Orbit.tr("Change the shortcut", "Changer le raccourci") }, ...show(keys));
+    button.toggleAttribute("custom", !!custom());
+    button.addEventListener("click", () => {
+      if (OrbitPalette.recording) return;
+      OrbitPalette.recording = true;
+      button.setAttribute("recording", "true");
+      button.replaceChildren(Orbit.tr("Press the keys…", "Appuie sur les touches…"));
+      const done = () => {
+        OrbitPalette.recording = false;
+        window.removeEventListener("keydown", onKey, true);
+        button.removeAttribute("recording");
+        const now = OrbitPalette.flat().find(c => c[4] == id)?.[3];
+        button.replaceChildren(...show(now));
+        button.toggleAttribute("custom", !!custom());
+      };
+      const onKey = e => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.key == "Escape") return done();
+        if (e.key == "Backspace" || e.key == "Delete") {
+          OrbitPalette.setCustom(id, null);
+          return done();
+        }
+        const combo = OrbitPalette.combo(e);
+        if (!combo) return;
+        OrbitPalette.setCustom(id, combo);
+        done();
+        // Another command may have lost this shortcut: redraw the list.
+        this.show("shortcuts");
+      };
+      window.addEventListener("keydown", onKey, true);
+    });
+    return h("div", { class: "orbit-setting" },
+      h("div", { class: "orbit-setting-label" }, Orbit.icon(icon), label), button);
   },
 
   // ---- widgets ------------------------------------------------------------------

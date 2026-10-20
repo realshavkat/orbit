@@ -9,6 +9,44 @@ var OrbitTabs = {
     this.initOrbitScheme();
     this.initHome();
     this.initDrag();
+    this.initTabNotes();
+  },
+
+  // Firefox opens the tab note panel on the sidebar's outer side, outside the
+  // window when Orbit sits at the screen edge: open it toward the page instead.
+  initTabNotes() {
+    const panel = document.getElementById("tabNotePanel");
+    if (!panel) return;
+    const open = panel.openPopup.bind(panel);
+    panel.openPopup = (anchor, options = {}) => {
+      if (gBrowser.tabContainer.verticalMode) {
+        options = { ...options, position: SidebarController._positionStart ? "topright topleft" : "topleft topright" };
+      }
+      return open(anchor, options);
+    };
+  },
+
+  // ---- Split view up to 4 pages (Firefox's own split view, which holds any number) --
+  SPLIT_MAX: 4,
+
+  splitSelected() {
+    const tabs = gBrowser.selectedTabs.filter(t => !t.pinned && !t.splitview).slice(0, this.SPLIT_MAX);
+    if (tabs.length < 2) return this.addToSplit();
+    gBrowser.addTabSplitView(tabs, { insertBefore: tabs[0] });
+  },
+
+  // One more page in the current split view, picked from the open tabs page.
+  addToSplit() {
+    const split = gBrowser.selectedTab.splitview;
+    if (!split) return document.getElementById("Browser:AddTabSplitView")?.doCommand();
+    if (split.tabs.length >= this.SPLIT_MAX) return;
+    const tab = gBrowser.addTrustedTab("about:opentabs");
+    split.addTabs([tab]);
+    gBrowser.selectedTab = tab;
+  },
+
+  toggleSplitGrid() {
+    Services.prefs.setBoolPref("orbit.split.grid", !Orbit.pref("orbit.split.grid", true));
   },
 
   // ---- Sidebar rows (dragging itself lives in OrbitDnD) -------------------------

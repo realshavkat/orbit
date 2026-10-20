@@ -2090,6 +2090,13 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   box-shadow: inset 0 0 0 1px var(--orbit-border);
   padding: 2px !important;
   margin-block: 2px !important;
+  /* As wide as the other rows, cells of equal width. */
+  margin-inline: 0 !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  /* Firefox draws a separator before the last tab, meant for two tabs side by side. */
+  & .tabbrowser-tab { min-width: 0 !important; border-inline: none !important; }
+  /* The close button shows on hover only, so every cell keeps the same room for its title. */
+  & .tabbrowser-tab:not(:hover) .tab-close-button { display: none !important; }
 }
 
 /* Motion: compositor-friendly properties only, one easing, no replays. */
@@ -3950,3 +3957,68 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 /* Saved sessions in settings */
 .orbit-sessions:empty { display: none; }
 .orbit-session-actions { display: flex; align-items: center; gap: 6px; }
+
+/* ==========================================================================
+   Horizontal tabs (sidebar.verticalTabs off): the tab strip under the toolbar
+   ========================================================================== */
+@media not -moz-pref("sidebar.verticalTabs") {
+  :root:not([customizing], [inDOMFullscreen]) {
+    & #TabsToolbar { display: flex !important; order: 2; min-height: 40px; padding-inline: 6px; background: transparent !important; }
+    /* Spaces, settings and the rest stay one Ctrl+K away. */
+    & :is(#sidebar-container, #sidebar-launcher-splitter, #orbit-sidebar-header) { display: none !important; }
+    & #tabbrowser-tabs #tabs-newtab-button {
+      flex: 0 0 auto !important;
+      width: auto !important;
+      order: 3;
+      margin: 0 0 0 4px !important;
+      padding: 0 8px !important;
+      border: none !important;
+    }
+    & #tabbrowser-tabs #tabs-newtab-button > :not(.toolbarbutton-icon) { display: none !important; }
+    & #tabbrowser-tabs #tabs-newtab-button::after { display: none !important; }
+    & #tabbrowser-tabs #tabs-newtab-button + * { border-top: none !important; padding-top: 0 !important; }
+    & #tabbrowser-tabs tab-split-view-wrapper { display: flex !important; flex-direction: row !important; align-items: stretch; }
+    & #tabbrowser-tabs :is(.tabbrowser-tab, tab-split-view-wrapper) { max-height: 40px; }
+    & #tabbrowser-tabbox { margin-inline-start: var(--orbit-gap, 8px) !important; }
+    & #TabsToolbar :is(.titlebar-buttonbox-container, .titlebar-spacer) { display: none !important; }
+  }
+}
+
+/* ==========================================================================
+   Split view with 3 or 4 pages: in tab order, no splitter, grid or columns
+   ========================================================================== */
+#tabbrowser-tabpanels[splitview]:has(> .split-view-panel-active ~ .split-view-panel-active ~ .split-view-panel-active) {
+  & > .split-view-splitter { display: none !important; }
+  & > .split-view-panel-active { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; max-width: none !important; }
+  & > .split-view-panel-active[column="1"] { order: 1; }
+  & > .split-view-panel-active[column="2"] { order: 2; }
+  & > .split-view-panel-active[column="3"] { order: 3; }
+}
+@media -moz-pref("orbit.split.grid") {
+  #tabbrowser-tabpanels[splitview]:has(> .split-view-panel-active ~ .split-view-panel-active ~ .split-view-panel-active) {
+    flex-wrap: wrap;
+    & > .split-view-panel-active { flex: 1 1 40% !important; }
+  }
+}
+
+/* Custom shortcuts in settings */
+.orbit-shortcuts .orbit-setting-label { display: flex; align-items: center; gap: 10px; & .orbit-icon { width: 15px; height: 15px; opacity: .6; } }
+.orbit-shortcuts-hint { margin: -4px 0 4px; }
+.orbit-keys-edit {
+  appearance: none;
+  min-width: 64px;
+  min-height: 28px;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 2px 6px;
+  border: none;
+  border-radius: 7px;
+  background: none;
+  color: var(--orbit-fg);
+  font: 500 12px var(--orbit-font), sans-serif;
+  &:hover { background: var(--orbit-field); }
+  &[custom] kbd { box-shadow: inset 0 0 0 1px var(--orbit-accent), inset 0 -1px 0 rgb(0 0 0 / .45); }
+  &[recording] { background: color-mix(in srgb, var(--orbit-accent) 18%, transparent); color: var(--orbit-accent); }
+}
+.orbit-keys-none { opacity: .4; }
+.orbit-lock-pin { width: 240px; text-align: center; letter-spacing: .2em; }

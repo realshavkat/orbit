@@ -247,7 +247,7 @@ var OrbitLayout = {
 
   onKey(e) {
     // AltGr reports Ctrl+Alt on Windows; never steal AltGr characters.
-    if (e.getModifierState("AltGraph")) return;
+    if (e.getModifierState("AltGraph") || OrbitPalette.recording || OrbitPalette.runShortcut(e)) return;
     if (e.ctrlKey && !e.altKey && !e.shiftKey && e.code == "Comma") {
       OrbitSettings.toggle();
     } else if (e.ctrlKey && e.altKey && !e.shiftKey && e.code == "KeyC") {
