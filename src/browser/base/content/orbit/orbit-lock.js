@@ -156,108 +156,142 @@ var OrbitLock = {
 };
 
 var OrbitBeta = {
+  KEY: "orbit.beta.key",
   UNTIL: "orbit.beta.until",
+  DEVICE: "orbit.beta.device",
   GRACE: 14 * 86400,
-  ALLOWED: [/^accounts\.firefox\.com$/, /\.accounts\.firefox\.com$/, /^(checkout|js|m|hooks)\.stripe\.com$/, /\.stripe\.network$/],
+  ALLOWED: [/^(checkout|js|m|hooks)\.stripe\.com$/, /\.stripe\.network$/, /^accounts\.firefox\.com$/, /\.accounts\.firefox\.com$/],
   state: "ok",
+  error: "",
 
   site() {
-    const url = OrbitPalette.community();
-    if (!url) return null;
-    const u = new URL(url);
-    return u.protocol == "https:" || ["localhost", "127.0.0.1"].includes(u.hostname) ? url : null;
+    return OrbitPalette.community();
   },
 
   init() {
     if (!this.site()) return;
-    const topics = ["fxaccounts:onverified", "fxaccounts:onlogin", "fxaccounts:onlogout"];
-    const obs = (s, topic) => (topic == "fxaccounts:onlogout" ? this.set("signin") : this.check(true));
-    for (const t of topics) Services.obs.addObserver(obs, t);
     const listener = { onLocationChange: () => this.sync() };
     gBrowser.addProgressListener(listener);
     gBrowser.tabContainer.addEventListener("TabSelect", () => this.sync());
-    window.addEventListener("unload", () => {
-      topics.forEach(t => Services.obs.removeObserver(obs, t));
-      gBrowser.removeProgressListener(listener);
-    }, { once: true });
-    this.check(false);
+    window.addEventListener("unload", () => gBrowser.removeProgressListener(listener), { once: true });
+    if (window == Services.wm.getMostRecentWindow("navigator:browser")) this.check(false);
+    else this.sync();
   },
 
   now: () => Math.floor(Date.now() / 1000),
 
+  device() {
+    let id = Orbit.pref(this.DEVICE, "");
+    if (!/^[0-9a-f-]{36}$/.test(id)) {
+      id = Services.uuid.generateUUID().toString().slice(1, -1);
+      Services.prefs.setStringPref(this.DEVICE, id);
+    }
+    return id;
+  },
+
+  normalize(raw) {
+    const s = String(raw ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const body = s.startsWith("ORBIT") ? s.slice(5) : s;
+    return /^[A-Z0-9]{20}$/.test(body) ? `ORBIT-${body.match(/.{5}/g).join("-")}` : null;
+  },
+
+  messages() {
+    return {
+      key_invalid: Orbit.tr("This key doesn't exist. Check it and try again.", "Cette clé n'existe pas. Vérifie-la et réessaie."),
+      key_revoked: Orbit.tr("This key is no longer valid.", "Cette clé n'est plus valable."),
+      key_device_limit: Orbit.tr("This key is already used on the maximum number of devices.", "Cette clé est déjà utilisée sur le nombre maximum d'appareils."),
+      offline: Orbit.tr("Orbit's server can't be reached. Check your connection.", "Le serveur d'Orbit ne répond pas. Vérifie ta connexion."),
+    };
+  },
+
+  async activate(raw) {
+    const key = this.normalize(raw);
+    if (!key) return { ok: false, error: this.messages().key_invalid };
+    Services.prefs.setStringPref(this.KEY, key);
+    await this.check(true);
+    return { ok: this.state == "ok", error: this.error };
+  },
+
+  forget() {
+    Services.prefs.clearUserPref(this.KEY);
+    Services.prefs.setIntPref(this.UNTIL, 0);
+    this.check(true);
+  },
+
   async check(force) {
-    if (!force && Orbit.pref(this.UNTIL, 0) > this.now()) return this.set("ok");
-    const site = this.site();
+    const key = Orbit.pref(this.KEY, "");
+    if (!force && key && Orbit.pref(this.UNTIL, 0) > this.now()) return this.set("ok");
+    if (!key) return this.set("key");
     try {
-      const { getFxAccountsSingleton } = ChromeUtils.importESModule("resource://gre/modules/FxAccounts.sys.mjs");
-      const fxa = getFxAccountsSingleton();
-      if (!(await fxa.getSignedInUser())?.verified) return this.set("signin");
-      const token = await fxa.getOAuthToken({ scope: "profile" });
-      const call = (path, init = {}) => fetch(`${site}/api/v1${path}`, { credentials: "omit", ...init,
-        headers: { "content-type": "application/json", "x-orbit-request": "1", ...(init.headers ?? {}) } }).then(r => r.json().then(b => ({ ok: r.ok, body: b })));
-      const auth = await call("/auth/mozilla", { method: "POST", body: JSON.stringify({ token, client: "app" }) });
-      if (auth.body.needs_username) return this.set("account");
-      if (!auth.ok || !auth.body.session) return this.set("signin");
-      const bearer = { authorization: `Bearer ${auth.body.session}` };
-      const lic = await call("/license", { headers: bearer });
-      call("/auth/logout", { method: "POST", headers: bearer, body: "{}" }).catch(() => {});
-      if (!lic.ok) return this.set("signin");
-      if (!lic.body.active) return this.set("pay");
-      Services.prefs.setIntPref(this.UNTIL, this.now() + (lic.body.required ? this.GRACE : 7 * 86400));
-      this.set("ok");
+      const res = await fetch(`${this.site()}/api/v1/license/activate`, {
+        method: "POST", credentials: "omit",
+        headers: { "content-type": "application/json", "x-orbit-request": "1" },
+        body: JSON.stringify({ key, device: this.device() }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (res.ok && body.active) {
+        Services.prefs.setIntPref(this.UNTIL, this.now() + (body.required ? this.GRACE : 7 * 86400));
+        return this.set("ok");
+      }
+      if (res.status >= 500) throw new Error(`server ${res.status}`);
+      Services.prefs.setIntPref(this.UNTIL, 0);
+      this.set("key", this.messages()[body.error] ?? this.messages().key_invalid);
     } catch (e) {
       console.warn("Orbit beta check", e);
-      this.set(Orbit.pref(this.UNTIL, 0) > 0 ? "ok" : "offline");
+      if (Orbit.pref(this.UNTIL, 0) > 0) return this.set("ok");
+      this.set("key", this.messages().offline);
     }
   },
 
-  set(state) {
-    if (state != "ok" && state != "offline") Services.prefs.setIntPref(this.UNTIL, 0);
+  set(state, error = "") {
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
-      if (win.OrbitBeta) {
-        win.OrbitBeta.state = state;
-        win.OrbitBeta.sync();
-      }
+      if (!win.OrbitBeta) continue;
+      win.OrbitBeta.state = state;
+      win.OrbitBeta.error = error;
+      win.OrbitBeta.sync(true);
     }
   },
 
   allowed(uri) {
     if (!uri || !/^https?$/.test(uri.scheme)) return true;
-    const site = new URL(this.site());
-    if (uri.host == site.hostname) return true;
+    if (uri.host == new URL(this.site()).hostname) return true;
     return this.ALLOWED.some(re => re.test(uri.host));
   },
 
-  sync() {
+  sync(redraw = false) {
     const show = this.state != "ok" && !this.allowed(gBrowser.currentURI);
-    const el = document.getElementById("orbit-beta-gate");
-    if (!show) return el?.remove();
-    if (el?.dataset.state == this.state) return;
-    el?.remove();
+    const old = document.getElementById("orbit-beta-gate");
+    if (!show) return old?.remove();
+    if (old && !redraw) return;
+    old?.remove();
     const h = Orbit.h.bind(Orbit);
     const site = this.site();
-    const open = url => (gBrowser.selectedTab = gBrowser.addTrustedTab(url));
-    const texts = {
-      signin: [Orbit.tr("Sign in to start the Orbit beta", "Connecte-toi pour lancer la bêta d'Orbit"),
-        Orbit.tr("Sign in to Firefox Sync with the account that has beta access.", "Connecte-toi à Firefox Sync avec le compte qui a l'accès bêta."),
-        [[Orbit.tr("Sign in to Firefox Sync", "Se connecter à Firefox Sync"), () => openPreferences("paneSync"), true]]],
-      account: [Orbit.tr("Create your Orbit account", "Crée ton compte Orbit"),
-        Orbit.tr("Your Mozilla account isn't linked to an Orbit account yet.", "Ton compte Mozilla n'est pas encore lié à un compte Orbit."),
-        [[Orbit.tr("Create my account", "Créer mon compte"), () => OrbitPalette.communitySignIn(), true], [Orbit.tr("Check again", "Vérifier à nouveau"), () => this.check(true)]]],
-      pay: [Orbit.tr("Get the Orbit beta", "Obtiens la bêta d'Orbit"),
-        Orbit.tr("The beta is a small one-time purchase. Orbit becomes free for everyone at version 1.0.", "La bêta est un petit achat, une seule fois. Orbit devient gratuit pour tous à la version 1.0."),
-        [[Orbit.tr("Get beta access", "Obtenir l'accès bêta"), () => open(`${site}/beta`), true], [Orbit.tr("I've paid, check again", "J'ai payé, vérifier"), () => this.check(true)]]],
-      offline: [Orbit.tr("Can't check your beta access", "Impossible de vérifier ton accès bêta"),
-        Orbit.tr("Orbit's server can't be reached. Check your connection.", "Le serveur d'Orbit ne répond pas. Vérifie ta connexion."),
-        [[Orbit.tr("Try again", "Réessayer"), () => this.check(true), true]]],
+    const open = path => (gBrowser.selectedTab = gBrowser.addTrustedTab(`${site}${path}`));
+    const input = h("input", { class: "orbit-input orbit-beta-input", placeholder: "ORBIT-XXXXX-XXXXX-XXXXX-XXXXX", spellcheck: "false",
+      "aria-label": Orbit.tr("Beta key", "Clé bêta"), autocomplete: "off", value: Orbit.pref(this.KEY, "") });
+    const error = h("div", { class: "orbit-lock-error", role: "alert" }, this.error);
+    const go = h("button", { class: "orbit-button primary" }, Orbit.tr("Activate", "Activer"));
+    const submit = async () => {
+      go.disabled = true;
+      error.textContent = "";
+      const r = await this.activate(input.value);
+      go.disabled = false;
+      if (!r.ok) error.textContent = r.error;
     };
-    const [title, text, actions] = texts[this.state];
-    document.body.append(h("div", { id: "orbit-beta-gate", "data-state": this.state },
+    go.addEventListener("click", submit);
+    input.addEventListener("keydown", e => e.key == "Enter" && submit());
+    document.body.append(h("div", { id: "orbit-beta-gate" },
       h("div", { class: "orbit-lock-card" },
         h("img", { class: "orbit-beta-logo", src: `${Orbit.BASE}orbit-logo.svg`, alt: "" }),
-        h("div", { class: "orbit-lock-title" }, title),
-        h("div", { class: "orbit-lock-text" }, text),
-        h("div", { class: "orbit-beta-actions" }, ...actions.map(([label, fn, primary]) =>
-          h("button", { class: `orbit-button${primary ? " primary" : ""}`, onclick: fn }, label))))));
+        h("div", { class: "orbit-lock-title" }, Orbit.tr("Welcome to the Orbit beta", "Bienvenue dans la bêta d'Orbit")),
+        h("div", { class: "orbit-lock-text" }, Orbit.tr("Enter your beta key to start. You'll find it in your Orbit account after buying or receiving the beta.",
+          "Entre ta clé bêta pour commencer. Elle est dans ton compte Orbit après avoir acheté ou reçu la bêta.")),
+        h("div", { class: "orbit-beta-form" }, input, go),
+        error,
+        h("div", { class: "orbit-beta-links" },
+          h("button", { class: "orbit-link", onclick: () => open("/beta") }, Orbit.tr("Get a key", "Obtenir une clé")),
+          h("span", {}, "·"),
+          h("button", { class: "orbit-link", onclick: () => open("/me/payments") }, Orbit.tr("Find my key", "Retrouver ma clé"))))));
+    input.focus();
   },
 };

@@ -73,8 +73,15 @@ var OrbitPalette = {
     return !!host && Services.cookies.getCookiesFromHost(host, {}).some(c => c.name == "orbit_session");
   },
 
-  async communitySignIn() {
+  secureCommunity() {
     const base = this.community();
+    if (!base) return null;
+    const u = new URL(base);
+    return u.protocol == "https:" || ["localhost", "127.0.0.1"].includes(u.hostname) ? base : null;
+  },
+
+  async communitySignIn() {
+    const base = this.secureCommunity();
     if (!base || this._signingIn) return false;
     this._signingIn = true;
     try {

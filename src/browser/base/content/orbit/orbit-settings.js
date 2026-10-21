@@ -137,7 +137,7 @@ var OrbitSettings = {
       ],
     },
     { id: "shortcuts", icon: "command", items: [{ kind: "shortcuts" }] },
-    { id: "about", icon: "info", items: [{ kind: "about" }] },
+    { id: "about", icon: "info", items: [{ kind: "betaKey" }, { kind: "about" }] },
   ],
 
   t(key) {
@@ -568,6 +568,29 @@ var OrbitSettings = {
       }
       case "sessions":
         return this.renderSessions();
+      case "betaKey": {
+        if (!OrbitBeta.site()) return null;
+        const key = Orbit.pref(OrbitBeta.KEY, "");
+        const status = h("div", { class: "orbit-setting-desc" }, key
+          ? `${key.slice(0, 6)}…${key.slice(-4)} · ${OrbitBeta.state == "ok" ? Orbit.tr("active", "active") : OrbitBeta.error || Orbit.tr("not active", "inactive")}`
+          : Orbit.tr("No key on this device.", "Aucune clé sur cet appareil."));
+        const change = h("button", { class: "orbit-button" }, key ? Orbit.tr("Change", "Changer") : Orbit.tr("Enter a key", "Entrer une clé"));
+        change.addEventListener("click", async () => {
+          const value = { value: "" };
+          if (!Services.prompt.prompt(window, "Orbit", Orbit.tr("Your Orbit beta key:", "Ta clé bêta Orbit :"), value, null, {})) return;
+          const r = await OrbitBeta.activate(value.value);
+          if (!r.ok) Services.prompt.alert(window, "Orbit", r.error);
+          this.show(this._last);
+        });
+        const remove = key ? h("button", { class: "orbit-icon-button", title: Orbit.tr("Remove the key", "Retirer la clé") }, Orbit.icon("trash-2")) : null;
+        remove?.addEventListener("click", () => {
+          OrbitBeta.forget();
+          this.show(this._last);
+        });
+        return h("div", { class: "orbit-setting" },
+          h("div", { class: "orbit-setting-text" }, h("div", { class: "orbit-setting-label" }, Orbit.tr("Orbit beta key", "Clé bêta d'Orbit")), status),
+          h("div", { class: "orbit-session-actions" }, remove, change));
+      }
       case "lockPin": {
         const label = () => (OrbitLock.hasPin() ? Orbit.tr("Change", "Changer") : Orbit.tr("Set", "Définir"));
         const set = h("button", { class: "orbit-button" }, label());

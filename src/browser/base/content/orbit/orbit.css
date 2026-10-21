@@ -3693,7 +3693,11 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 }
 #orbit-beta-gate .orbit-lock-text { max-width: 420px; font-size: 14px; line-height: 1.5; }
 .orbit-beta-logo { width: 56px; height: auto; margin-bottom: 6px; }
-.orbit-beta-actions { display: flex; gap: 8px; margin-top: 10px; }
+.orbit-beta-form { display: flex; gap: 8px; margin-top: 12px; }
+.orbit-beta-input { width: 340px; text-align: center; font-family: ui-monospace, "Cascadia Mono", monospace; letter-spacing: .06em; }
+.orbit-beta-links { display: flex; gap: 8px; align-items: center; font-size: 13px; color: rgb(255 255 255 / .5); }
+.orbit-link { border: 0; padding: 0; background: none; color: color-mix(in srgb, var(--orbit-accent, #7c86ff) 70%, #fff); font: inherit; cursor: pointer; }
+.orbit-link:hover { text-decoration: underline; }
 
 :root[orbit-focus]:not([customizing]) {
   & :is(#sidebar-container, #sidebar-launcher-splitter, #navigator-toolbox) { visibility: collapse !important; }
