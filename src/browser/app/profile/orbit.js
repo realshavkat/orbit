@@ -42,6 +42,9 @@ pref("browser.tabs.notes.enabled", true);
 // Split views of 3-4 pages: 2x2 grid (false = side by side columns).
 pref("orbit.split.grid", true);
 pref("orbit.shortcuts", "");
+// Orbit community site. Empty: no community entry anywhere. Set it to the
+// service's HTTPS address once it has a domain (accounts must not use plain HTTP).
+pref("orbit.community.url", "");
 // Firefox Sync may carry these Orbit prefs once the user turns it on in
 // Orbit's settings (the control prefs must exist to be accepted from Sync).
 pref("services.sync.prefs.sync.orbit.spaces.data", false);

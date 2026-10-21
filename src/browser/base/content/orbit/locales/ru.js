@@ -696,4 +696,9 @@ ORBIT_I18N.ru = {
   "The assistant opens beside the page": "Ассистент открывается рядом со страницей",
   "Where downloaded files go": "Куда сохраняются загрузки",
   "Width of the tab column": "Ширина колонки вкладок",
+  "My Orbit account": "Мой аккаунт Orbit",
+  "Orbit notifications": "Уведомления Orbit",
+  "Share this site on my profile": "Поделиться сайтом в профиле",
+  "Members who shared this site": "Участники, поделившиеся этим сайтом",
+  "Share this site on my Orbit profile": "Поделиться сайтом в профиле Orbit",
 };

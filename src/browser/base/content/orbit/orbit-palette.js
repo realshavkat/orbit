@@ -28,6 +28,35 @@ var OrbitPalette = {
     if (c && !c.hasAttribute("disabled")) c.doCommand();
   },
 
+  // ---- Orbit community (orbit.community.url; empty = hidden) ------------------------
+  // Only what the user clicks reaches the service: a page they open, or the
+  // domain of the current site when they choose "Share this site". Never in
+  // private windows, never history or tabs.
+  community() {
+    const url = Orbit.pref("orbit.community.url", "");
+    return /^https?:\/\//.test(url) && !PrivateBrowsingUtils.isWindowPrivate(window) ? url.replace(/\/$/, "") : null;
+  },
+
+  currentHost() {
+    const uri = gBrowser.currentURI;
+    return /^https?$/.test(uri?.scheme) ? uri.host.replace(/^www\./, "") : null;
+  },
+
+  communityCommands(T) {
+    const base = this.community();
+    if (!base) return [];
+    const open = path => () => openTrustedLinkIn(`${base}${path}`, "tab");
+    const host = this.currentHost();
+    return [
+      ["user", T("My Orbit account", "Mon compte Orbit"), open("/me")],
+      ["bell", T("Orbit notifications", "Notifications Orbit"), open("/notifications")],
+      ...(host ? [
+        ["link", T("Share this site on my profile", "Partager ce site sur mon profil"), open(`/share?domain=${encodeURIComponent(host)}`)],
+        ["user", T("Members who shared this site", "Membres qui ont partagé ce site"), open(`/sites/${encodeURIComponent(host)}`)],
+      ] : []),
+    ];
+  },
+
   // ---- custom shortcuts: {command id: "Ctrl Maj K"} in orbit.shortcuts -----------
   recording: false,
 
@@ -137,6 +166,7 @@ var OrbitPalette = {
         ["bot", T("Ask about the selected tabs…", "Poser une question sur les onglets sélectionnés…"), () => OrbitAI.askTabs(this.chosenTabs(), "ask")],
       ]],
       [T("Orbit", "Orbit"), [
+        ...this.communityCommands(T),
         ["layers", T("New space", "Nouvel espace"), () => OrbitSpaces.edit(null)],
         ...OrbitSpaces.spaces.map((s, i) => ["layers", `${T("Go to space", "Aller à l'espace")} ${s.name}`,
           () => OrbitSpaces.switchTo(s.id), i < 9 ? `Alt ${i + 1}` : undefined]),

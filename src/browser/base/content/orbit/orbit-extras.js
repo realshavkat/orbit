@@ -328,6 +328,18 @@ var OrbitExtras = {
       const glance = h("xul:menuitem", { id: "orbit-context-glance", label: this.t("glance"),
         oncommand: () => OrbitGlance.open?.(gContextMenu.linkURL) });
       linkMenu.insertBefore(glance, document.getElementById("context-openlinkintab"));
+      // Orbit community: share the current site's domain, on request only.
+      const share = h("xul:menuitem", { id: "orbit-context-share-site", label: Orbit.tr("Share this site on my Orbit profile", "Partager ce site sur mon profil Orbit"),
+        oncommand: () => {
+          const base = OrbitPalette.community();
+          const host = OrbitPalette.currentHost();
+          if (base && host) openTrustedLinkIn(`${base}/share?domain=${encodeURIComponent(host)}`, "tab");
+        } });
+      linkMenu.append(share);
+      linkMenu.addEventListener("popupshowing", e => {
+        if (e.target != linkMenu) return;
+        share.hidden = !OrbitPalette.community() || !OrbitPalette.currentHost() || gContextMenu?.onLink || gContextMenu?.isTextSelected || gContextMenu?.onTextInput;
+      });
       // "Keep on screen": a reference window above every other window.
       const ref = h("xul:menuitem", { id: "orbit-context-reference", oncommand: () => {
         const c = this._refCtx;

@@ -696,4 +696,9 @@ ORBIT_I18N.es = {
   "The assistant opens beside the page": "El asistente se abre junto a la página",
   "Where downloaded files go": "Dónde van los archivos descargados",
   "Width of the tab column": "Ancho de la columna de pestañas",
+  "My Orbit account": "Mi cuenta Orbit",
+  "Orbit notifications": "Notificaciones de Orbit",
+  "Share this site on my profile": "Compartir este sitio en mi perfil",
+  "Members who shared this site": "Miembros que compartieron este sitio",
+  "Share this site on my Orbit profile": "Compartir este sitio en mi perfil de Orbit",
 };

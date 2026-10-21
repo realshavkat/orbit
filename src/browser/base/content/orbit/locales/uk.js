@@ -696,4 +696,9 @@ ORBIT_I18N.uk = {
   "The assistant opens beside the page": "Асистент відкривається поруч зі сторінкою",
   "Where downloaded files go": "Куди зберігаються завантаження",
   "Width of the tab column": "Ширина колонки вкладок",
+  "My Orbit account": "Мій обліковий запис Orbit",
+  "Orbit notifications": "Сповіщення Orbit",
+  "Share this site on my profile": "Поділитися сайтом у профілі",
+  "Members who shared this site": "Учасники, які поділилися цим сайтом",
+  "Share this site on my Orbit profile": "Поділитися сайтом у профілі Orbit",
 };
