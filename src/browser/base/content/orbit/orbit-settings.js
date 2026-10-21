@@ -6,6 +6,7 @@ var OrbitSettings = {
   FONTS: ["Outfit", "Inter", "Manrope", "Space Grotesk", "DM Sans", "Segoe UI Variable Text"],
 
   SECTIONS: [
+    { id: "account", icon: "user", items: [{ kind: "account" }] },
     {
       id: "general", icon: "settings-2",
       items: [
@@ -26,11 +27,7 @@ var OrbitSettings = {
         { kind: "range", pref: "orbit.theme.grain", label: "grainAmount", min: 0, max: 100, unit: "%" },
         { kind: "range", pref: "orbit.theme.grain-size", label: "grainSize", min: 60, max: 600, unit: "px" },
         { kind: "range", pref: "orbit.theme.radius", label: "radius", min: 0, max: 14, unit: "px" },
-      ],
-    },
-    {
-      id: "effects", icon: "sparkles",
-      items: [
+        { kind: "heading", label: "effects" },
         { kind: "toggle", pref: "orbit.effects.glass", label: "glass", def: false },
         { kind: "toggle", pref: "orbit.effects.nebula", label: "nebula" },
         { kind: "toggle", pref: "orbit.effects.grain", label: "grain" },
@@ -138,7 +135,7 @@ var OrbitSettings = {
       ],
     },
     { id: "shortcuts", icon: "command", items: [{ kind: "shortcuts" }] },
-    { id: "about", icon: "info", items: [{ kind: "betaKey" }, { kind: "about" }] },
+    { id: "about", icon: "info", items: [{ kind: "about" }] },
   ],
 
   t(key) {
@@ -147,7 +144,7 @@ var OrbitSettings = {
 
   STRINGS: {
     fr: {
-      title: "Paramètres", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
+      title: "Paramètres", account: "Compte", general: "Général", look: "Apparence", effects: "Effets", layout: "Disposition",
       browsing: "Navigation", about: "À propos",
       unsigned: "Extensions Chrome", "unsigned.d": "Installe celles du Chrome Web Store. Elles ne sont pas vérifiées par Mozilla. Les autres extensions restent signées",
       installExt: "Installer une extension depuis un fichier (.crx, .xpi, .zip)",
@@ -247,7 +244,7 @@ var OrbitSettings = {
       "about.update": "Rechercher des mises à jour", "about.source": "Code source",
     },
     en: {
-      title: "Settings", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
+      title: "Settings", account: "Account", general: "General", look: "Appearance", effects: "Effects", layout: "Layout",
       browsing: "Browsing", about: "About",
       unsigned: "Chrome extensions", "unsigned.d": "Installs them from the Chrome Web Store. Mozilla does not check them. Other extensions stay signed",
       installExt: "Install an extension from a file (.crx, .xpi, .zip)",
@@ -353,7 +350,7 @@ var OrbitSettings = {
   },
 
   GROUPS: [
-    ["personal", ["general", "look", "effects", "mods", "layout"]],
+    ["personal", ["account", "general", "look", "mods", "layout"]],
     ["web", ["browsing", "downloads", "ai"]],
     ["protection", ["privacy", "memory"]],
     ["system", ["sessions", "notify", "shortcuts"]],
@@ -364,8 +361,8 @@ var OrbitSettings = {
       personal: Orbit.tr("Personalization", "Personnalisation"), web: Orbit.tr("Browsing", "Navigation"),
       protection: Orbit.tr("Protection", "Protection"), system: Orbit.tr("System", "Système"),
       general: Orbit.tr("Language, startup, updates and font.", "Langue, démarrage, mises à jour et police."),
-      look: Orbit.tr("Theme, colors and background of Orbit.", "Thème, couleurs et fond d'Orbit."),
-      effects: Orbit.tr("Motion, glass and texture. Mods change anything.", "Mouvement, verre et texture. Les mods changent tout le reste."),
+      look: Orbit.tr("Theme, colors, background, motion and glass.", "Thème, couleurs, fond, mouvement et verre."),
+      account: Orbit.tr("Your Orbit account: profile, beta key and who sees what.", "Ton compte Orbit : profil, clé bêta et qui voit quoi."),
       layout: Orbit.tr("Where things sit and how much room they take.", "Où sont les éléments et la place qu'ils prennent."),
       browsing: Orbit.tr("How tabs, links and media behave.", "Le comportement des onglets, des liens et des médias."),
       downloads: Orbit.tr("Orbit Turbo splits big downloads over several connections when it helps.", "Orbit Turbo découpe les gros téléchargements sur plusieurs connexions quand ça aide."),
@@ -441,7 +438,7 @@ var OrbitSettings = {
       reset.hidden = true;
       const out = [];
       for (const section of this.SECTIONS) {
-        if (section.id == "about") continue;
+        if (section.id == "about" || section.id == "account") continue;
         const rows = section.items.map(item => this.decorate(this.render(item), item, section.id))
           .filter(el => el && norm(el.textContent).includes(needle));
         if (rows.length) out.push(h("div", { class: "orbit-settings-group" }, this.t(section.id)), ...this.group(rows));
@@ -537,6 +534,10 @@ var OrbitSettings = {
           Orbit.icon(item.icon ?? "chevron-right"));
       case "choice-str":
         return this.row(this.segmented(item.options, Orbit.pref(item.pref, ""), v => p.setStringPref(item.pref, v)), item.label);
+      case "account":
+        return OrbitAccount.renderSettings();
+      case "heading":
+        return h("div", { class: "orbit-settings-group" }, this.t(item.label));
       case "info":
         return this.row(null, item.label);
       case "updates": {
@@ -1053,6 +1054,15 @@ var OrbitSettings = {
       };
       window.addEventListener("keydown", onKey, true);
     });
+    return row;
+  },
+
+  rowFor(control, label, desc) {
+    const h = Orbit.h.bind(Orbit);
+    const row = h("div", { class: "orbit-setting orbit-setting-clickable" },
+      h("div", { class: "orbit-setting-text" }, h("div", { class: "orbit-setting-label" }, label), desc ? h("div", { class: "orbit-setting-desc" }, desc) : null),
+      control);
+    row.addEventListener("click", e => !e.target.closest(".orbit-switch, button, a") && row.querySelector(".orbit-switch")?.click());
     return row;
   },
 

@@ -74,7 +74,7 @@ var Orbit = {
         console.error(`Orbit: no translation for ${l}`, e);
       }
     }
-    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js", "orbit-edit.js", "orbit-vpn.js", "orbit-extras.js", "orbit-folders.js", "orbit-kept.js", "orbit-updates.js", "orbit-mods.js", "orbit-import.js", "orbit-downloads.js", "orbit-background.js", "orbit-security.js", "orbit-chrome-ext.js", "orbit-dnd.js", "orbit-colors.js", "orbit-palette.js", "orbit-sessions.js", "orbit-lock.js", "orbit-picker.js"]) {
+    for (const f of ["orbit-layout.js", "orbit-notify.js", "orbit-ai.js", "orbit-media.js", "orbit-memory.js", "orbit-spaces.js", "orbit-tabs.js", "orbit-glance.js", "orbit-settings.js", "orbit-menu.js", "orbit-welcome.js", "orbit-edit.js", "orbit-vpn.js", "orbit-extras.js", "orbit-folders.js", "orbit-kept.js", "orbit-updates.js", "orbit-mods.js", "orbit-import.js", "orbit-downloads.js", "orbit-background.js", "orbit-security.js", "orbit-chrome-ext.js", "orbit-dnd.js", "orbit-colors.js", "orbit-palette.js", "orbit-sessions.js", "orbit-lock.js", "orbit-picker.js", "orbit-account.js"]) {
       Services.scriptloader.loadSubScript(this.BASE + f, window);
     }
     document.documentElement.setAttribute("orbit-lang", this.lang());
@@ -106,6 +106,7 @@ var Orbit = {
       OrbitNotify.init();
       OrbitWelcome.maybeShow();
       OrbitForum.maybeOpen();
+      OrbitSitePeople.init();
       document.documentElement.setAttribute("orbit-ready", "true");
     };
     if (gBrowserInit.delayedStartupFinished) ready();

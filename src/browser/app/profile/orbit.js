@@ -34,6 +34,7 @@ pref("orbit.split.grid", true);
 pref("orbit.shortcuts", "");
 pref("orbit.community.url", "http://45.134.39.118:8790");
 pref("orbit.forum.onStartup", true);
+pref("orbit.sites.people", true);
 pref("services.sync.prefs.sync.orbit.spaces.data", false);
 pref("services.sync.prefs.sync.orbit.theme.intensity", false);
 pref("services.sync.prefs.sync.orbit.theme.grain", false);
