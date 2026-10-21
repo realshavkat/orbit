@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Shared checks with no browser services, so tools/check-orbit.mjs can run them.
-
 export const ASSISTANTS = [
   { name: "Claude", alias: "@claude", url: "https://claude.ai/new?q={searchTerms}", home: "https://claude.ai/new" },
   { name: "ChatGPT", alias: "@gpt", url: "https://chatgpt.com/?q={searchTerms}", home: "https://chatgpt.com" },
@@ -11,7 +9,6 @@ export const ASSISTANTS = [
   { name: "Le Chat", alias: "@mistral", url: "https://chat.mistral.ai/chat?q={searchTerms}", home: "https://chat.mistral.ai/chat" },
 ];
 
-// "socks5://host:port" | "http(s)://host:port" -> { kind, host, port } or null.
 export function parseProxy(text) {
   const m = /^(socks5?|socks4|https?):\/\/\[?([\w.-]+|[0-9a-f:]+)\]?:(\d{1,5})\/?$/i.exec((text ?? "").trim());
   if (!m || +m[3] < 1 || +m[3] > 65535) return null;
@@ -19,14 +16,12 @@ export function parseProxy(text) {
   return { kind: scheme.startsWith("socks") ? (scheme == "socks4" ? "socks4" : "socks5") : "http", host: m[2], port: +m[3] };
 }
 
-// True only when a 206 body is exactly the byte range we asked for.
 export function contentRange(header, from, to, total = null) {
   const m = /^bytes (\d+)-(\d+)\/(\d+|\*)$/i.exec(String(header ?? "").trim());
   if (!m || +m[1] != from || +m[2] != to) return false;
   return total == null || m[3] == "*" || +m[3] == total;
 }
 
-// Offset of the zip archive inside a .crx (v2 or v3).
 export function zipOffset(bytes) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const magic = String.fromCharCode(...bytes.subarray(0, 4));
@@ -38,8 +33,6 @@ export function zipOffset(bytes) {
   throw new Error(`crx v${version}`);
 }
 
-// Date group of a download for orbit://downloads: "today", "yesterday",
-// "week" (last 7 days), "month" (this calendar month), else "YYYY-MM".
 export function downloadGroup(time, now = Date.now()) {
   const day = new Date(now);
   day.setHours(0, 0, 0, 0);
@@ -68,7 +61,6 @@ export function resolveOrbitURL(text) {
   return alias ? alias + (alias.startsWith("about:") ? m[2] : "") : `about:${page}${m[2]}`;
 }
 
-// One sRGB pixel (0-255 channels) as the color formats the picker offers.
 export function colorFormats(r, g, b) {
   const hex = `#${[r, g, b].map(v => v.toString(16).padStart(2, "0")).join("").toUpperCase()}`;
   const [R, G, B] = [r, g, b].map(v => v / 255);
@@ -83,7 +75,6 @@ export function colorFormats(r, g, b) {
     hue = max == R ? ((G - B) / d) % 6 : max == G ? (B - R) / d + 2 : (R - G) / d + 4;
     hue = (hue * 60 + 360) % 360;
   }
-  // OKLCH from linear sRGB (Björn Ottosson's OKLab matrices).
   const [lr, lg, lb] = [R, G, B].map(v => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
   const L = Math.cbrt(0.4122214708 * lr + 0.5363325363 * lg + 0.0514459929 * lb);
   const M = Math.cbrt(0.2119034982 * lr + 0.6806995451 * lg + 0.1073969566 * lb);

@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit's own app menu (replaces the ≡ panel). Items run Firefox's existing
-// <command>s, so shortcuts and behavior stay identical.
 var OrbitMenu = {
   ITEMS: [
     { icon: "plus", fr: "Nouvel onglet", en: "New tab", key: "Ctrl+T", run: () => BrowserCommands.openTab() },

@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Store pages ask, Orbit decides: every request is checked against the page
-// it comes from and the id's format; files are only ever fetched from fixed
-// official addresses built from the id, never from what the page says.
 const HOSTS = {
   "OrbitStore:Chrome": ["chromewebstore.google.com", "chrome.google.com"],
   "OrbitStore:ModInstall": ["zen-browser.app"],
@@ -12,14 +9,25 @@ const HOSTS = {
   "OrbitStore:ModState": ["zen-browser.app"],
 };
 
+const ORBIT = ["OrbitStore:OrbitModInstall", "OrbitStore:OrbitModRemove", "OrbitStore:OrbitModState"];
+
 export class OrbitStoreParent extends JSWindowActorParent {
   async receiveMessage(msg) {
-    let host = "";
+    let host = "", origin = "";
     try {
       host = this.manager.documentURI?.host ?? "";
+      origin = this.manager.documentURI?.prePath ?? "";
     } catch {}
-    if (!HOSTS[msg.name]?.includes(host)) return null;
     const win = this.browsingContext.topChromeWindow;
+    if (ORBIT.includes(msg.name)) {
+      const site = win?.OrbitMods?.community();
+      const slug = String(msg.data?.slug ?? "");
+      if (!site || origin != site || !/^[a-z0-9-]{1,48}$/.test(slug)) return null;
+      if (msg.name == "OrbitStore:OrbitModInstall") await win.OrbitMods.installOrbit(slug).catch(e => console.error("Orbit mods", e));
+      if (msg.name == "OrbitStore:OrbitModRemove") await win.OrbitMods.remove(`orbit-${slug}`).catch(e => console.error("Orbit mods", e));
+      return win.OrbitMods.isInstalledOrbit(slug);
+    }
+    if (!HOSTS[msg.name]?.includes(host)) return null;
     if (!win?.OrbitMods || !win.OrbitChromeExt) return null;
     const id = String(msg.data?.id ?? "");
     if (msg.name == "OrbitStore:Chrome") {

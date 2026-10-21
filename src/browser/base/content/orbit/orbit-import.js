@@ -2,11 +2,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Import: finds the browsers installed on this computer and brings
-// everything over in one click (bookmarks, history, passwords, form data,
-// payment methods, extensions, open tabs), using Gecko's migrators.
 var OrbitImport = {
-  // Gecko resource types, in display order.
   TYPES: [["BOOKMARKS", "bookmarks"], ["HISTORY", "history"], ["PASSWORDS", "passwords"], ["FORMDATA", "forms"],
     ["PAYMENT_METHODS", "payments"], ["EXTENSIONS", "extensions"], ["SESSION", "tabs"], ["COOKIES", "cookies"]],
 
@@ -32,10 +28,6 @@ var OrbitImport = {
     }[k];
   },
 
-  // ---- Zen (and other Gecko browsers): the whole profile ---------------------------
-  // Zen keeps a Gecko profile, so Orbit can take it as is: a new Orbit profile
-  // gets Zen's data files, then Orbit restarts into it. Zen's UI settings
-  // (prefs.js, chrome/, layout) stay behind so Orbit keeps its own look.
   GECKO_SOURCES: [["Zen Browser", ["zen"]], ["Floorp", ["Floorp"]], ["LibreWolf", ["librewolf"]], ["Waterfox", ["Waterfox"]]],
   PROFILE_FILES: ["places.sqlite", "favicons.sqlite", "cookies.sqlite", "key4.db", "cert9.db", "logins.json",
     "logins-backup.json", "formhistory.sqlite", "autofill-profiles.json", "permissions.sqlite", "content-prefs.sqlite",
@@ -62,11 +54,9 @@ var OrbitImport = {
         out.push({ gecko: true, name: `${name} · ${get("Name") ?? path}`, path: full, size, icon: this.exeIcon(name) });
       }
     }
-    // The most used profile first.
     return out.sort((a, b) => b.size - a.size);
   },
 
-  // The browser's own icon, read from its .exe (Windows), or a generic one.
   exeIcon(name) {
     const exe = { "Zen Browser": "zen.exe", Floorp: "floorp.exe", LibreWolf: "librewolf.exe", Waterfox: "waterfox.exe" }[name];
     for (const base of ["ProgF", "LocalAppData"]) {
@@ -81,7 +71,6 @@ var OrbitImport = {
     return "chrome://global/skin/icons/defaultFavicon.svg";
   },
 
-  // A running browser keeps parent.lock open; reading it then fails.
   async isRunning(profilePath) {
     const lock = PathUtils.join(profilePath, "parent.lock");
     if (!(await IOUtils.exists(lock))) return false;
@@ -105,7 +94,6 @@ var OrbitImport = {
     const profile = service.createProfile(null, `Orbit (${src.name.split(" · ")[0]})`);
     const dest = profile.rootDir.path;
     await IOUtils.makeDirectory(dest, { ignoreExisting: true });
-    // Runs in the background: the card shows each step, browsing goes on.
     const steps = [];
     for (const f of [...this.PROFILE_FILES, ...this.PROFILE_DIRS]) {
       if (await IOUtils.exists(PathUtils.join(src.path, f))) steps.push(f);
@@ -118,7 +106,6 @@ var OrbitImport = {
     }
     card.progress(1);
     card.mark(0, true);
-    // Orbit's own first-run is already done for this person.
     await IOUtils.writeUTF8(PathUtils.join(dest, "user.js"),
       `user_pref("orbit.welcome.done", true);\nuser_pref("orbit.user.name", ${JSON.stringify(Orbit.pref("orbit.user.name", ""))});\n` +
       `user_pref("browser.startup.page", 3);\n`);
@@ -129,7 +116,6 @@ var OrbitImport = {
     return true;
   },
 
-  // A progress card in the toast stack: one line per step, a bar, then a result.
   progressCard(name, labels) {
     const h = Orbit.h.bind(Orbit);
     let stack = document.getElementById("orbit-toasts");
@@ -161,7 +147,6 @@ var OrbitImport = {
     };
   },
 
-  // Gecko's migrators, one resource type after the other, in the background.
   async runInBackground(src) {
     const RT = this.MigrationUtils.resourceTypes;
     const types = this.TYPES.filter(([type]) => src.types & RT[type]);
@@ -195,7 +180,6 @@ var OrbitImport = {
     return ChromeUtils.importESModule("resource:///modules/MigrationUtils.sys.mjs").MigrationUtils;
   },
 
-  // [{ key, name, icon, profile, types }]
   async detect() {
     const MU = this.MigrationUtils;
     const out = [];

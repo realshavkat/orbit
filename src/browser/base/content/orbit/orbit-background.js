@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Window background: Orbit's liquid gradient (default), a picture, a looping
-// video or a plain color. Files are copied into <profile>/orbit-backgrounds.
-// A video pauses whenever the window is inactive or minimized.
 var OrbitBackground = {
   DIR: "orbit-backgrounds",
   IMAGE: ["png", "jpg", "jpeg", "webp", "gif", "avif"],
@@ -51,7 +48,6 @@ var OrbitBackground = {
     root.setAttribute("orbit-bg", effective);
   },
 
-  // Picks a picture or a video and makes it the background.
   async choose() {
     const fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
     const fr = Orbit.lang() == "fr";
@@ -65,7 +61,6 @@ var OrbitBackground = {
     await IOUtils.makeDirectory(this.dir, { ignoreExisting: true });
     const name = `background-${Date.now()}.${ext}`;
     await IOUtils.copy(fp.file.path, PathUtils.join(this.dir, name));
-    // Only the current background is kept on disk.
     const old = Orbit.pref("orbit.background.file", "");
     if (old) await IOUtils.remove(PathUtils.join(this.dir, old), { ignoreAbsent: true });
     Services.prefs.setStringPref("orbit.background.file", name);

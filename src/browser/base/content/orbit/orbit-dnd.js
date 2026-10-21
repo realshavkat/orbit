@@ -2,11 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Sidebar drag and drop, replacing Gecko's tab dragging inside the sidebar.
-// A floating card follows the pointer and says what the drop will do. In row
-// lists (space-pinned tabs, the tab list, folders) a slot opens where the tab
-// will land and the other rows make room; in the Essentials grid a bar shows
-// the spot. Empty zones get a visible box while dragging.
 var OrbitDnD = {
   THRESHOLD: 5,
   ROW: 34,
@@ -30,7 +25,6 @@ var OrbitDnD = {
   init() {
     const box = document.getElementById("vertical-tabs");
     if (!box) return;
-    // Gecko's own drag would fight this one inside the sidebar.
     window.addEventListener("dragstart", e => {
       if (this.press || this.drag || this.source(e.composedTarget ?? e.target) || this.source(e.target)) {
         e.preventDefault();
@@ -40,7 +34,6 @@ var OrbitDnD = {
     box.addEventListener("pointerdown", e => this.down(e), true);
   },
 
-  // What a press on `el` would drag: a tab, or a folder by its label.
   source(el) {
     if (el?.nodeType == Node.TEXT_NODE) el = el.parentElement;
     if (!el?.closest?.("#vertical-tabs")) return null;
@@ -76,13 +69,10 @@ var OrbitDnD = {
 
   up(e) {
     if (!this.drag) return this.cleanup();
-    // A shaky click (a few pixels, dropped where it started) stays a click:
-    // it must still open the folder or select the tab.
     const near = Math.hypot(e.clientX - this.press.x, e.clientY - this.press.y) < 12;
     if (near && (!this.target || this.target.type == "noop" || this.target.ref == this.drag.item)) return this.end(false);
     e.preventDefault();
     e.stopPropagation();
-    // The click that follows a drag must not select or toggle anything.
     const swallow = ev => { ev.preventDefault(); ev.stopPropagation(); };
     window.addEventListener("click", swallow, { capture: true, once: true });
     setTimeout(() => window.removeEventListener("click", swallow, true), 0);
@@ -111,11 +101,9 @@ var OrbitDnD = {
       h("img", { src: icon, alt: "" }),
       h("div", {}, h("b", {}, title), this.action));
     this.line = h("div", { id: "orbit-dnd-line", hidden: true });
-    // The landing slot previews the row: icon and title, at its future place.
     this.slot = h("div", { id: "orbit-dnd-slot", hidden: true }, h("img", { src: icon, alt: "" }), h("span", {}, title));
     document.body.append(this.slot, this.line, this.ghost);
 
-    // Empty zones (once the dragged items left them) get a box for the drag.
     const tabsEl = gBrowser.tabContainer;
     const pinned = document.getElementById("pinned-tabs-container");
     const others = t => !moving.includes(t);
@@ -150,11 +138,6 @@ var OrbitDnD = {
     }
   },
 
-  // ---- targeting -------------------------------------------------------------------
-  // Rects as laid out, without the shift this drag applied.
-  // Where `el` sits once this drag's gap is in place: its position measured at
-  // drag start (animations never skew it), the list's scroll since, and the
-  // gap if `el` comes after it.
   rect(el) {
     let n = this.nat.get(el);
     if (!n) {
@@ -175,7 +158,6 @@ var OrbitDnD = {
     return document.getElementById("tabbrowser-arrowscrollbox")?.scrollbox?.scrollTop ?? 0;
   },
 
-  // Positions without any gap, for every row the drag can aim at.
   snapshot() {
     this.nat = new Map();
     this.scroll0 = this.listScroll();
@@ -194,7 +176,6 @@ var OrbitDnD = {
       .filter(t => !this.isMoving(t));
   },
 
-  // Visible top-level entries of the current space's list (tabs and folders).
   listItems() {
     const out = [];
     for (const t of gBrowser.visibleTabs) {
@@ -205,7 +186,6 @@ var OrbitDnD = {
     return out;
   },
 
-  // Index among `rows` where y falls (by row middles).
   indexAt(rows, y) {
     const i = rows.findIndex(r => y < this.rect(r).top + this.rect(r).height / 2);
     return i < 0 ? rows.length : i;
@@ -228,9 +208,6 @@ var OrbitDnD = {
     this.openSlot(target?.rows ? target : null);
   },
 
-  // Rows from `index` on move down; the slot fills the gap.
-  // The gap is real layout (a margin on one row), so containers grow and what
-  // follows moves down; rows glide to their new place (FLIP on transform).
   openSlot(target) {
     let margin = null;
     let slot = null;
@@ -261,7 +238,6 @@ var OrbitDnD = {
     }
     if (slot) slot.top = this._slotAt();
     const list = this.rect(document.getElementById("tabbrowser-arrowscrollbox"));
-    // A slot scrolled out of the tab list is not drawn over the rest of the sidebar.
     const clipped = slot && target.inList && (slot.top < list.top - 4 || slot.top + slot.height > list.top + list.height + 4);
     this.slot.hidden = !slot || clipped;
     if (slot && !clipped) {
@@ -279,7 +255,6 @@ var OrbitDnD = {
     this.margin = m;
   },
 
-  // Returns { type, label, zone?, ref?, before?, line?, rows?, index?, group? } or null.
   resolve(el, x, y) {
     const drag = this.drag;
     const space = OrbitSpaces.active?.name ?? "";
@@ -301,12 +276,9 @@ var OrbitDnD = {
       return { type: "kept", label: keptLabel, zone: el.closest("#orbit-dz-kept") };
     }
 
-    // Pinned area: the Essentials grid, then the space's pinned rows below it.
     if (el.closest("#pinned-tabs-container")) {
       const rows = this.keptRows();
       const tile = el.closest(".tabbrowser-tab");
-      // Where the rows start without the gap: the gap must not move this line,
-      // or the target flips between the grid and the rows at every frame.
       const rowsTop = rows[0] ? this.nat.get(rows[0])?.top ?? this.rect(rows[0]).top : null;
       const inRows = OrbitKept.isKept(tile) || (rowsTop != null && y >= rowsTop - 3) || drag.isGroup;
       if (!inRows) {
@@ -320,12 +292,10 @@ var OrbitDnD = {
       return { type: "kept", label: keptLabel, rows, index: this.indexAt(rows, y) };
     }
 
-    // Tab list (with folders), the space header and the empty space below.
     if (!el.closest("#tabbrowser-arrowscrollbox, #orbit-sidebar-header, #tabs-newtab-button, #vertical-tabs")) return null;
     const rows = this.listItems();
     const listLabel = drag.kind == "tab" || drag.isGroup ? this.t("reorder") : this.t("list");
     if (el.closest("#orbit-sidebar-header, #tabs-newtab-button")) {
-      // Right under the header: after the pinned folders that sit above it.
       const index = rows.findIndex(r => !(r.localName == "tab-group" && r.hasAttribute("orbit-pinned")));
       return { type: "list", label: listLabel, rows, index: index < 0 ? rows.length : index, inList: true, anchor: this.rect(listBox) };
     }
@@ -339,7 +309,6 @@ var OrbitDnD = {
         if (y <= labBottom || g.collapsed) {
           return { type: "folder", ref: g, label: this.t("folder", g.label || "…"), zone: lab };
         }
-        // Inside an open folder: a spot between its tabs.
         const inner = g.tabs.filter(t => t.visible !== false && !t.hidden && !this.isMoving(t));
         const after = rows.slice(rows.indexOf(g) + 1);
         return { type: "group", group: g, label: this.t("folder", g.label || "…"), rows: inner, index: this.indexAt(inner, y),
@@ -349,12 +318,10 @@ var OrbitDnD = {
     return { type: "list", label: listLabel, rows, index: this.indexAt(rows, y), inList: true, anchor: this.rect(listBox) };
   },
 
-  // ---- drop --------------------------------------------------------------------------
   end(drop) {
     const target = drop ? this.target : null;
     const drag = this.drag;
     const items = drag ? (drag.isGroup ? [drag.item] : drag.tabs) : [];
-    // FLIP from the slot (or the item's place) to the final spot.
     const from = !this.slot?.hidden ? this.slot.getBoundingClientRect() : null;
     this.cleanup();
     if (!target || !drag) return;
@@ -376,7 +343,6 @@ var OrbitDnD = {
     });
   },
 
-  // Turns "index among rows" into "before/after a row".
   spot(target) {
     const { rows, index } = target;
     if (!rows?.length) return null;
@@ -419,7 +385,6 @@ var OrbitDnD = {
         break;
       case "list":
         for (const t of tabs) if (t.pinned) gBrowser.unpinTab(t);
-        // Rows are top-level entries, so this never lands inside a folder.
         if (spot) this.place(tabs, spot);
         OrbitSpaces.syncVisibility();
         break;

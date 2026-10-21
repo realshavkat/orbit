@@ -1,9 +1,5 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// surfer's branding generator hardcodes Zen URLs; point them at Orbit.
-// Runs after `surfer import` (see the `import` npm script).
 import { readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 

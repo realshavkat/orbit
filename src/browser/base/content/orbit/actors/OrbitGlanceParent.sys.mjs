@@ -5,7 +5,6 @@
 export class OrbitGlanceParent extends JSWindowActorParent {
   receiveMessage({ name, data }) {
     if (name != "Orbit:Glance") return;
-    // Content processes are untrusted: only accept plain http(s) URLs.
     let url;
     try {
       url = new URL(data?.href);

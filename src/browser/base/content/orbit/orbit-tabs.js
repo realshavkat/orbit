@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Tabs: command bar instead of empty new tabs (idle sleep lives in OrbitMemory).
 var OrbitTabs = {
   init() {
     this.initCommandBar();
@@ -12,8 +11,6 @@ var OrbitTabs = {
     this.initTabNotes();
   },
 
-  // Firefox opens the tab note panel on the sidebar's outer side, outside the
-  // window when Orbit sits at the screen edge: open it toward the page instead.
   initTabNotes() {
     const panel = document.getElementById("tabNotePanel");
     if (!panel) return;
@@ -26,7 +23,6 @@ var OrbitTabs = {
     };
   },
 
-  // ---- Split view up to 4 pages (Firefox's own split view, which holds any number) --
   SPLIT_MAX: 4,
 
   splitSelected() {
@@ -35,7 +31,6 @@ var OrbitTabs = {
     gBrowser.addTabSplitView(tabs, { insertBefore: tabs[0] });
   },
 
-  // One more page in the current split view, picked from the open tabs page.
   addToSplit() {
     const split = gBrowser.selectedTab.splitview;
     if (!split) return document.getElementById("Browser:AddTabSplitView")?.doCommand();
@@ -49,23 +44,17 @@ var OrbitTabs = {
     Services.prefs.setBoolPref("orbit.split.grid", !Orbit.pref("orbit.split.grid", true));
   },
 
-  // ---- Sidebar rows (dragging itself lives in OrbitDnD) -------------------------
   initDrag() {
     const tc = gBrowser.tabContainer;
-    // "New tab" sits above the list in its own row. Moving it in the DOM (not
-    // with CSS order) keeps Firefox's drag geometry right, so drags stay smooth.
     this.placeNewTab();
     Services.prefs.addObserver("sidebar.verticalTabs", this.placeNewTab);
     window.addEventListener("unload", () => Services.prefs.removeObserver("sidebar.verticalTabs", this.placeNewTab), { once: true });
-    // Only freshly opened tabs slide in; a tab moved by drag must not replay it.
     tc.addEventListener("TabOpen", e => {
       e.target.setAttribute("orbit-new", "true");
       setTimeout(() => e.target.removeAttribute("orbit-new"), 400);
     });
   },
 
-  // Vertical: under the space header. Tabs on top: after the last tab, where
-  // Firefox keeps it (setTimeout: Firefox moves the tabs on the same change).
   placeNewTab: () => setTimeout(() => {
     const newTab = document.getElementById("tabs-newtab-button");
     const header = document.getElementById("orbit-sidebar-header");
@@ -75,9 +64,6 @@ var OrbitTabs = {
     else periphery?.prepend(newTab);
   }, 0),
 
-  // ---- Home page ----------------------------------------------------------------
-  // orbit://home (resource://orbit/home.html) is a static, unprivileged page;
-  // the OrbitHome actor hands it the greeting, search engine and shortcuts.
   HOME: "resource://orbit/home.html",
   isHome(spec) {
     return spec?.startsWith(this.HOME);
@@ -98,19 +84,14 @@ var OrbitTabs = {
         },
         matches: [`${this.HOME}*`],
         messageManagerGroups: ["browsers"],
-        // The parent only answers Orbit's own home page (it checks the URL).
         safeForUntrustedWebProcess: true,
       });
     } catch {}
     Services.prefs.setStringPref("browser.startup.homepage", this.HOME);
-    // Any "new tab" Gecko opens by itself (last tab closed...) shows the home page,
-    // and it counts as an empty page: blank address bar, focus in it.
     AboutNewTab.newTabURL = this.HOME;
     if (!gInitialPages.includes(this.HOME)) gInitialPages.push(this.HOME);
   },
 
-  // ---- orbit:// ---------------------------------------------------------------
-  // orbit://<page> is Orbit's name for the built-in about:<page> pages.
   resolveOrbitURL(text) {
     return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs").resolveOrbitURL(text);
   },
@@ -157,9 +138,6 @@ var OrbitTabs = {
     this.displayOrbitURL();
   },
 
-  // ---- Command bar ----------------------------------------------------------
-  // Ctrl+T / "+" opens the floating URL bar; a tab is only created once the
-  // user picks something. No empty new-tab page is ever rendered.
   initCommandBar() {
     const origOpenTab = BrowserCommands.openTab.bind(BrowserCommands);
     BrowserCommands.openTab = (args = {}) => {
@@ -176,7 +154,6 @@ var OrbitTabs = {
     controller.whereToOpen = event => {
       const where = origWhere(event);
       if (!this.commandMode || where != "current") return where;
-      // Reuse a blank tab instead of stacking another one next to it.
       const b = gBrowser.selectedBrowser;
       const blank = b.currentURI.spec == "about:blank" || this.isHome(b.currentURI.spec);
       return blank && !b.webProgress?.isLoadingDocument ? "current" : "tab";
@@ -207,7 +184,6 @@ var OrbitTabs = {
 
   closeCommandBar() {
     if (!this.commandMode) return;
-    // Let the pending load read `commandMode` before resetting it.
     setTimeout(() => {
       this.commandMode = false;
       document.documentElement.removeAttribute("orbit-commandbar");

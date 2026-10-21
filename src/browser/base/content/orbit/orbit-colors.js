@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Quick colors (like Zen's gradient picker): a field where up to three dots
-// pick the space's colors (left-right = hue, top-bottom = light-dark), theme
-// mode buttons, preset palettes, a wave for the background strength and a
-// knob for the grain. Everything applies live.
 var OrbitColors = {
   PRESETS: [
     ["#5b6cff", "#3a2bd0"], ["#f4efe6", "#d9cbb5"], ["#f3b6c9", "#e58aa7"], ["#d9b8ef", "#a77fd6"],
@@ -25,7 +21,6 @@ var OrbitColors = {
     return `#${f(0)}${f(8)}${f(4)}`;
   },
 
-  // Field position (0..1, 0..1) -> color, and back (approximate, for presets).
   colorAt(x, y) {
     return this.hex(x * 360, 85 - y * 20, 80 - y * 52);
   },
@@ -60,8 +55,6 @@ var OrbitColors = {
 
     const field = h("div", { class: "oc-field" });
     const hint = h("div", { class: "oc-hint" }, Orbit.tr("Click to add a color", "Clique pour ajouter une couleur"));
-    // While a dot moves only the CSS variables change (one style write per
-    // frame); the space is saved, and every window updated, on release.
     let frame = 0;
     const preview = () => {
       if (frame) return;
@@ -116,7 +109,6 @@ var OrbitColors = {
     });
     field.append(hint);
 
-    // Harmony: rebuild the other dots from the first one.
     const HARMONIES = [[1 / 12, -1 / 12], [0.5], [1 / 3, 2 / 3]];
     const actions = h("div", { class: "oc-actions" },
       h("button", { class: "orbit-icon-button", title: Orbit.tr("Add a color", "Ajouter une couleur"), onclick: e => {
@@ -199,8 +191,6 @@ var OrbitColors = {
     setTimeout(() => panel.remove(), 140);
   },
 
-  // A slider drawn as a wave: the stronger, the taller the wave.
-  // onInput: live (cheap) feedback; onCommit: once the pointer is released.
   wave(value, max, onInput, onCommit, label) {
     const h = Orbit.h.bind(Orbit);
     const NS = "http://www.w3.org/2000/svg";
@@ -246,7 +236,6 @@ var OrbitColors = {
     return el;
   },
 
-  // A dial: drag up or down (or scroll) to turn it.
   knob(value, onInput, onCommit, label) {
     const h = Orbit.h.bind(Orbit);
     const cap = h("span", { class: "oc-knob-cap" }, h("i"));
@@ -271,7 +260,6 @@ var OrbitColors = {
     });
     el.addEventListener("pointermove", e => el.hasPointerCapture(e.pointerId) && start && set(start.v + (start.y - e.clientY) * 0.8));
     el.addEventListener("pointerup", () => onCommit(value));
-    // Wheel: live, saved shortly after the last notch.
     let timer = 0;
     el.addEventListener("wheel", e => {
       e.preventDefault();

@@ -2,19 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Edit mode: right-click the sidebar, "Modifier Orbit". A panel lists the
-// toolbar's buttons (remove, reorder by dragging them in the toolbar) and
-// every button that can be added, Orbit's own included (AI assistant, keep on
-// screen...), plus the sidebar's layout. Built on CustomizableUI, so it persists.
 var OrbitEdit = {
   AREA: "nav-bar",
-  // Buttons worth offering in the tray (extensions' buttons are always offered).
   OFFER: ["home-button", "history-panelmenu", "bookmarks-menu-button", "downloads-button", "library-button",
     "screenshot-button", "fullscreen-button", "zoom-controls", "print-button", "new-window-button",
     "privatebrowsing-button", "find-button", "panic-button", "developer-button", "save-page-button",
     "open-file-button", "preferences-button", "alltabs-button", "new-tab-button", "edit-controls",
     "unified-extensions-button", "orbit-ai-button", "orbit-ref-button", "orbit-picker-button", "orbit-vpn-button"],
-  // Lucide icon per known button (palette nodes are detached: no computed icon).
   ICONS: { "home-button": "house", "history-panelmenu": "history", "bookmarks-menu-button": "bookmark", "downloads-button": "download",
     "library-button": "book-open", "screenshot-button": "camera", "fullscreen-button": "maximize-2", "zoom-controls": "zoom-in",
     "print-button": "printer", "new-window-button": "app-window", "privatebrowsing-button": "eye-off", "find-button": "search",
@@ -58,7 +52,6 @@ var OrbitEdit = {
   init() {
     this.placeBlocker();
     this.createWidgets();
-    // Extensions panel: a pin button on each extension puts it in the toolbar.
     document.addEventListener("ViewShowing", e => {
       if (e.target.id == "unified-extensions-view") setTimeout(() => this.decorateExtensions(e.target), 0);
     }, true);
@@ -70,8 +63,6 @@ var OrbitEdit = {
     }, true);
   },
 
-  // Orbit's own buttons, offered in the edit panel (app-wide: the first window
-  // creates them, the others get "already exists").
   createWidgets() {
     const make = (id, label, run) => {
       try {
@@ -85,7 +76,6 @@ var OrbitEdit = {
       win.OrbitExtras.reference(win.gBrowser.currentURI.spec, win.gBrowser.selectedTab.label, win.gBrowser.selectedTab.getAttribute("image")));
   },
 
-  // Orbit Blocker's shield goes in the toolbar once; after that it is the user's.
   placeBlocker() {
     if (Orbit.pref("orbit.blocker.placed", false)) return;
     const place = () => {
@@ -102,7 +92,6 @@ var OrbitEdit = {
     window.addEventListener("unload", () => CustomizableUI.removeListener(listener), { once: true });
   },
 
-  // "New container tab" entries, one per container, with its color.
   containerItems(item) {
     if (!Orbit.pref("privacy.userContext.enabled", false)) return [];
     return ContextualIdentityService.getPublicIdentities().map(identity => {
@@ -132,8 +121,6 @@ var OrbitEdit = {
     }
   },
 
-  // Orbit's sidebar menu, sorted in sections: create, this space, display,
-  // then Orbit itself. Toggles show their state; containers open a submenu.
   menu(_sx, _sy, x, y) {
     document.getElementById("orbit-ctx")?.remove();
     const h = Orbit.h.bind(Orbit);
@@ -176,7 +163,6 @@ var OrbitEdit = {
     document.body.append(menu);
     menu.style.left = `${Math.min(x, innerWidth - menu.offsetWidth - 8)}px`;
     menu.style.top = `${Math.min(y, innerHeight - menu.offsetHeight - 8)}px`;
-    // The submenu opens on the side with room.
     if (sub) {
       const r = menu.getBoundingClientRect();
       sub.toggleAttribute("left", r.right + 240 > innerWidth);
@@ -190,7 +176,6 @@ var OrbitEdit = {
     const outside = e => !menu.contains(e.target) && close();
     const key = e => {
       if (e.key == "Escape") return close();
-      // Arrow keys move through the items, like a native menu.
       const list = items();
       const i = list.indexOf(document.activeElement);
       if (e.key == "ArrowDown" || e.key == "ArrowUp") {
@@ -203,7 +188,6 @@ var OrbitEdit = {
     items()[0]?.focus();
   },
 
-  // ---- edit mode ------------------------------------------------------------------
   items() {
     return CustomizableUI.getWidgetIdsInArea(this.AREA).filter(id => document.getElementById(id));
   },
@@ -228,7 +212,6 @@ var OrbitEdit = {
           OrbitSettings.row(OrbitSettings.slider({ min: 180, max: 480, unit: "px", value: Orbit.pref("orbit.view.sidebar-width", 240),
             onInput: v => Services.prefs.setIntPref("orbit.view.sidebar-width", v) }), "sidebarWidth"))),
     };
-    // The position row reads "Left / Right", so its label is the plain word.
     panes.sidebar.querySelector(".orbit-setting-label").textContent = this.t("position");
     const tabs = OrbitSettings.segmented([["toolbar", this.t("toolbar")], ["sidebar", this.t("sidebar")]], "toolbar", v => {
       panes.toolbar.hidden = v != "toolbar";
@@ -246,7 +229,6 @@ var OrbitEdit = {
     this._click = e => {
       if (e.target.closest?.(".orbit-edit-x")) return;
       if (e.target.closest?.(`#${this.AREA}`) && !e.target.closest(".titlebar-buttonbox-container")) {
-        // mousedown must keep its default action or dragging would not start.
         if (e.type != "mousedown") e.preventDefault();
         e.stopPropagation();
       }
@@ -323,7 +305,6 @@ var OrbitEdit = {
     this.tray.replaceChildren(...(cards.length ? cards : [h("span", { class: "orbit-setting-desc" }, this.t("none"))]));
   },
 
-  // A palette widget's localized name.
   async label(w) {
     const node = w.forWindow?.(window)?.node ?? gNavToolbox.palette.querySelector(`#${CSS.escape(w.id)}`);
     const direct = node?.getAttribute("label") || node?.getAttribute("tooltiptext") || w.label;

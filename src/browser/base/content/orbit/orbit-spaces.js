@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Spaces: named groups of tabs, each with its own icon and gradient.
-// Pinned tabs ("essentials") are shared by every space.
-// Space list lives in the `orbit.spaces.data` pref (shared by all windows);
-// each tab remembers its space through SessionStore custom values.
 var OrbitSpaces = {
   THEMES: [
     { id: "cosmos", c1: "#5b6cff", c2: "#3a2bd0" },
@@ -48,7 +44,6 @@ var OrbitSpaces = {
     this.update({ animate: false });
   },
 
-  // ---- data ---------------------------------------------------------------
   load() {
     try {
       this.spaces = JSON.parse(Orbit.pref("orbit.spaces.data", "") || "[]");
@@ -88,7 +83,6 @@ var OrbitSpaces = {
     return this.THEMES.find(t => t.id == space.theme) ?? this.THEMES[0];
   },
 
-  // ---- tabs <-> spaces ----------------------------------------------------
   spaceOf(tab) {
     return tab.getAttribute("orbit-space");
   },
@@ -109,21 +103,15 @@ var OrbitSpaces = {
     return gBrowser.tabs.filter(t => !t.pinned && !t.closing && this.spaceOf(t) == id);
   },
 
-  // Clicking the space name folds the essentials (Zen).
   toggleEssentials() {
     document.documentElement.toggleAttribute("orbit-essentials-folded");
   },
 
-  // Clear button: closes the space's tabs except the selected ones (the
-  // current tab, or every Ctrl+clicked tab). Double-click closes them all.
   clearTabs(all = false) {
-    // Pinned folders and space-pinned tabs survive a single click, like Zen;
-    // a double-click closes everything, the space's pinned rows included.
     const tabs = this.tabsIn(this.activeId).filter(t => all ||
       (!OrbitFolders.isPinnedTab(t) && !(t.selected || t.multiselected)));
     if (all) tabs.push(...gBrowser.tabs.filter(t => t.getAttribute(OrbitKept.KEY) == this.activeId));
     if (!tabs.length) return;
-    // Closing everything leaves the space on its home page.
     if (all) gBrowser.selectedTab = this.openTab();
     OrbitKept.closeForReal(tabs);
   },
@@ -147,13 +135,11 @@ var OrbitSpaces = {
         break;
       }
       case "TabSelect":
-        // Selecting a tab from another space (tab search, extension...) follows it.
         if (!tab.pinned && this.spaceOf(tab) && this.spaceOf(tab) != this.activeId) {
           this.switchTo(this.spaceOf(tab), { keepSelection: true });
         }
         break;
       case "TabClose":
-        // Closing the last tab of a space keeps you in that space.
         if (tab.selected && !tab.pinned && this.tabsIn(this.activeId).length == 0 && !window.closed) {
           gBrowser.selectedTab = this.openTab();
         }
@@ -180,7 +166,6 @@ var OrbitSpaces = {
     for (const tab of gBrowser.tabs) {
       if (tab.pinned || tab.closing) continue;
       if (!this.spaceOf(tab)) this.adopt(tab);
-      // Tabs of a pinned folder show in every space.
       const inSpace = this.spaceOf(tab) == this.activeId || OrbitFolders.isEverywhere(tab);
       if (inSpace && tab.hidden) gBrowser.showTab(tab);
       else if (!inSpace && !tab.hidden) gBrowser.hideTab(tab, "orbit-spaces");
@@ -189,7 +174,6 @@ var OrbitSpaces = {
     globalThis.OrbitFolders?.placeHeader();
   },
 
-  // ---- switching ----------------------------------------------------------
   switchTo(id, { animate = true, keepSelection = false } = {}) {
     if (!this.byId(id)) return;
     const from = this.spaces.findIndex(s => s.id == this.activeId);
@@ -237,7 +221,6 @@ var OrbitSpaces = {
     }
   },
 
-  // ---- rendering ----------------------------------------------------------
   update({ animate = true, dir = 1 } = {}) {
     this.syncVisibility();
     const space = this.active;
@@ -248,7 +231,6 @@ var OrbitSpaces = {
     root.style.setProperty("--orbit-c3", theme.c3 ?? theme.c2);
     this.render();
     if (animate && !window.gReduceMotion) {
-      // Tabs of the new space cascade in from the side we're moving towards.
       const frames = [
         { opacity: 0, transform: `translateX(${dir * 18}px)` },
         { opacity: 1, transform: "none" },
@@ -306,12 +288,10 @@ var OrbitSpaces = {
       h("button", { class: "orbit-icon-button", title: `${t("settings")} (Ctrl+,)`, onclick: () => OrbitSettings.toggle() }, icon("settings-2"))
     );
     requestAnimationFrame(() => this.moveIndicator());
-    // Keep the pill under the active space when the sidebar is resized.
     this._indicatorObserver ??= new ResizeObserver(() => this.moveIndicator());
     this._indicatorObserver.observe(footer);
   },
 
-  // Glide the gradient pill under the active space button.
   moveIndicator() {
     const btn = document.querySelector(".orbit-space-button[active]");
     if (!btn) return;
@@ -323,7 +303,6 @@ var OrbitSpaces = {
     return { h: Orbit.h.bind(Orbit), icon: Orbit.icon.bind(Orbit), t: Orbit.t.bind(Orbit) };
   },
 
-  // ---- editor (create / edit / delete) -------------------------------------
   edit(space) {
     const { h, icon, t } = this.helpers();
     document.getElementById("orbit-space-editor")?.remove();
@@ -381,7 +360,6 @@ var OrbitSpaces = {
     document.body.append(card);
     input.focus();
     input.select();
-    // Click outside closes.
     setTimeout(() =>
       window.addEventListener("mousedown", function out(e) {
         if (!card.isConnected) return window.removeEventListener("mousedown", out, true);
@@ -409,7 +387,6 @@ var OrbitSpaces = {
     this.render();
   },
 
-  // ---- tab context menu: "Move to space" ------------------------------------
   addTabMenu() {
     const menu = document.getElementById("tabContextMenu");
     if (!menu) return;

@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// AI: each assistant becomes a search engine with an @alias (type
-// "@claude question" in the address bar), and the assistant panel is
-// Firefox's chatbot sidebar (a plain web view, loaded only when opened).
 var OrbitAI = {
   get ENGINES() {
     return ChromeUtils.importESModule("resource://orbit/orbit-pure.mjs").ASSISTANTS;
@@ -25,7 +22,6 @@ var OrbitAI = {
     }
   },
 
-  // Search URL for a query with a given assistant (used by the home page).
   url(name, q) {
     const e = this.ENGINES.find(x => x.name == name) ?? this.ENGINES[0];
     return e.url.replace("{searchTerms}", encodeURIComponent(q));
@@ -36,9 +32,6 @@ var OrbitAI = {
     SidebarController.toggle("viewGenaiChatSidebar");
   },
 
-  // Sends the text of several tabs to the chosen assistant: a summary, a
-  // comparison or the user's own question. Short prompts go in the URL;
-  // long ones are copied, to paste in the assistant's box.
   async askTabs(tabs, mode, question = "") {
     if (mode == "ask" && !question) {
       return OrbitPalette.ask(Orbit.tr("Your question about these tabs", "Ta question sur ces onglets"), q => q && this.askTabs(tabs, mode, q));

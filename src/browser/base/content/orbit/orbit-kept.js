@@ -2,12 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Space-pinned tabs (Zen's pinned list). They are Gecko pinned tabs shown as
-// rows under the essentials, above the space name, and only in their own
-// space. Pin one from its menu or by dragging it (OrbitDnD). Closing one
-// only puts it to sleep.
 var OrbitKept = {
-  KEY: "orbit-kept", // attribute and session value: the id of the tab's space
+  KEY: "orbit-kept",
 
   t(k) {
     const fr = Orbit.lang() == "fr";
@@ -19,7 +15,6 @@ var OrbitKept = {
 
   init() {
     const tc = gBrowser.tabContainer;
-    // Dragged out of the pinned area: back to a normal tab of its space.
     tc.addEventListener("TabUnpinned", e => {
       const space = e.target.getAttribute(this.KEY);
       if (!space) return;
@@ -30,7 +25,6 @@ var OrbitKept = {
     for (const type of ["TabOpen", "TabClose", "TabPinned", "TabSelect"]) {
       tc.addEventListener(type, () => setTimeout(() => this.sync(), 0));
     }
-    // Closing a space-pinned tab unloads it instead.
     const origRemove = gBrowser.removeTab.bind(gBrowser);
     gBrowser.removeTab = (tab, options = {}) => {
       if (tab?.hasAttribute(this.KEY) && !this._closing) {
@@ -39,12 +33,9 @@ var OrbitKept = {
       }
       return origRemove(tab, options);
     };
-    // Ctrl+W on any pinned tab (essential or space-pinned): Gecko ignores it;
-    // Orbit closes the page but keeps the pin (unloaded, like Zen).
     const origClose = BrowserCommands.closeTabOrWindow.bind(BrowserCommands);
     BrowserCommands.closeTabOrWindow = event => {
       const tab = gBrowser.selectedTab;
-      // Tabs of a pinned folder are kept the same way.
       if ((tab.pinned || OrbitFolders.isPinnedTab(tab)) && !gBrowser.multiSelectedTabsCount && window.location.href == AppConstants.BROWSER_CHROME_URL) {
         this.sleep(tab);
         return;
@@ -52,7 +43,6 @@ var OrbitKept = {
       origClose(event);
     };
     this.addMenu();
-    // Lazily restored tabs never fire SSTabRestoring: read the value directly.
     const restoreAll = () => {
       for (const tab of gBrowser.tabs) {
         const space = SessionStore.getCustomTabValue(tab, this.KEY);
@@ -84,12 +74,11 @@ var OrbitKept = {
       if (!tab.pinned) gBrowser.pinTab(tab);
       this.pop(tab);
     } else if (tab.pinned) {
-      gBrowser.unpinTab(tab); // TabUnpinned does the rest
+      gBrowser.unpinTab(tab);
     }
     this.sync();
   },
 
-  // A small "landed" animation on the pinned tab.
   pop(tab) {
     tab.removeAttribute("orbit-just-pinned");
     void tab.offsetWidth;
@@ -105,7 +94,6 @@ var OrbitKept = {
     gBrowser.discardBrowser(tab);
   },
 
-  // Only the current space's pinned rows show.
   sync() {
     const active = OrbitSpaces.activeId;
     let any = false;
@@ -134,7 +122,6 @@ var OrbitKept = {
     });
   },
 
-  // "Close all" from the clear button really closes them.
   closeForReal(tabs) {
     this._closing = true;
     try {

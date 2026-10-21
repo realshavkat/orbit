@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Small tab features from Zen: rename a tab (double-click its title),
-// copy its link, open a link in Glance, unload a space, close a tab and go
-// back to the last used one, duplicate with Ctrl+Shift+D.
 var OrbitExtras = {
   RENAME_KEY: "orbit-label",
 
@@ -44,16 +41,13 @@ var OrbitExtras = {
     }, true);
   },
 
-  // ---- rename ---------------------------------------------------------------------
   initRename() {
     const tc = gBrowser.tabContainer;
-    // A renamed tab keeps its name when the page changes its title.
     const origTitle = gBrowser.setTabTitle.bind(gBrowser);
     gBrowser.setTabTitle = tab => {
       const name = tab.getAttribute(this.RENAME_KEY);
       return name ? gBrowser.setTabLabelForAuthPrompts(tab, name) : origTitle(tab);
     };
-    // Lazily restored tabs never fire SSTabRestoring: read names directly too.
     const restoreAll = () => {
       for (const tab of gBrowser.tabs) {
         const name = SessionStore.getCustomTabValue(tab, this.RENAME_KEY);
@@ -88,10 +82,8 @@ var OrbitExtras = {
     }
   },
 
-  // Inline editor over the tab title.
   rename(tab) {
     const box = tab.querySelector(".tab-label-container");
-    // Essentials tiles show no title: edit the name in a small popover instead.
     if (!box || !box.getBoundingClientRect().width) {
       return this.popover(tab, { value: tab.label, placeholder: this.t("rename"), onDone: v => this.setName(tab, v) });
     }
@@ -119,7 +111,6 @@ var OrbitExtras = {
     for (const type of ["mousedown", "click", "dblclick"]) input.addEventListener(type, e => e.stopPropagation());
   },
 
-  // Floating text field under a tab (essentials have no visible title).
   popover(tab, { value = "", placeholder = "", extra = null, onDone }) {
     document.getElementById("orbit-tab-popover")?.remove();
     const h = Orbit.h.bind(Orbit);
@@ -149,7 +140,6 @@ var OrbitExtras = {
     return { pop, input, close };
   },
 
-  // ---- tags: a colored label on a tab ("IMPORTANT" in yellow...) -------------------
   TAG_KEY: "orbit-tag",
   TAG_COLORS: ["#f5c518", "#ff5d5d", "#ff9f43", "#3ddc97", "#4f8cff", "#a66bff", "#ff6bcb", "#8a8a99"],
   TAG_PRESETS: [["IMPORTANT", "#f5c518", "star"], ["URGENT", "#ff5d5d", "flame"], ["À LIRE", "#4f8cff", "book-open"], ["TODO", "#3ddc97", "check"]],
@@ -164,7 +154,6 @@ var OrbitExtras = {
     setTimeout(restoreAll, 0);
   },
 
-  // A target is a tab or a folder (tab-group); folders keep their tag in OrbitFolders' data.
   getTag(tab) {
     if (!tab) return null;
     if (tab.localName == "tab-group") return OrbitFolders.meta[tab.id]?.tag ?? null;
@@ -183,7 +172,6 @@ var OrbitExtras = {
     this.paintTag(tab);
   },
 
-  // Black or white text, whichever reads better on the tag color.
   ink(hex) {
     const n = parseInt(hex.slice(1), 16);
     const lum = (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255;
@@ -200,7 +188,6 @@ var OrbitExtras = {
     }
     if (!pill) {
       pill = Orbit.h("span", { class: "orbit-tab-tag" });
-      // Before the close button, so the × stays at the far right.
       const close = tab.querySelector(".tab-content > .tab-close-button");
       if (close) close.before(pill);
       else tab.querySelector(".tab-content")?.append(pill);
@@ -210,7 +197,6 @@ var OrbitExtras = {
     tab.style.setProperty("--orbit-tag", tag.color);
   },
 
-  // Text, color and an optional icon, drawn in the tag's ink color.
   fillTag(pill, tag) {
     const ink = this.ink(tag.color);
     pill.replaceChildren(...(tag.icon ? [Orbit.h("img", { class: "orbit-tag-icon", alt: "",
@@ -219,7 +205,6 @@ var OrbitExtras = {
     pill.style.color = ink;
   },
 
-  // On every selected tab when the menu was opened on a selection.
   editTag(target) {
     if (!target) return;
     const targets = target.multiselected ? gBrowser.selectedTabs : [target];
@@ -256,7 +241,6 @@ var OrbitExtras = {
     });
   },
 
-  // An image, a video or a page in its own small window, always on top.
   reference(url, title = "", icon = "") {
     const w = 420;
     const hgt = 300;
@@ -268,13 +252,10 @@ var OrbitExtras = {
       `chrome,dialog=no,alwaysontop,resizable,titlebar=no,width=${w},height=${hgt},left=${left},top=${top}`, args);
   },
 
-  // ---- context menus -----------------------------------------------------------------
   initMenus() {
     const h = Orbit.h.bind(Orbit);
     const tabMenu = document.getElementById("tabContextMenu");
-    // Tidy once every Orbit item exists (other modules add theirs at init).
     tabMenu?.addEventListener("popupshowing", e => e.target == tabMenu && this.organizeTabMenu(tabMenu), true);
-    // Items other modules add later get their icon when a menu opens.
     for (const id of ["tabContextMenu", "contentAreaContextMenu"]) {
       document.getElementById(id)?.addEventListener("popupshowing", () => this.menuIcons(), true);
     }
@@ -313,7 +294,6 @@ var OrbitExtras = {
         reset.hidden = !tab?.hasAttribute(this.RENAME_KEY);
         sleepSpace.hidden = !tab || tab.pinned;
         sleepOthers.hidden = OrbitSpaces.spaces.length < 2;
-        // Firefox stops "Open in split view" at 2 tabs; Orbit splits up to 4.
         setTimeout(() => {
           const item = document.getElementById("context_moveTabToSplitView");
           const tabs = TabContextMenu.contextTabs ?? [];
@@ -328,7 +308,6 @@ var OrbitExtras = {
       const glance = h("xul:menuitem", { id: "orbit-context-glance", label: this.t("glance"),
         oncommand: () => OrbitGlance.open?.(gContextMenu.linkURL) });
       linkMenu.insertBefore(glance, document.getElementById("context-openlinkintab"));
-      // Orbit community: share the current site's domain, on request only.
       const share = h("xul:menuitem", { id: "orbit-context-share-site", label: Orbit.tr("Share this site on my Orbit profile", "Partager ce site sur mon profil Orbit"),
         oncommand: () => {
           const base = OrbitPalette.community();
@@ -340,7 +319,6 @@ var OrbitExtras = {
         if (e.target != linkMenu) return;
         share.hidden = !OrbitPalette.community() || !OrbitPalette.currentHost() || gContextMenu?.onLink || gContextMenu?.isTextSelected || gContextMenu?.onTextInput;
       });
-      // "Keep on screen": a reference window above every other window.
       const ref = h("xul:menuitem", { id: "orbit-context-reference", oncommand: () => {
         const c = this._refCtx;
         if (c) this.reference(c.url, c.title, c.icon);
@@ -362,7 +340,6 @@ var OrbitExtras = {
     }
   },
 
-  // Icons on the native menus' main items, so every menu reads like Orbit's.
   MENU_ICONS: {
     context_openANewTab: "plus", context_reloadTab: "rotate-cw", context_reloadSelectedTabs: "rotate-cw",
     context_duplicateTab: "copy", context_duplicateTabs: "copy", context_toggleMuteTab: "volume-x",
@@ -392,7 +369,6 @@ var OrbitExtras = {
     }
   },
 
-  // The tab menu, tidied: frequent actions first, the rest under "More".
   TAB_MENU: [
     ["context_openANewTab", "context_duplicateTab", "context_duplicateTabs", "context_reloadTab", "context_reloadSelectedTabs",
       "context_toggleMuteTab", "context_toggleMuteSelectedTabs", "context_playTab", "context_playSelectedTabs"],
@@ -415,9 +391,7 @@ var OrbitExtras = {
     const h = Orbit.h.bind(Orbit);
     const fr = Orbit.lang() == "fr";
     const take = id => document.getElementById(id);
-    // Separators Orbit did not create would sit in odd places now.
     for (const sep of [...menu.children].filter(c => c.localName == "menuseparator" && !c.id)) sep.remove();
-    // An empty marker keeps the insertion point fixed while items move.
     const anchor = h("xul:menuseparator", { "orbit-hidden": "true" });
     menu.prepend(anchor);
     this.TAB_MENU.forEach((group, i) => {
@@ -450,7 +424,6 @@ var OrbitExtras = {
     for (const s of OrbitSpaces.spaces) if (s.id != OrbitSpaces.activeId) this.unloadSpace(s.id);
   },
 
-  // ---- closing a tab goes back to the last one used (in the same space) ---------
   initLastUsed() {
     const orig = gBrowser._findTabToBlurTo.bind(gBrowser);
     gBrowser._findTabToBlurTo = (tab, ...rest) => {

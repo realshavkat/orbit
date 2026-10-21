@@ -1,10 +1,5 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Tiny Marionette client for poking at the running dev browser's chrome.
-//   node tools/mn.mjs eval "return document.title"
-//   node tools/mn.mjs shot out.png
 import { connect } from "node:net";
 import { writeFileSync, readFileSync } from "node:fs";
 
@@ -21,7 +16,6 @@ sock.on("data", d => {
     const colon = buf.indexOf(":");
     if (colon < 0) return;
     const len = +buf.slice(0, colon);
-    // length counts bytes; buf is latin1 so 1 char == 1 byte
     if (buf.length < colon + 1 + len) return;
     const msg = JSON.parse(Buffer.from(buf.slice(colon + 1, colon + 1 + len), "latin1").toString("utf8"));
     buf = buf.slice(colon + 1 + len);
@@ -50,7 +44,6 @@ try {
 })();`, args: [], sandbox: "system" });
     console.log(typeof r.value === "string" ? r.value : JSON.stringify(r.value, null, 1));
   } else if (cmd === "click") {
-    // MN_CONTEXT=content node tools/mn.mjs click "a[href]" alt
     const el = await send("WebDriver:FindElement", { using: "css selector", value: arg });
     const mod = process.argv[4] == "alt" ? "" : null;
     const origin = el.value;
@@ -60,14 +53,11 @@ try {
     await send("WebDriver:PerformActions", { actions });
     await send("WebDriver:ReleaseActions");
   } else if (cmd === "drag") {
-    // node tools/mn.mjs drag "<css selector>" dx,dy[;dx,dy...]  (real input; ends pressed unless "up")
     const el = await send("WebDriver:FindElement", { using: "css selector", value: arg });
     const steps = process.argv[4].split(";").map(p => p.split(",").map(Number));
     const acts = [{ type: "pointerMove", x: 0, y: 0, origin: el.value }, { type: "pointerDown", button: 0 }];
-    // Relative to the previous point: the dragged element may vanish while dragging.
     let px = 0, py = 0;
     for (const [x, y] of steps) { acts.push({ type: "pointerMove", x: x - px, y: y - py, origin: "pointer", duration: 120 }); px = x; py = y; }
-    // A 4th argument ending in .png: screenshot while the button is still down.
     const shotPath = process.argv[5]?.endsWith(".png") ? process.argv[5] : null;
     await send("WebDriver:PerformActions", { actions: [{ type: "pointer", id: "m", parameters: { pointerType: "mouse" }, actions: acts }] });
     if (shotPath) {
@@ -80,7 +70,6 @@ try {
     await send("WebDriver:PerformActions", { actions: [{ type: "pointer", id: "m", parameters: { pointerType: "mouse" }, actions: [{ type: "pointerUp", button: 0 }] }] });
     await send("WebDriver:ReleaseActions");
   } else if (cmd === "actions") {
-    // WebDriver actions JSON, e.g. an Alt+click: see tools/README in comments.
     await send("WebDriver:PerformActions", { actions: JSON.parse(arg) });
     await send("WebDriver:ReleaseActions");
   } else if (cmd === "shot") {

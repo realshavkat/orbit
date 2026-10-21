@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Memory: adaptive sleep under memory pressure, an optional memory budget,
-// the orbit://memoire sheet and an eco mode. Runs from one timer per window
-// (60 s) plus the platform's "memory-pressure" notification.
 var OrbitMemory = {
   init() {
     if (!this._watching) {
@@ -13,7 +10,6 @@ var OrbitMemory = {
       Services.obs.addObserver(this.observe, "memory-pressure");
       window.addEventListener("unload", () => Services.obs.removeObserver(this.observe, "memory-pressure"), { once: true });
     }
-    // One timer for the whole app. Each window would otherwise sleep the same tabs.
     if (this._timer) return;
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
       if (win != window && win.OrbitMemory?._timer) return;
@@ -31,7 +27,6 @@ var OrbitMemory = {
     }, { once: true });
   },
 
-  // Windows reports low memory: sleep everything idle for 2+ minutes.
   observe(_subject, topic) {
     if (topic != "memory-pressure") return;
     this.pressureUntil = Date.now() + 10 * 60_000;
@@ -39,7 +34,6 @@ var OrbitMemory = {
     if (n >= 3) OrbitNotify.tabsSlept(n);
   },
 
-  // Minutes before an idle tab sleeps; -1 = adaptive (shorter under pressure).
   idleMinutes() {
     const v = Orbit.pref("orbit.tabs.unload-after-minutes", -1);
     if (v != -1) return v;
@@ -50,7 +44,6 @@ var OrbitMemory = {
     const b = tab.linkedBrowser;
     return !(tab.selected || tab.closing || !tab.linkedPanel || tab.soundPlaying || tab.hasAttribute("pending") ||
       b?.docShellIsActive || b?._sharingState?.webRTC?.sharing ||
-      // Gecko marks the tab with an attribute; sleeping it would close its Picture-in-Picture.
       tab.hasAttribute("pictureinpicture"));
   },
 
@@ -63,7 +56,6 @@ var OrbitMemory = {
     return n;
   },
 
-  // Sleep every background tab, then let Gecko give unused memory back.
   async freeNow() {
     const total = info => info.memory + info.children.reduce((a, c) => a + c.memory, 0);
     const before = total(await ChromeUtils.requestProcInfo());
@@ -80,8 +72,6 @@ var OrbitMemory = {
     return n;
   },
 
-  // Total resident memory of Orbit (all processes) and a per-tab estimate:
-  // a content process' memory shared evenly by the tabs it hosts.
   async measure() {
     const info = await ChromeUtils.requestProcInfo();
     const byPid = new Map(info.children.map(c => [c.pid, c.memory]));
@@ -99,9 +89,6 @@ var OrbitMemory = {
     return { total, ui: info.memory, tabs };
   },
 
-  // Runs every minute from one window: idle sleep, then the memory budget.
-  // The budget is measured again after each tab, because a shared process
-  // does not shrink by that tab's share of its memory.
   async enforceBudget() {
     let slept = 0;
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
@@ -125,7 +112,6 @@ var OrbitMemory = {
     if (n >= 3) OrbitNotify.tabsSlept(n);
   },
 
-  // Total memory, and the oldest tab that can sleep, across every window.
   async oldestAwake() {
     const info = await ChromeUtils.requestProcInfo();
     const total = info.memory + info.children.reduce((a, c) => a + c.memory, 0);
@@ -141,8 +127,6 @@ var OrbitMemory = {
     return { total, next };
   },
 
-  // Eco mode: fewer content processes (after restart), still background,
-  // smaller image cache.
   ECO_KEYS: ["dom.ipc.processCount", "image.mem.surfacecache.max_size_kb", "orbit.effects.nebula"],
   ECO_SAVED: "orbit.memory.eco-saved",
 
@@ -174,8 +158,6 @@ var OrbitMemory = {
     }
   },
 
-  // ---- performance presets ----------------------------------------------------------
-  // Four planets, from fastest to lightest. Process counts apply after a restart.
   PRESETS: {
     mercure: {
       "dom.ipc.processCount": 8, "dom.ipc.processPrelaunch.enabled": true, "orbit.tabs.unload-after-minutes": 60,
@@ -214,7 +196,6 @@ var OrbitMemory = {
     return mb >= 1024 ? `${(mb / 1024).toFixed(1).replace(".", ",")} Go` : `${Math.round(mb)} Mo`;
   },
 
-  // ---- orbit://memoire sheet --------------------------------------------------
   t(k) {
     const fr = Orbit.lang() == "fr";
     const S = {

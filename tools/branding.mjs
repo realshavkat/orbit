@@ -1,10 +1,5 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
-// Generates configs/branding/release/* (what surfer turns into
-// browser/branding/release) from the Orbit artwork in assets/.
-//   npm run branding
 import sharp from "sharp";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -16,7 +11,6 @@ mkdirSync(join(out, "content"), { recursive: true });
 const appIcon = readFileSync(join(root, "assets/logoapp.png"));
 const planetPaths = [...readFileSync(join(root, "assets/logonobgsvg.svg"), "utf8").matchAll(/ d="([^"]+)"/g)].map(m => m[1]);
 
-// The planet mark (331x251) centered in a rounded square.
 function iconSvg({ size = 1024, bg = "#000", bg2 = null, fg = "#fefefe", radius = 0.23, pad = 0.2 }) {
   const inner = size * (1 - pad * 2);
   const scale = inner / 331;
@@ -34,7 +28,6 @@ const appPng = await square(appIcon);
 const privatePng = await sharp(Buffer.from(iconSvg({ bg: "#5b21b6", bg2: "#c026d3" }))).png().toBuffer();
 const png = (src, size) => sharp(src).resize(size, size).png().toBuffer();
 
-// Banner: dark gradient with the icon centered (installer art, about box).
 async function banner(w, h, iconRatio = 0.42) {
   const bg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><defs>
     <radialGradient id="a" cx="0" cy="0" r="1.2"><stop offset="0" stop-color="#5b3df5"/><stop offset="1" stop-color="#0b0b10" stop-opacity="0"/></radialGradient>
@@ -46,7 +39,6 @@ async function banner(w, h, iconRatio = 0.42) {
     .removeAlpha();
 }
 
-// ICO with PNG-compressed entries (Vista+).
 async function ico(src, sizes) {
   const imgs = await Promise.all(sizes.map(s => png(src, s)));
   const header = Buffer.alloc(6 + 16 * sizes.length);
@@ -67,7 +59,6 @@ async function ico(src, sizes) {
   return Buffer.concat([header, ...imgs]);
 }
 
-// 24-bit bottom-up BMP, as NSIS expects.
 async function bmp(pipeline) {
   const { data, info } = await pipeline.raw().toBuffer({ resolveWithObject: true });
   const { width: w, height: h, channels: c } = info;

@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit settings sheet (gear in the sidebar, Ctrl+, or orbit://settings).
-// Every control is a custom widget writing a pref; OrbitLayout.applyPrefs()
-// turns prefs into live CSS in every window, so nothing needs a restart
-// except the UI language.
 var OrbitSettings = {
   FONTS: ["Outfit", "Inter", "Manrope", "Space Grotesk", "DM Sans", "Segoe UI Variable Text"],
 
@@ -348,13 +344,11 @@ var OrbitSettings = {
     },
   },
 
-  // ---- sheet ------------------------------------------------------------------
   toggle() {
     if (document.getElementById("orbit-settings")) this.close();
     else this.open();
   },
 
-  // Navigation groups and one line under each section title.
   GROUPS: [
     ["personal", ["general", "look", "effects", "mods", "layout"]],
     ["web", ["browsing", "downloads", "ai"]],
@@ -434,7 +428,6 @@ var OrbitSettings = {
           { duration: 260, easing: "cubic-bezier(.2,.9,.25,1)" });
       }
     };
-    // Search: every section's rows whose text matches, grouped by section.
     this.filter = q => {
       const norm = x => x.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const needle = norm(q.trim());
@@ -472,7 +465,6 @@ var OrbitSettings = {
     window.addEventListener("keydown", this._onKey, true);
   },
 
-  // Back to Orbit's defaults for every pref the section shows.
   resetSection(id) {
     for (const item of this.SECTIONS.find(s => s.id == id)?.items ?? []) {
       if (item.pref) Services.prefs.clearUserPref(item.pref);
@@ -489,8 +481,6 @@ var OrbitSettings = {
     setTimeout(() => sheet.remove(), 180);
   },
 
-  // ---- row helpers ----------------------------------------------------------------
-  // A changed setting shows "Reset"; a whole toggle row is clickable.
   decorate(el, item, sectionId) {
     if (!el) return el;
     if (item.kind == "toggle") {
@@ -510,7 +500,6 @@ var OrbitSettings = {
     return el;
   },
 
-  // ---- rows ---------------------------------------------------------------------
   row(control, labelKey, extra = null) {
     const h = Orbit.h.bind(Orbit);
     const desc = this.t(`${labelKey}.d`);
@@ -561,7 +550,6 @@ var OrbitSettings = {
         if (!LaunchOnLogin.isSupported()) return null;
         const sw = this.switch(false, on => (on ? LaunchOnLogin.enable() : LaunchOnLogin.disable())
           .catch(e => console.error("Orbit autostart", e)));
-        // Reflect the real state without writing it back.
         LaunchOnLogin.isEnabled().then(on => {
           sw.toggleAttribute("on", on);
           sw.setAttribute("aria-checked", String(on));
@@ -642,7 +630,6 @@ var OrbitSettings = {
           const addon = await AddonManager.getAddonByID(item.id);
           if (addon) await (on ? addon.enable() : addon.disable());
         }), item.label);
-        // Hide the row when the add-on is missing; reflect its real state.
         AddonManager.getAddonByID(item.id).then(a => {
           if (!a) row.remove();
           else if (a.userDisabled) row.lastChild.click();
@@ -661,9 +648,6 @@ var OrbitSettings = {
     return null;
   },
 
-  // Anti-stealer vault. Malware that copies a browser profile gets the saved
-  // passwords unless a primary password encrypts them; Windows sign-in guards
-  // showing and filling them; sessions can be wiped at every close.
   renderVault() {
     const h = Orbit.h.bind(Orbit);
     const p = Services.prefs;
@@ -698,7 +682,6 @@ var OrbitSettings = {
         }));
   },
 
-  // Light / dark / system, with a small preview of each.
   renderScheme() {
     const h = Orbit.h.bind(Orbit);
     const p = Services.prefs;
@@ -719,7 +702,6 @@ var OrbitSettings = {
       cards);
   },
 
-  // Consecutive simple rows share one card; wide items get their own.
   group(rows) {
     const h = Orbit.h.bind(Orbit);
     const out = [];
@@ -814,7 +796,7 @@ var OrbitSettings = {
     const open = url => { this.close(); gBrowser.selectedTab = gBrowser.addTrustedTab(url); };
     return h("div", { class: "orbit-mods-page" },
       h("div", { class: "orbit-mods-actions" },
-        h("button", { class: "orbit-button primary", onclick: () => open("https://zen-browser.app/mods/") },
+        h("button", { class: "orbit-button primary", onclick: () => open(OrbitMods.community() ? `${OrbitMods.community()}/mods` : "https://zen-browser.app/mods/") },
           Orbit.icon("sparkles"), Orbit.tr("Browse mods", "Parcourir les mods")),
         h("button", { class: "orbit-button", onclick: async () => {
           const name = { value: Orbit.tr("My mod", "Mon mod") };
@@ -828,7 +810,6 @@ var OrbitSettings = {
       list);
   },
 
-  // One installed mod: picture, name, switch; its preferences unfold below.
   modCard(m, on, refresh) {
     const h = Orbit.h.bind(Orbit);
     const prefs = h("div", { class: "orbit-mod-prefs", hidden: true }, ...m.prefs.map(p => this.modPref(p)));
@@ -919,7 +900,6 @@ var OrbitSettings = {
     ["Ctrl Maj ]", "Picture-in-Picture", "Picture-in-Picture"],
   ],
 
-  // Save button, then each saved session with restore and delete.
   renderSessions() {
     const h = Orbit.h.bind(Orbit);
     const list = h("div", { class: "orbit-sessions" });
@@ -940,8 +920,6 @@ var OrbitSettings = {
     return h("div", {}, this.row(save, "sessionSave"), list);
   },
 
-  // Shortcuts page: search, Orbit's fixed keys, then every palette command by
-  // group, each one recordable. A custom shortcut wins over a built-in one.
   renderShortcuts() {
     const h = Orbit.h.bind(Orbit);
     const tr = Orbit.tr.bind(Orbit);
@@ -988,14 +966,12 @@ var OrbitSettings = {
       ...sections, empty);
   },
 
-  // Which action already answers these keys (to say what a new shortcut replaces).
   shortcutOwner(keys, exceptId) {
     const fixed = this.SHORTCUTS.find(([k]) => k == keys);
     if (fixed) return Orbit.tr(fixed[2], fixed[1]);
     return OrbitPalette.flat().find(c => c[3] == keys && c[4] != exceptId)?.[1] ?? null;
   },
 
-  // One row: icon, action, keys. Palette commands record a new shortcut on click.
   shortcutRow({ icon, label, keys, id }) {
     const h = Orbit.h.bind(Orbit);
     const tr = Orbit.tr.bind(Orbit);
@@ -1054,13 +1030,11 @@ var OrbitSettings = {
     return row;
   },
 
-  // ---- widgets ------------------------------------------------------------------
   switch(on, onChange) {
     const h = Orbit.h.bind(Orbit);
     const sw = h("button", {
       class: "orbit-switch", role: "switch", "aria-checked": String(on), on,
       onclick: () => {
-        // Read the attribute: callers may set the real state later.
         on = !sw.hasAttribute("on");
         sw.toggleAttribute("on", on);
         sw.setAttribute("aria-checked", String(on));
@@ -1070,7 +1044,6 @@ var OrbitSettings = {
     return sw;
   },
 
-  // Fully custom slider: track, fill, thumb, value bubble, keyboard support.
   slider({ min, max, value, unit = "", step = 1, onInput }) {
     const h = Orbit.h.bind(Orbit);
     const fill = h("div", { class: "orbit-slider-fill" });
@@ -1135,7 +1108,6 @@ var OrbitSettings = {
     return seg;
   },
 
-  // Custom dropdown; options: [{value, label, font?}], footer: optional button.
   dropdown(options, current, onChange, footer = null) {
     const h = Orbit.h.bind(Orbit);
     const label = h("span", {});
@@ -1156,7 +1128,6 @@ var OrbitSettings = {
         }, h("span", {}, o.label), o.value == current ? Orbit.icon("check") : null)),
         footer ? h("div", { class: "orbit-dropdown-sep" }) : null,
         footer);
-      // On the sheet itself, not in the row: cards clip their content.
       const host = document.getElementById("orbit-settings") ?? document.body;
       host.append(menu);
       const r = btn.getBoundingClientRect();
@@ -1169,7 +1140,6 @@ var OrbitSettings = {
       menu.style.top = up ? "" : `${r.bottom + 6}px`;
       menu.style.bottom = up ? `${innerHeight - r.top + 6}px` : "";
       menu.toggleAttribute("up", up);
-      // A scroll of the page under it would leave it floating: close it.
       menu.closest("#orbit-settings")?.querySelector(".orbit-settings-body")
         ?.addEventListener("scroll", () => this.closeMenus(), { once: true });
       const outside = e => {
@@ -1189,7 +1159,6 @@ var OrbitSettings = {
     return open.length > 0;
   },
 
-  // ---- special rows ----------------------------------------------------------------
   renderLanguage() {
     const h = Orbit.h.bind(Orbit);
     const available = Services.locale.availableLocales;
@@ -1219,7 +1188,6 @@ var OrbitSettings = {
       v => Services.prefs.setStringPref("orbit.theme.font", v), add), "font");
   },
 
-  // Copies a .ttf/.otf/.woff2 into the profile and registers it.
   addFont() {
     this.closeMenus();
     const fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
@@ -1295,7 +1263,6 @@ var OrbitSettings = {
       h("div", { class: "orbit-about-fine" }, this.t("about.credits")));
   },
 
-  // Live update status, the same steps as Firefox's About window, in Orbit's style.
   renderUpdater() {
     const h = Orbit.h.bind(Orbit);
     const icon = h("span", { class: "orbit-upd-icon" }, Orbit.icon("refresh-cw"));
@@ -1320,7 +1287,6 @@ var OrbitSettings = {
     const check = () => updater.check();
     const restart = () => Services.startup.quit(Ci.nsIAppStartup.eAttemptQuit | Ci.nsIAppStartup.eRestart);
     const listener = (status, ...args) => {
-      // Settings closed: stop following the updater.
       if (!card.isConnected && card.dataset.state) return updater.removeListener(listener);
       const v = updater.update?.displayVersion || updater.update?.appVersion || "";
       switch (status) {
@@ -1366,8 +1332,6 @@ var OrbitSettings = {
     };
     updater.addListener(listener);
     set("checking", Orbit.tr("Checking for updates…", "Recherche de mises à jour…"));
-    // After the card is on screen: the updater may answer synchronously, and
-    // the listener stops for good when it sees the card detached.
     setTimeout(check, 0);
     return card;
   },

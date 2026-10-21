@@ -2,13 +2,8 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit VPN: one switch that routes all browsing through a tunnel you
-// choose: Tor, a VPN app's local proxy, or your own SOCKS5/HTTPS server.
-// While on, DNS goes through the tunnel and WebRTC cannot leak the real IP;
-// if the server stops answering nothing goes out (no fallback to direct).
 var OrbitVPN = {
   WIDGET: "orbit-vpn-button",
-  // Prefs set while the custom tunnel is on, restored when it goes off.
   TUNNEL_PREFS: ["network.proxy.type", "network.proxy.socks", "network.proxy.socks_port", "network.proxy.socks_version",
     "network.proxy.socks_remote_dns", "network.proxy.http", "network.proxy.http_port", "network.proxy.ssl",
     "network.proxy.ssl_port", "network.proxy.no_proxies_on", "network.proxy.failover_direct",
@@ -28,14 +23,11 @@ var OrbitVPN = {
     }[k];
   },
 
-  // One-click servers for the simple mode.
   PRESETS: [
     ["tor-browser", "socks5://127.0.0.1:9150"],
     ["tor", "socks5://127.0.0.1:9050"],
   ],
 
-  // Off for now (not reliable yet): no button, no setting, and a tunnel left
-  // on by an earlier version is turned off so browsing goes direct.
   AVAILABLE: false,
 
   init() {
@@ -44,12 +36,10 @@ var OrbitVPN = {
       if (CustomizableUI.getPlacementOfWidget(this.WIDGET)) CustomizableUI.removeWidgetFromArea(this.WIDGET);
       return;
     }
-    // Gecko's own (Mozilla-account) VPN is not part of Orbit.
     if (Orbit.pref("orbit.vpn.mode", "custom") != "custom") Services.prefs.setStringPref("orbit.vpn.mode", "custom");
     Services.prefs.clearUserPref("browser.ipProtection.enabled");
     if (CustomizableUI.getPlacementOfWidget("ipprotection-button")) CustomizableUI.removeWidgetFromArea("ipprotection-button");
     this.migrate();
-    // App-wide widget: the first window creates it, later ones get "exists".
     try {
       CustomizableUI.createWidget({
         id: this.WIDGET,
@@ -66,7 +56,6 @@ var OrbitVPN = {
     window.addEventListener("unload", () => Services.prefs.removeObserver("orbit.vpn.enabled", this._obs), { once: true });
   },
 
-  // Only the first window applies saved state (prefs are global).
   migrate() {
     if (Orbit.pref("orbit.vpn.enabled", false) && Orbit.pref("network.proxy.type", 5) != 1) {
       this.apply(true, { quiet: true });
@@ -80,7 +69,6 @@ var OrbitVPN = {
     node.setAttribute("tooltiptext", on ? this.t("on") : this.t("off"));
   },
 
-  // ---- panel (toolbar button) ------------------------------------------------------
   P(k) {
     const fr = Orbit.lang() == "fr";
     return {
@@ -132,7 +120,6 @@ var OrbitVPN = {
           h("button", { class: "orbit-toast-link", onclick: () => this.checkIP(ipLine) }, this.P("check"))),
         ipLine,
       ];
-      // Simple mode with no server yet: one-click choices.
       if (!server && !adv) {
         children.push(h("div", { class: "orbit-vpn-adv" },
           h("div", { class: "orbit-setting-desc" }, this.P("choose")),
@@ -228,8 +215,6 @@ var OrbitVPN = {
     return s ? `${s.host}:${s.port}` : url;
   },
 
-  // Asks a public "what is my IP" service, through the tunnel when it is on.
-  // Returns true only when a public address came back.
   async checkIP(line) {
     line.textContent = this.P("checking");
     try {
@@ -262,16 +247,13 @@ var OrbitVPN = {
         Services.prefs.setBoolPref("orbit.vpn.advanced", true);
         return;
       }
-      // Remember the user's own proxy settings once, to restore them later.
       if (!Orbit.pref("orbit.vpn.saved", "")) {
         const saved = {};
         for (const k of this.TUNNEL_PREFS) if (p.prefHasUserValue(k)) saved[k] = Orbit.pref(k);
         p.setStringPref("orbit.vpn.saved", JSON.stringify(saved));
       }
       p.setIntPref("network.proxy.type", 1);
-      // A dead proxy must not fall back to a direct connection.
       p.setBoolPref("network.proxy.failover_direct", false);
-      // Only the sites listed in "bypass" skip the tunnel (local addresses by default).
       p.setStringPref("network.proxy.no_proxies_on", Orbit.pref("orbit.vpn.bypass", "localhost, 127.0.0.1"));
       if (server.kind == "http") {
         for (const k of ["http", "ssl"]) {
@@ -283,12 +265,10 @@ var OrbitVPN = {
         p.setStringPref("network.proxy.socks", server.host);
         p.setIntPref("network.proxy.socks_port", server.port);
         p.setIntPref("network.proxy.socks_version", server.kind == "socks4" ? 4 : 5);
-        // DNS lookups go through the tunnel too (unless turned off in advanced mode).
         p.setBoolPref("network.proxy.socks_remote_dns", Orbit.pref("orbit.vpn.dns", true));
         p.setStringPref("network.proxy.http", "");
         p.setStringPref("network.proxy.ssl", "");
       }
-      // No WebRTC leak of the real address.
       const webrtc = Orbit.pref("orbit.vpn.webrtc", true);
       p.setBoolPref("media.peerconnection.ice.proxy_only_if_behind_proxy", webrtc);
       p.setBoolPref("media.peerconnection.ice.default_address_only", webrtc);

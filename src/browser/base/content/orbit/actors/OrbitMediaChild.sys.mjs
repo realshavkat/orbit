@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Volume of the page's <video>/<audio> elements, for the sidebar player.
 export class OrbitMediaChild extends JSWindowActorChild {
   receiveMessage(msg) {
     const media = [...this.document.querySelectorAll("video, audio")];

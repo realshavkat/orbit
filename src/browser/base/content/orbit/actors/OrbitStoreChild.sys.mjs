@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Store pages speak to Orbit: the Chrome Web Store's greyed "Add to Chrome"
-// becomes "Add to Orbit", addons.mozilla.org says Orbit instead of Firefox,
-// and Zen's mod pages get a working install button. The page only gets a
-// label and a click handler; the work happens in the parent (OrbitStoreParent).
 const ADD = { fr: "Ajouter à Orbit", es: "Añadir a Orbit", de: "Zu Orbit hinzufügen", pt: "Adicionar ao Orbit",
   it: "Aggiungi a Orbit", ru: "Добавить в Orbit", uk: "Додати до Orbit", en: "Add to Orbit" };
 const REMOVE = { fr: "Retirer d'Orbit", es: "Quitar de Orbit", de: "Aus Orbit entfernen", pt: "Remover do Orbit",
@@ -22,11 +18,12 @@ export class OrbitStoreChild extends JSWindowActorChild {
   handleEvent(e) {
     if (e.type != "DOMContentLoaded" || this._observer) return;
     const host = this.document.location.host;
+    const known = ["zen-browser.app", "addons.mozilla.org", "chromewebstore.google.com", "chrome.google.com"];
     const run = host == "zen-browser.app" ? () => this.zen()
       : host == "addons.mozilla.org" ? () => this.amo()
-      : () => this.chrome();
+      : known.includes(host) ? () => this.chrome()
+      : () => this.orbit();
     let queued = false;
-    // These sites re-render themselves: re-apply after each change, batched.
     this._observer = new this.contentWindow.MutationObserver(() => {
       if (queued) return;
       queued = true;
@@ -43,7 +40,6 @@ export class OrbitStoreChild extends JSWindowActorChild {
     this._observer?.disconnect();
   }
 
-  // Chrome Web Store: the disabled "Add to Chrome" button of a detail page.
   chrome() {
     const id = /\/detail\/(?:[^/]+\/)?([a-p]{32})/.exec(this.document.location.pathname)?.[1];
     if (!id) return;
@@ -68,7 +64,6 @@ export class OrbitStoreChild extends JSWindowActorChild {
     }, true);
   }
 
-  // addons.mozilla.org: "Add to Firefox" -> "Add to Orbit" (installing already works).
   amo() {
     for (const el of this.document.querySelectorAll(".AMInstallButton-button, .Button--action, .GetFirefoxButton-button")) {
       const walker = this.document.createTreeWalker(el, 4);
@@ -78,7 +73,6 @@ export class OrbitStoreChild extends JSWindowActorChild {
     }
   }
 
-  // zen-browser.app/mods/<id>: Zen's hidden install / uninstall buttons.
   zen() {
     const install = this.document.getElementById("install-theme");
     const remove = this.document.getElementById("install-theme-uninstall");
@@ -87,7 +81,6 @@ export class OrbitStoreChild extends JSWindowActorChild {
     install.setAttribute("orbit-store", id);
     this.document.getElementById("install-theme-error")?.remove();
     const show = installed => {
-      // The site hides them with a class: an inline display wins over it.
       install.hidden = installed;
       install.style.setProperty("display", installed ? "none" : "flex", "important");
       if (remove) {
@@ -108,7 +101,28 @@ export class OrbitStoreChild extends JSWindowActorChild {
     this.sendQuery("OrbitStore:ModState", { id }).then(show);
   }
 
-  // Replace the visible text but keep icons and the button's own markup.
+  orbit() {
+    this.document.documentElement.setAttribute("data-orbit-browser", "1");
+    for (const btn of this.document.querySelectorAll("button[data-orbit-mod]:not([orbit-store])")) {
+      const slug = btn.getAttribute("data-orbit-mod");
+      btn.setAttribute("orbit-store", slug);
+      let installed = false;
+      const show = state => {
+        if (state == null) return;
+        installed = state;
+        btn.toggleAttribute("data-orbit-installed", installed);
+        this.label(btn, installed ? REMOVE[lang()] : ADD[lang()]);
+      };
+      btn.addEventListener("click", ev => {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        this.label(btn, BUSY[lang()]);
+        this.sendQuery(installed ? "OrbitStore:OrbitModRemove" : "OrbitStore:OrbitModInstall", { slug }).then(show);
+      }, true);
+      this.sendQuery("OrbitStore:OrbitModState", { slug }).then(show);
+    }
+  }
+
   label(btn, text) {
     const walker = this.document.createTreeWalker(btn, 4);
     const nodes = [];

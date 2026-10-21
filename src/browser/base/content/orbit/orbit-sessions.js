@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Named sessions: a snapshot of this window (tabs, spaces, essentials,
-// history of each tab) saved in the profile, restored in a new window.
-// Also export and import of Orbit's settings as a JSON file.
 var OrbitSessions = {
   MAX: 40,
 
@@ -45,7 +42,6 @@ var OrbitSessions = {
     OrbitPalette.ask(Orbit.tr("Name of the session", "Nom de la session"), name => this.save(name));
   },
 
-  // In a new window, so the current tabs stay as they are.
   async restore(id) {
     const s = (await this.list()).find(x => x.id == id);
     if (!s) return;
@@ -59,9 +55,6 @@ var OrbitSessions = {
     await this.write((await this.list()).filter(x => x.id != id));
   },
 
-  // ---- Firefox Sync: spaces and settings on every computer -------------------------
-  // Turning it on here also turns it on on the other computers (the control
-  // prefs travel with Sync). Tabs stay on their own computer.
   SYNCED: [
     "orbit.spaces.data",
     "orbit.theme.intensity",
@@ -97,7 +90,6 @@ var OrbitSessions = {
     for (const n of this.SYNCED) Services.prefs.setBoolPref(`services.sync.prefs.sync.${n}`, on);
   },
 
-  // ---- settings export / import ---------------------------------------------------
   async pickFile(mode, title) {
     const fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
     fp.init(window.browsingContext, title, mode);
@@ -113,7 +105,6 @@ var OrbitSessions = {
     const p = Services.prefs;
     const prefs = {};
     for (const name of p.getChildList("orbit.")) {
-      // The PIN's hash stays on this PC: a 4-digit PIN is quick to guess offline.
       if (!p.prefHasUserValue(name) || name == "orbit.lock.pin") continue;
       const type = p.getPrefType(name);
       prefs[name] = type == p.PREF_BOOL ? p.getBoolPref(name) : type == p.PREF_INT ? p.getIntPref(name) : p.getStringPref(name);
@@ -133,7 +124,6 @@ var OrbitSessions = {
       OrbitNotify.show({ kind: "settings", icon: "info", tone: "warn", title: Orbit.tr("Not an Orbit settings file", "Ce n'est pas un fichier de réglages Orbit"), timeout: 4000 });
       return;
     }
-    // Only Orbit's own prefs, with the type they already have.
     const p = Services.prefs;
     let n = 0;
     for (const [name, v] of Object.entries(data.prefs)) {

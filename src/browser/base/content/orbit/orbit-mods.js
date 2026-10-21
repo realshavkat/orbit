@@ -2,16 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Themes and mods.
-// - Firefox themes (addons.mozilla.org) take over Orbit's colors and header
-//   image; Orbit's liquid background steps aside while one is active.
-// - Mods live in <profile>/orbit-mods/. A mod is a folder in Zen's format
-//   (theme.json, chrome.css, preferences.json, readme.md), so Zen mods install
-//   as they are, from zen-browser.app/mods ("Add to Orbit") or by hand. A lone
-//   .css file is a mod too. userChrome.css works as usual.
-// Zen mod preferences behave like in Zen: checkbox -> @media (-moz-bool-pref:
-// "name") / -moz-pref("name"), dropdown -> attribute on the root element,
-// string -> CSS variable --name (dots become dashes).
 var OrbitMods = {
   DIR: "orbit-mods",
   OFF_PREF: "orbit.mods.disabled",
@@ -39,7 +29,6 @@ var OrbitMods = {
     this._timer = setTimeout(() => this.apply().catch(e => console.error("Orbit mods", e)), 60);
   },
 
-  // ---- Firefox themes -------------------------------------------------------------
   watchTheme() {
     const sync = async () => {
       const [theme] = await AddonManager.getAddonsByTypes(["theme"]).then(all => all.filter(a => a.isActive));
@@ -51,7 +40,6 @@ var OrbitMods = {
     sync();
   },
 
-  // ---- reading mods -----------------------------------------------------------------
   disabled() {
     try {
       return new Set(JSON.parse(Orbit.pref(this.OFF_PREF, "[]")));
@@ -68,7 +56,6 @@ var OrbitMods = {
     }
   },
 
-  // [{ id, name, description, author, version, image, dir|file, prefs: [...] }]
   async list() {
     await IOUtils.makeDirectory(this.dir, { ignoreExisting: true });
     const out = [];
@@ -81,7 +68,7 @@ var OrbitMods = {
         const prefs = await this.readJSON(PathUtils.join(path, "preferences.json"), []);
         out.push({ id: name, name: meta?.name || name, description: meta?.description ?? "", author: meta?.author ?? "",
           version: meta?.version ?? "", image: meta?.image ?? "", homepage: meta?.homepage ?? "", dir: path,
-          prefs: Array.isArray(prefs) ? prefs.filter(p => p?.property && p?.type) : [], zen: !!meta?.style });
+          prefs: Array.isArray(prefs) ? prefs.filter(p => p?.property && p?.type) : [], zen: !!(meta?.style || meta?.zen), store: !!(meta?.style || meta?.zen || meta?.orbit) });
       } else if (name.toLowerCase().endsWith(".css")) {
         out.push({ id: name, name: name.replace(/\.css$/i, ""), description: "", author: "", version: "", image: "", file: path, prefs: [] });
       }
@@ -89,7 +76,6 @@ var OrbitMods = {
     return out.sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  // ---- applying -------------------------------------------------------------------
   sanitize(property) {
     return String(property).replace(/\./g, "-");
   },
@@ -102,8 +88,6 @@ var OrbitMods = {
     return p.defaultValue ?? "";
   },
 
-  // Gecko dropped -moz-bool-pref for web content and chrome: the condition is
-  // resolved here, from the pref's current value.
   resolvePrefQueries(css) {
     const truth = (name, value) => {
       const type = Services.prefs.getPrefType(name);
@@ -124,7 +108,6 @@ var OrbitMods = {
       .replace(/-moz-pref\(\s*["']([^"']+)["']\s*(?:,\s*["']([^"']*)["']\s*)?\)/g, (_, n, v) => (truth(n, v ?? null) ? yes : no));
   },
 
-  // Mods are author sheets on this window only: each window applies them.
   async apply() {
     for (const uri of this._loaded ?? []) {
       try {
@@ -154,10 +137,8 @@ var OrbitMods = {
       const src = mod.file ?? PathUtils.join(mod.dir, "chrome.css");
       try {
         const css = this.resolvePrefQueries(await IOUtils.readUTF8(src));
-        // Written next to the original so relative url()s keep working.
         const out = mod.file ? `${mod.file}.orbit` : PathUtils.join(mod.dir, ".orbit-chrome.css");
         await IOUtils.writeUTF8(out, css);
-        // A query string defeats the stylesheet cache, so edits show on reload.
         const uri = Services.io.newURI(`${Services.io.newFileURI(new FileUtils.File(out)).spec}?${Date.now()}`);
         window.windowUtils.loadSheet(uri, window.windowUtils.AUTHOR_SHEET);
         this._loaded.push(uri);
@@ -165,7 +146,6 @@ var OrbitMods = {
         console.error(`Orbit mod ${mod.id}`, e);
       }
     }
-    // Follow every preference a mod declares.
     for (const name of this._watched ?? []) if (!watch.has(name)) Services.prefs.removeObserver(name, this._obs);
     for (const name of watch) if (!this._watched?.has(name)) Services.prefs.addObserver(name, this._obs);
     this._watched = watch;
@@ -183,7 +163,6 @@ var OrbitMods = {
     else Services.prefs.setStringPref(p.property, String(value));
   },
 
-  // ---- Zen's mod store ----------------------------------------------------------
   checkId(id) {
     if (!/^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(id)) throw new Error(`bad mod id ${id}`);
   },
@@ -201,9 +180,69 @@ var OrbitMods = {
     return text;
   },
 
-  // Files come from Zen's official store repository, by id only.
+  FILES: ["theme.json", "chrome.css", "preferences.json", "readme.md"],
+
+  community() {
+    const url = Orbit.pref("orbit.community.url", "");
+    return /^https?:\/\//.test(url) ? url.replace(/\/$/, "") : null;
+  },
+
+  checkSlug(slug) {
+    if (!/^[a-z0-9-]{1,48}$/.test(slug)) throw new Error(`bad mod slug ${slug}`);
+  },
+
+  async isInstalledOrbit(slug) {
+    this.checkSlug(slug);
+    return IOUtils.exists(PathUtils.join(this.dir, `orbit-${slug}`, "theme.json"));
+  },
+
+  async writePackage(folder, pkg, extraMeta = {}) {
+    const files = pkg?.files ?? {};
+    if (typeof files["chrome.css"] != "string") throw new Error("package without chrome.css");
+    const dir = PathUtils.join(this.dir, folder);
+    await IOUtils.makeDirectory(dir, { createAncestors: true, ignoreExisting: true });
+    let meta = {};
+    try {
+      meta = JSON.parse(files["theme.json"] ?? "{}") ?? {};
+    } catch {}
+    meta = { ...meta, name: pkg.name ?? meta.name, version: pkg.version ?? meta.version, ...extraMeta };
+    for (const name of this.FILES) {
+      const path = PathUtils.join(dir, name);
+      if (name == "theme.json") await IOUtils.writeUTF8(path, JSON.stringify(meta, null, 2));
+      else if (typeof files[name] == "string") await IOUtils.writeUTF8(path, files[name]);
+      else await IOUtils.remove(path, { ignoreAbsent: true });
+    }
+    await this.toggle(folder, true);
+    this.schedule();
+    OrbitNotify.show({ kind: "mod", icon: "sparkles", tone: "ok", title: meta.name,
+      text: Orbit.tr("Mod installed. Settings › Mods to adjust it.", "Mod installé. Paramètres › Mods pour le régler."), timeout: 4000 });
+  },
+
+  async fetchJSON(url) {
+    const text = await this.fetchText(url, 3 * 1024 * 1024);
+    if (text == null) throw new Error(`${url}: not found`);
+    return JSON.parse(text);
+  },
+
+  async installOrbit(slug) {
+    this.checkSlug(slug);
+    const base = this.community();
+    if (!base) throw new Error("Orbit Mods is not set up");
+    const pkg = await this.fetchJSON(`${base}/api/v1/mods/${slug}/package`);
+    await this.writePackage(`orbit-${slug}`, pkg, { orbit: { slug } });
+  },
+
   async installZen(id) {
     this.checkId(id);
+    const site = this.community();
+    if (site) {
+      try {
+        const pkg = await this.fetchJSON(`${site}/api/v1/mods/zen/${id}/package`);
+        return await this.writePackage(id, pkg, { id, zen: { converted: true } });
+      } catch (e) {
+        console.warn("Orbit mods: conversion unavailable, installing as is", e);
+      }
+    }
     const base = `${this.STORE}/${id}`;
     const meta = JSON.parse(await this.fetchText(`${base}/theme.json`, 64 * 1024) ?? "null");
     if (!meta || meta.id != id) throw new Error(`mod ${id} not found`);
@@ -234,9 +273,15 @@ var OrbitMods = {
     this.schedule();
   },
 
-  // Newer version in Zen's store? Re-installing keeps the mod's preferences.
   async update(id) {
     const mod = (await this.list()).find(m => m.id == id);
+    const slug = /^orbit-([a-z0-9-]{1,48})$/.exec(id)?.[1];
+    if (slug && this.community()) {
+      const pkg = await this.fetchJSON(`${this.community()}/api/v1/mods/${slug}`).catch(() => null);
+      if (!pkg || pkg.version == mod?.version) return false;
+      await this.installOrbit(slug);
+      return true;
+    }
     if (!mod?.zen) return false;
     const meta = JSON.parse(await this.fetchText(`${this.STORE}/${id}/theme.json`, 64 * 1024) ?? "null");
     if (!meta || meta.version == mod.version) return false;
@@ -244,7 +289,6 @@ var OrbitMods = {
     return true;
   },
 
-  // ---- making a mod ---------------------------------------------------------------
   async create(name) {
     const id = Services.uuid.generateUUID().toString().slice(1, -1);
     const dir = PathUtils.join(this.dir, id);
@@ -256,7 +300,6 @@ var OrbitMods = {
       { property: `orbit.mod.${id.slice(0, 8)}.round`, label: "Coins très arrondis", type: "checkbox", defaultValue: true },
       { property: `orbit.mod.${id.slice(0, 8)}.color`, label: "Couleur d'accent", type: "string", defaultValue: "#7c86ff" },
     ], null, 2));
-    // The string preference becomes this variable (dots -> dashes).
     const var1 = `--orbit-mod-${id.slice(0, 8)}-color`;
     await IOUtils.writeUTF8(PathUtils.join(dir, "chrome.css"), `/* ${name}: edit this file, then Settings › Mods › Reload.
    Orbit's elements: #vertical-tabs, #pinned-tabs-container, .tabbrowser-tab,

@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Color picker (pipette): freezes the window into a snapshot, a loupe follows
-// the pointer, a click gives the pixel's color as HEX, RGB, HSL and OKLCH.
-// HEX goes to the clipboard at once; the last colors stay in a short history.
 var OrbitPicker = {
   RECENT: "orbit.picker.recent",
 
@@ -19,12 +16,10 @@ var OrbitPicker = {
   async start() {
     if (document.getElementById("orbit-picker")) return;
     for (const el of document.querySelectorAll("#orbit-palette, #orbit-picked, #orbit-settings[closing]")) el.remove();
-    // Let the closed overlays leave the screen before the snapshot.
     await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
     const scale = window.devicePixelRatio;
     let bitmap;
     try {
-      // An explicit rect: without one the snapshot includes the window frame.
       bitmap = await window.browsingContext.currentWindowGlobal.drawSnapshot(new DOMRect(0, 0, innerWidth, innerHeight), scale, "white");
     } catch (e) {
       console.error("Orbit: color picker snapshot", e);
@@ -60,7 +55,6 @@ var OrbitPicker = {
       const c = read(x, y);
       label.textContent = c.hex;
       lens.style.setProperty("--c", c.hex);
-      // Beside the pointer, flipped near the right and bottom edges.
       const side = e.clientX + 24 + 150 > innerWidth ? -24 - 136 : 24;
       const down = e.clientY + 24 + 170 > innerHeight ? -24 - 166 : 24;
       lens.style.transform = `translate(${e.clientX + side}px, ${e.clientY + down}px)`;
@@ -98,7 +92,6 @@ var OrbitPicker = {
     this.card(c, x, y);
   },
 
-  // The picked color in every format; click a row to copy it.
   card(c, x, y) {
     document.getElementById("orbit-picked")?.remove();
     const h = Orbit.h.bind(Orbit);

@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* Orbit look for the built-in pages (orbit://preferences, extensions,
-   downloads, config...). Registered as a user sheet by OrbitLayout.
-   Most widgets there are web components: we restyle them through the
-   design tokens they read (custom properties cross shadow roots). */
 @font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
 @font-face { font-family: "Inter"; src: url("chrome://orbit/content/fonts/Inter.ttf"); font-weight: 100 900; }
 @font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
@@ -144,14 +140,12 @@
     outline-width: 1.5px !important;
   }
 
-  /* Hide Mozilla account / promos / labs entries */
   :is(#category-more-from-mozilla, #category-experimental, #firefoxMoreFromMozilla,
       #mozillaVPN, #sync-pane-promo, .sync-promo, #category-ai-controls, moz-page-nav-button[support-page]) {
     display: none !important;
   }
 }
 
-/* Reader view: Outfit, calm dark page, accent links. */
 @-moz-document url-prefix("about:reader") {
   body.dark {
     --main-background: #0b0b0e !important;
@@ -164,7 +158,6 @@
   .toolbar-container .toolbar { border-radius: 10px !important; }
 }
 
-/* orbit://downloads: a full page of download cards, centered. */
 @-moz-document url-prefix("about:downloads") {
   #contentAreaDownloadsView {
     padding: 40px max(24px, calc(50vw - 460px)) 24px !important;

@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Sidebar mini player: the media playing in another tab (title, artist,
-// artwork) with previous / play-pause / next, via the platform's
-// MediaController. Hovering it shows a seek bar and a volume bar. Event-driven:
-// the only timer runs while the card is hovered and something plays.
 var OrbitMedia = {
   init() {
     if (!Orbit.pref("orbit.media.sidebar-player", true)) return;
@@ -15,7 +11,6 @@ var OrbitMedia = {
         child: { esModuleURI: "resource://orbit/actors/OrbitMediaChild.sys.mjs" },
         allFrames: true,
         messageManagerGroups: ["browsers"],
-        // The parent only sends volume queries; it never trusts the child.
         safeForUntrustedWebProcess: true,
       });
     } catch {}
@@ -64,7 +59,6 @@ var OrbitMedia = {
     gBrowser.tabContainer.addEventListener("TabClose", e => e.target == this.tab && setTimeout(() => this.refresh()));
   },
 
-  // A thin bar the pointer can drag; onPick gets a fraction 0..1.
   bar(onPick) {
     const h = Orbit.h.bind(Orbit);
     const fill = h("i", {});
@@ -103,7 +97,6 @@ var OrbitMedia = {
     return (hms[0] ? `${hms[0]}:${String(hms[1]).padStart(2, "0")}` : `${hms[1]}`) + `:${String(hms[2]).padStart(2, "0")}`;
   },
 
-  // Position = last reported one + time elapsed at the playback rate.
   tick() {
     const p = this.pos;
     const ok = p?.duration > 0 && isFinite(p.duration);
@@ -118,7 +111,6 @@ var OrbitMedia = {
     if (this.hover && !this.timer) this.timer = setInterval(() => this.tick(), 500);
   },
 
-  // Volume lives in the page's media elements (OrbitMedia actor, every frame).
   actors() {
     const bc = this.tab?.linkedBrowser?.browsingContext;
     return (bc?.getAllBrowsingContextsInSubtree() ?? [])
@@ -142,7 +134,6 @@ var OrbitMedia = {
   },
 
   refresh() {
-    // Prefer the tab that is audibly playing; keep the last one while paused.
     const playing = gBrowser.tabs.find(t => t.soundPlaying);
     const next = playing ?? (this.tab && !this.tab.closing && this.ctl()?.isActive ? this.tab : null);
     if (next != this.tab) this.watch(next);
@@ -179,7 +170,6 @@ var OrbitMedia = {
 
   render() {
     const c = this.ctl();
-    // Short clips never activate the media controller; sound alone is enough.
     const visible = !!((c?.isActive || this.tab?.soundPlaying) && !this.tab.selected);
     this.card.hidden = !visible;
     if (!visible) return;

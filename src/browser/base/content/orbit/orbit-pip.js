@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Loaded into each Picture-in-Picture window (see OrbitPiP in orbit.js):
-// Orbit's look over Firefox's player (orbit-pip.css). Nothing else changes,
-// so every native shortcut and control keeps working.
 (function () {
   const doc = document;
   if (doc.documentElement.hasAttribute("orbit-pip")) return;

@@ -2,11 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Updates. Automatic (Gecko's updater downloads and installs on restart) or
-// "ask me": at launch Orbit checks, and if a version is out it shows a window
-// with its patch notes (the GitHub release text) and an "Update" button.
-// The very first time an update shows up, that window appears even in
-// automatic mode, with a box to keep (or stop) automatic updates.
 var OrbitUpdates = {
   REPO: "realshavkat/orbit",
   ASKED: "orbit.updates.first-prompt-done",
@@ -30,9 +25,7 @@ var OrbitUpdates = {
   },
 
   async init() {
-    // Firefox's About window becomes Orbit's About page (version and updates).
     window.openAboutDialog = () => OrbitSettings.open("about");
-    // One check per launch, from the first window.
     if ([...Services.wm.getEnumerator("navigator:browser")].length > 1) return;
     const first = !Orbit.pref(this.ASKED, false);
     if (!first && await this.isAuto()) return;
@@ -102,7 +95,6 @@ var OrbitUpdates = {
     }
   },
 
-  // Patch notes: the body of the GitHub release for that version.
   async notes(version) {
     try {
       const res = await fetch(`https://api.github.com/repos/${this.REPO}/releases/tags/${encodeURIComponent(version)}`,
@@ -114,7 +106,6 @@ var OrbitUpdates = {
     }
   },
 
-  // Tiny Markdown subset -> DOM (text only, never HTML): headings, bullets, paragraphs.
   renderNotes(md) {
     const h = Orbit.h.bind(Orbit);
     const out = [];

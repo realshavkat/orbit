@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit's own notifications: small cards bottom right. Each kind can be
-// turned off in Settings (orbit.notify.<kind>) or from the card itself
-// ("Ne plus demander"); "Plus tard" snoozes it for 30 days.
 var OrbitNotify = {
   KINDS: ["pin", "default", "update", "sleep", "tips"],
   SNOOZE_DAYS: 30,
@@ -47,9 +44,7 @@ var OrbitNotify = {
     Services.prefs.setIntPref(`orbit.notify.${kind}.snooze`, Math.floor(Date.now() / 1000) + this.SNOOZE_DAYS * 86400);
   },
 
-  // Startup checks run once, in the first window, a few seconds after launch.
   init() {
-    // Only for the first window of a session.
     if ([...Services.wm.getEnumerator("navigator:browser")].length > 1) return;
     setTimeout(() => this.startupChecks().catch(e => console.error("Orbit notify", e)), 4000);
   },
@@ -103,8 +98,6 @@ var OrbitNotify = {
     this.show({ kind: "sleep", icon: "activity", tone: "warm", title: this.t("sleep.t", { n }), text: this.t("sleep.d"), timeout: 6000 });
   },
 
-  // Card layout of the design: badge, title + text, close; actions below
-  // (or a single row when there are none).
   show({ kind, icon, tone, title, text, link, primary, secondary, never, timeout }) {
     const h = Orbit.h.bind(Orbit);
     let stack = document.getElementById("orbit-toasts");

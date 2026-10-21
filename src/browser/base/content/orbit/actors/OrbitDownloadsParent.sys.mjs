@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Data and actions for orbit://downloads (resource://orbit/downloads.html).
-// Only that page gets answers; downloads are referred to by a number the
-// parent hands out, never by path, and the page only picks among fixed actions.
 const lazy = {};
 ChromeUtils.defineESModuleGetters(lazy, {
   Downloads: "resource://gre/modules/Downloads.sys.mjs",
@@ -129,7 +126,6 @@ export class OrbitDownloadsParent extends JSWindowActorParent {
     return null;
   }
 
-  // Live updates while the page is open (batched per download).
   watch(list) {
     if (this._view) return;
     this._pending = new Map();

@@ -2,20 +2,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// First-run setup. Built to stay light on any PC: a static background, no
-// blur or masks, and only one small demo animating at a time (transforms and
-// opacity only). The window's own background is paused meanwhile.
 var OrbitWelcome = {
   STEPS: ["hello", "look", "tour", "layout", "setup", "done"],
 
   maybeShow() {
     if (Orbit.pref("orbit.welcome.done", false) || PrivateBrowsingUtils.isWindowPrivate(window)) return;
-    // Only the first window shows it.
     if (Services.wm.getMostRecentWindow("navigator:browser") != window) return;
     this.show();
   },
 
-  // Feature list: [icon, title, text].
   FEATURES() {
     return [
       ["layers", Orbit.tr("Spaces and Essentials", "Espaces et favoris"),
@@ -172,7 +167,6 @@ var OrbitWelcome = {
     return [];
   },
 
-  // Three big picture cards; `pick` runs on click.
   choices(options, current, pick) {
     const h = Orbit.h.bind(Orbit);
     const wrap = h("div", { class: "ow-choices" });

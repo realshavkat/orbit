@@ -15,7 +15,6 @@
 html, body { height: 100%; margin: 0; }
 body { font-family: "Outfit", system-ui, sans-serif; }
 
-/* A thin margin all around stays grabbable for resizing (no title bar). */
 #holder { position: absolute; inset: 4px; border-radius: 8px; overflow: hidden; background: #000; }
 #holder browser { width: 100%; height: 100%; display: block; }
 
@@ -62,7 +61,6 @@ body:hover #bar, #bar:focus-within { opacity: 1; transform: none; }
 #close { background-image: url("chrome://orbit/content/icons/x.svg"); }
 #close:hover { background-color: #e5484d; }
 
-/* Drop a file, an image or a link on the window to show it instead. */
 #drop {
   position: absolute;
   inset: 4px;

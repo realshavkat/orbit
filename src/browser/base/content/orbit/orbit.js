@@ -2,17 +2,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit window bootstrap. Loaded into every browser.xhtml window (via the
-// browser.xhtml patch, or tools/dev.mjs in dev). Feature scripts share the
-// window scope and hang off the `Orbit` object.
-
 var Orbit = {
   BASE: "chrome://orbit/content/",
   XHTML: "http://www.w3.org/1999/xhtml",
 
-  // i18n. Orbit's strings are written in English and French; every other
-  // language is a dictionary in locales/<lang>.js keyed by the English text.
-  // Only the active language is loaded.
   LANGS: ["fr", "en", "es", "de", "pt", "it", "ru", "uk"],
 
   lang() {
@@ -20,14 +13,12 @@ var Orbit = {
     return this.LANGS.includes(l) ? l : "en";
   },
 
-  // tr("Hello", "Bonjour") -> the string in the UI language.
   tr(en, fr) {
     const l = this.lang();
     if (l == "fr") return fr ?? en;
     return (l != "en" && ORBIT_I18N[l]?.[en]) || en;
   },
 
-  // A {fr: {...}, en: {...}} table seen in the UI language (strings and arrays).
   dict(table) {
     const l = this.lang();
     if (table[l]) return table[l];
@@ -53,7 +44,6 @@ var Orbit = {
     return fallback;
   },
 
-  // Build DOM quickly: h("div", {class: "x", onclick}, child, "text").
   h(tag, attrs = {}, ...children) {
     const el = tag.includes(":")
       ? document.createXULElement(tag.split(":")[1])
@@ -67,7 +57,6 @@ var Orbit = {
     return el;
   },
 
-  // Services.search moved to a module in recent Gecko.
   get search() {
     return ChromeUtils.importESModule("moz-src:///toolkit/components/search/SearchService.sys.mjs").SearchService;
   },
@@ -109,6 +98,7 @@ var Orbit = {
       OrbitDnD.init();
       OrbitPalette.init();
       OrbitLock.init();
+      OrbitBeta.init();
       OrbitAI.init();
       OrbitPiP.init();
       OrbitMedia.init();
@@ -129,8 +119,6 @@ var Orbit = {
   },
 };
 
-// Advanced Picture-in-Picture: inject Orbit's script into every PiP window.
-// The observer is app-wide, so only the first browser window registers it.
 var OrbitPiP = {
   PLAYER: "chrome://global/content/pictureinpicture/player.xhtml",
   init() {

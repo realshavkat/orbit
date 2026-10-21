@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// orbit://downloads <-> parent. The page sends "OrbitDownloads:Ready" and
-// "OrbitDownloads:Act" ({ id, action }) events; data and live changes come
-// back as "OrbitDownloads:Data", ":Changed" and ":Removed" events.
 export class OrbitDownloadsChild extends JSWindowActorChild {
   send(type, detail) {
     const win = this.contentWindow;

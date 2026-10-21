@@ -2,15 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit Turbo: big downloads use several connections at once (like a
-// download manager), which gets past servers that slow down each connection.
-// Adaptive: the normal download runs first for a moment; if it is already fast
-// (above the user's threshold) or nearly done, Turbo stays out of the way.
-// Otherwise the normal download pauses (its data kept) while Turbo works, and
-// resumes if Turbo fails. Needs a server that accepts byte ranges.
 var OrbitDownloads = {
-  CHUNK: 4 * 1024 * 1024, // write and concatenation step, keeps memory flat
-  MEASURE_MS: 2500, // how long the normal download runs before deciding
+  CHUNK: 4 * 1024 * 1024,
+  MEASURE_MS: 2500,
 
   t(k) {
     const fr = Orbit.lang() == "fr";
@@ -29,7 +23,6 @@ var OrbitDownloads = {
     return Math.min(32, Math.max(2, Orbit.pref("orbit.downloads.connections", 8)));
   },
 
-  // Turbo only when the normal download is slower than this (0 = always).
   get threshold() {
     return Math.max(0, Orbit.pref("orbit.downloads.turbo-below-mbps", 20)) * 1048576;
   },
@@ -39,10 +32,7 @@ var OrbitDownloads = {
   },
 
   async init() {
-    // Every window dresses its own downloads panel; the download list view
-    // below is app-wide (first window only).
     window.addEventListener("popupshowing", e => e.target.id == "downloadsPanel" && this.panelHead(), true);
-    // "Show all downloads" opens orbit://downloads in a tab, not the Library window.
     try {
       ChromeUtils.registerWindowActor("OrbitDownloads", {
         parent: { esModuleURI: "resource://orbit/actors/OrbitDownloadsParent.sys.mjs" },
@@ -52,7 +42,6 @@ var OrbitDownloads = {
         },
         matches: [`${this.PAGE}*`],
         messageManagerGroups: ["browsers"],
-        // The parent only answers this page and only runs fixed actions.
         safeForUntrustedWebProcess: true,
       });
     } catch {}
@@ -82,17 +71,13 @@ var OrbitDownloads = {
     }, { once: true });
   },
 
-  // Takes over a fresh, public, plain GET download when the server allows ranges.
-  // The original download keeps running until Turbo has the whole file.
   async consider(download) {
     if (!this.enabled || download.succeeded || download.source.isPrivate || this._ours?.has(download)) return;
     const url = download.source.url;
     if (!/^https?:/.test(url) || download.source.adjustChannel) return;
-    // A download can be added before it starts: wait for its size.
     const over = () => download.succeeded || download.canceled || !!download.error;
     for (let i = 0; i < 40 && !(download.totalBytes > 0) && !over(); i++) await new Promise(r => setTimeout(r, 150));
     if (download.stopped || over() || !(download.totalBytes >= this.minSize)) return;
-    // Let the normal download show its speed first.
     const t0 = Date.now();
     const b0 = download.currentBytes;
     await new Promise(r => setTimeout(r, this.MEASURE_MS));
@@ -104,8 +89,6 @@ var OrbitDownloads = {
     if (!probe || download.stopped || download.succeeded) return;
     const target = download.target.path;
     const tmp = `${target}.orbit-turbo`;
-    // Both at once would split the bandwidth: pause the normal one, keep its
-    // data, and hide it from the panel while Turbo shows its own progress.
     download.tryToKeepPartialData = true;
     (this._paused ??= new Set()).add(download);
     await download.cancel().catch(() => {});
@@ -134,7 +117,6 @@ var OrbitDownloads = {
       await this.markDownloaded(done);
     } catch (e) {
       await IOUtils.remove(tmp, { ignoreAbsent: true });
-      // Cancelled from the Turbo card: the user wants no download at all.
       if (e?.name == "AbortError") {
         await download.finalize(true).catch(() => {});
         return;
@@ -145,8 +127,6 @@ var OrbitDownloads = {
     }
   },
 
-  // The normal download manager writes this mark. Turbo saves the file itself,
-  // so it has to ask for the same one (Zone.Identifier on Windows).
   async markDownloaded(download) {
     try {
       const { DownloadIntegration } = ChromeUtils.importESModule("resource://gre/modules/DownloadIntegration.sys.mjs");
@@ -156,7 +136,6 @@ var OrbitDownloads = {
     }
   },
 
-  // Range support check: a 1-byte request must come back 206 with the full size.
   async probe(url, expected) {
     try {
       const res = await fetch(url, { headers: { Range: "bytes=0-0" }, credentials: "include", cache: "no-store" });
@@ -192,7 +171,6 @@ var OrbitDownloads = {
     }, 400);
     try {
       await Promise.all(parts.map(p => this.segment(url, p, validator, ctrl.signal, size)));
-      // Stitch: the first part becomes the file, the others are appended.
       await IOUtils.move(parts[0].path, target);
       for (const p of parts.slice(1)) {
         const len = p.to - p.from + 1;
@@ -225,7 +203,6 @@ var OrbitDownloads = {
       throw new Error(`segment ${p.from}: HTTP ${res.status}`);
     }
     const reader = res.body.getReader();
-    // Few large writes instead of one per network packet (that capped speed).
     let pending = [];
     let pendingBytes = 0;
     const flush = async () => {
@@ -264,7 +241,6 @@ var OrbitDownloads = {
 
   PAGE: "resource://orbit/downloads.html",
 
-  // Text of orbit://downloads (the page has no access to Orbit's translations).
   pageStrings() {
     return {
       title: Orbit.tr("Downloads", "Téléchargements"), search: Orbit.tr("Search downloads", "Rechercher dans les téléchargements"),
@@ -286,8 +262,6 @@ var OrbitDownloads = {
     };
   },
 
-  // ---- downloads panel -------------------------------------------------------------
-  // A header with Orbit Turbo's switch, then Turbo's running downloads.
   panelHead() {
     const body = document.querySelector("#downloadsPanel-mainView > .panel-view-body-unscrollable");
     if (!body) return null;
@@ -316,7 +290,6 @@ var OrbitDownloads = {
     return jobs;
   },
 
-  // The normal download Turbo paused looks "cancelled" in the list: hidden meanwhile.
   hidePaused() {
     for (const el of document.querySelectorAll("#downloadsListBox > richlistitem")) {
       const d = el._shell?.download;
@@ -324,7 +297,6 @@ var OrbitDownloads = {
     }
   },
 
-  // Turbo's progress: in the downloads panel, or a toast if the panel was never built.
   card(name, onCancel) {
     const h = Orbit.h.bind(Orbit);
     let stack = this.panelHead();

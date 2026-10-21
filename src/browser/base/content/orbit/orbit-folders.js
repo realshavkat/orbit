@@ -2,11 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Folders: Gecko's tab groups with an icon, a tab count, a tag, sub-folders
-// and pinning: a folder pinned in a space sits with the space's pinned tabs,
-// above the space's name, and is kept by "clear" (pinned: true, from older
-// versions, means every space). The whole row opens and closes it.
-// Extra data per group lives in the orbit.folders pref: { id: {icon, parent, pinned, tag} }.
 var OrbitFolders = {
   PREF: "orbit.folders",
   ICONS: ["folder", "star", "briefcase", "code", "music", "film", "gamepad-2", "book-open", "graduation-cap", "heart",
@@ -49,7 +44,6 @@ var OrbitFolders = {
   init() {
     const tc = gBrowser.tabContainer;
     const schedule = () => {
-      // A timer, not requestAnimationFrame: rAF stalls while the window is hidden.
       if (this._timer) return;
       this._timer = setTimeout(() => {
         this._timer = 0;
@@ -62,14 +56,11 @@ var OrbitFolders = {
     }
     tc.addEventListener("TabGroupRemoved", e => {
       const id = e.target.id;
-      // A group that is gone takes its Orbit data with it; its sub-folders move up.
       const all = this.meta;
       for (const [k, v] of Object.entries(all)) if (v.parent == id) all[k].parent = all[id]?.parent;
       delete all[id];
       Services.prefs.setStringPref(this.PREF, JSON.stringify(all));
     });
-    // Gecko only toggles on the name itself: the chevron, icon, count and
-    // padding of the row must open and close it too.
     tc.addEventListener("click", e => {
       const box = e.target.closest?.(".tab-group-label-container");
       if (!box || e.button != 0 || e.ctrlKey || e.shiftKey || e.metaKey) return;
@@ -99,9 +90,6 @@ var OrbitFolders = {
       const label = group.querySelector(".tab-group-label");
       const box = label?.parentNode;
       if (box) {
-        // Row: icon tile, name, tag, contents (favicons when closed, count when
-        // open), chevron at the end.
-        // Rows decorated by older versions in this session.
         box.querySelectorAll(".orbit-folder-dot, .orbit-folder-icon, :scope > .orbit-folder-chevron:first-child").forEach(el => el.remove());
         if (!box.querySelector(".orbit-folder-tile")) {
           box.prepend(Orbit.h("span", { class: "orbit-folder-tile" }, Orbit.h("img", { class: "orbit-icon", alt: "" })));
@@ -117,7 +105,6 @@ var OrbitFolders = {
       group.toggleAttribute("orbit-pinned", !!m.pinned);
       this.paintTag(group, m.tag);
       group.style.setProperty("--orbit-folder-depth", String(this.depth(group.id, meta)));
-      // A collapsed parent hides its sub-folders.
       let hidden = false;
       for (let p = m.parent; p && !hidden; p = meta[p]?.parent) hidden = !!byId.get(p)?.collapsed;
       group.toggleAttribute("orbit-folder-hidden", hidden);
@@ -125,8 +112,6 @@ var OrbitFolders = {
     this.placeHeader();
   },
 
-  // Pinned folders of the current space go above the space's name, with its
-  // pinned tabs: the header and "New tab" move right after the last one.
   placeHeader() {
     const header = document.getElementById("orbit-sidebar-header");
     const newTab = document.getElementById("tabs-newtab-button");
@@ -136,7 +121,6 @@ var OrbitFolders = {
       !g.hasAttribute("orbit-folder-hidden"));
     const last = pinned.at(-1);
     document.documentElement.toggleAttribute("orbit-has-pinned-folders", !!last);
-    // With tabs on top, "+" lives after the last tab (OrbitTabs.placeNewTab).
     const moved = Orbit.pref("sidebar.verticalTabs", true) ? [header, newTab] : [header];
     if (last) {
       if (last.nextElementSibling != header) last.after(...moved);
@@ -145,7 +129,6 @@ var OrbitFolders = {
     }
   },
 
-  // A folder's tag, shown on its row like a tab's.
   paintTag(group, tag) {
     const box = group.querySelector(".tab-group-label-hover-highlight");
     let pill = box?.querySelector(".orbit-folder-tag");
@@ -158,7 +141,6 @@ var OrbitFolders = {
     OrbitExtras.fillTag(pill, tag);
   },
 
-  // Extra buttons in Gecko's folder editor panel.
   extendEditor() {
     const editor = gBrowser.tabGroupMenu;
     const panel = editor?.panel ?? editor?.querySelector("panel");
@@ -215,7 +197,6 @@ var OrbitFolders = {
     if (!group) return;
     const pinned = this.meta[group.id]?.pinned ? null : OrbitSpaces.spaceOf(group.tabs[0]) || OrbitSpaces.activeId;
     this.setMeta(group.id, { pinned });
-    // Pinned folders sit at the top of the list.
     if (pinned) {
       const first = gBrowser.tabContainer.ariaFocusableItems?.find?.(el => !el.pinned) ?? gBrowser.visibleTabs.find(t => !t.pinned);
       const target = first?.group ?? first;
@@ -224,8 +205,6 @@ var OrbitFolders = {
     OrbitSpaces.syncVisibility();
   },
 
-  // shortcut: a sub-folder is placed right after its parent but does not follow it
-  // when the parent is dragged elsewhere; upgrade if nested folders get heavy use.
   addSubFolder(parent) {
     if (!parent) return;
     gBrowser.tabGroupMenu.panel?.hidePopup?.();
@@ -241,7 +220,6 @@ var OrbitFolders = {
     return !!tab.group && !!this.meta[tab.group.id]?.pinned;
   },
 
-  // Older "pinned everywhere" folders.
   isEverywhere(tab) {
     return !!tab.group && this.meta[tab.group.id]?.pinned === true;
   },

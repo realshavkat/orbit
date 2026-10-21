@@ -1,7 +1,6 @@
 /* This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-// Orbit, português. Keys are the English source strings (tools/i18n_extract.mjs).
 ORBIT_I18N.pt = {
   ".css files that change Orbit's interface: colors, sizes, animations. userChrome.css works too.": "Arquivos .css que mudam a interface do Orbit: cores, tamanhos, animações. O userChrome.css também funciona.",
   "2 processes instead of 4 (next start), still background, smaller image cache": "2 processos em vez de 4 (no próximo início), fundo parado, cache de imagens menor",

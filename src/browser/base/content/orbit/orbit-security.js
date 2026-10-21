@@ -2,30 +2,24 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Fortress mode: Orbit's maximum security, in one switch. It trades some
-// speed and compatibility for safety (no JIT, no WebGL, no WebRTC, strict
-// tracking protection, HTTPS only, anti-fingerprinting). Turning it off puts
-// back exactly what the user had before.
 var OrbitSecurity = {
   PREF: "orbit.security.fortress",
   SAVED: "orbit.security.saved",
   FORTRESS: {
     "privacy.resistFingerprinting": true,
-    // Full site isolation. Orbit's memory defaults share processes; Fortress puts it back.
     "fission.webContentIsolationStrategy": 1,
     "dom.ipc.processCount.webIsolated": 4,
     "webgl.disabled": true,
     "media.peerconnection.enabled": false,
     "browser.contentblocking.category": "strict",
     "dom.security.https_only_mode": true,
-    // JIT compilers are the most attacked part of a browser engine.
     "javascript.options.ion": false,
     "javascript.options.baselinejit": false,
     "javascript.options.native_regexp": false,
     "geo.enabled": false,
     "network.http.referer.XOriginPolicy": 2,
     "security.ssl.require_safe_negotiation": true,
-    "privacy.firstparty.isolate": false, // Total Cookie Protection already isolates; FPI breaks logins
+    "privacy.firstparty.isolate": false,
     "browser.formfill.enable": false,
     "signon.autofillForms": false,
   },
@@ -62,7 +56,6 @@ var OrbitSecurity = {
         saved = JSON.parse(Orbit.pref(this.SAVED, "{}"));
       } catch {}
       for (const name of Object.keys(this.FORTRESS)) this.write(name, saved[name] ?? null);
-      // Gecko re-derives the protection prefs only when the category is set.
       p.setStringPref("browser.contentblocking.category", saved["browser.contentblocking.category"] ?? "standard");
       p.clearUserPref(this.SAVED);
     }

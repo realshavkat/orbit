@@ -27,10 +27,8 @@ function pinnedTiles() {
   }
 }
 
-// Data for the home page: greeting, search engine, shortcuts and today's stats.
 export class OrbitHomeParent extends JSWindowActorParent {
   async receiveMessage(msg) {
-    // Only Orbit's own home page gets answers.
     if (!this.manager.documentURI?.spec.startsWith(HOME)) return null;
     const win = this.browsingContext.topChromeWindow;
     switch (msg.name) {
@@ -80,7 +78,6 @@ export class OrbitHomeParent extends JSWindowActorParent {
     };
   }
 
-  // Pinned shortcuts first, then the most visited sites (one per host).
   async tiles() {
     const hidden = new Set(JSON.parse(pref("orbit.home.hidden", "[]")));
     const out = pinnedTiles().map(t => ({ ...t, pinned: true }));

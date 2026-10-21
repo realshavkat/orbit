@@ -2,8 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Orbit home (orbit://home): an unprivileged static page. Orbit's
-// OrbitHome actor answers "OrbitHome:Ready" with the data it needs.
 "use strict";
 const STRINGS = {
   fr: { morning: "Bonjour", evening: "Bonsoir", night: "Bonne nuit", ph: "Rechercher, saisir une adresse ou demander à l'IA",
@@ -49,7 +47,6 @@ $("search").addEventListener("submit", e => {
   if (!v) return;
   go(looksLikeUrl(v) ? (/^[a-z]+:\/\//i.test(v) ? v : `https://${v}`) : searchTpl.replace("{q}", encodeURIComponent(v)));
 });
-// Tab sends the question to the first assistant (Claude).
 q.addEventListener("keydown", e => {
   if (e.key == "Tab" && !e.shiftKey && q.value.trim()) {
     e.preventDefault();
@@ -97,7 +94,6 @@ function render(data = {}) {
     a.className = "tile";
     const ico = document.createElement("span");
     ico.className = "ico";
-    // A letter instead of a remote favicon: the home page makes no network requests.
     ico.textContent = (title || new URL(url).hostname).trim().charAt(0).toUpperCase();
     const label = document.createElement("span");
     label.textContent = title || new URL(url).hostname;

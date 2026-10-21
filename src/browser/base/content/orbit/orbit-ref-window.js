@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Runs in orbit-ref.html. The content lives in a remote <browser>, like
-// Firefox's own Picture-in-Picture: the web never runs in this chrome window.
-
 window.addEventListener("DOMContentLoaded", () => {
   const args = window.arguments?.[0]?.wrappedJSObject ?? window.arguments?.[0] ?? {};
   const fr = Services.locale.appLocaleAsBCP47.startsWith("fr");
@@ -24,7 +21,6 @@ window.addEventListener("DOMContentLoaded", () => {
     } catch {
       return;
     }
-    // Only web pages, web media and local files; never chrome: or about: pages.
     if (!["http", "https", "file"].includes(uri.scheme)) return;
     browser.fixupAndLoadURIString(uri.spec, { triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal() });
     $("title").textContent = args.title || uri.displaySpec;
@@ -48,7 +44,6 @@ window.addEventListener("DOMContentLoaded", () => {
     if (e.key == "Escape" || ((e.ctrlKey || e.metaKey) && e.key == "w")) window.close();
   });
 
-  // Drop a file, an image or a link on the window to show it instead.
   const body = document.body;
   window.addEventListener("dragover", e => {
     e.preventDefault();

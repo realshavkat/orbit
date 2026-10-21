@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Glance: Alt+click a link to preview it in a floating card over the page.
 var OrbitGlance = {
   init() {
     try {
@@ -14,11 +13,9 @@ var OrbitGlance = {
         },
         allFrames: true,
         messageManagerGroups: ["browsers"],
-        // The child only reports a link URL; the parent validates it.
         safeForUntrustedWebProcess: true,
       });
     } catch (e) {
-      // Already registered by an earlier window.
     }
     window.addEventListener("keydown", e => {
       if (e.key == "Escape" && this.overlay) {
@@ -58,9 +55,6 @@ var OrbitGlance = {
     const overlay = h("div", { id: "orbit-glance", onmousedown: e => e.target == overlay && this.close() }, card);
     document.getElementById("tabbrowser-tabbox").append(overlay);
     if (screenPoint) {
-      // Zoom the card out of the clicked link.
-      // Card is centered at 86% x 90% of the overlay (see orbit.css); its own
-      // rect is already scaled by the entry animation.
       const o = overlay.getBoundingClientRect();
       const x = screenPoint.x - window.mozInnerScreenX - (o.left + o.width * 0.07);
       const y = screenPoint.y - window.mozInnerScreenY - (o.top + o.height * 0.05);

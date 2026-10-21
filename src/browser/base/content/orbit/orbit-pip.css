@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* Orbit's Picture-in-Picture: Firefox's player, fully restyled. Glass buttons
-   at the top, one floating glass bar at the bottom, Lucide icons. The window
-   moves and resizes freely (no size presets, no snapping). */
 @font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
 
 :root[orbit-pip] {
@@ -19,13 +16,11 @@
 }
 :root[orbit-pip] :is(body, button, #timestamp) { font-family: "Outfit", system-ui, sans-serif !important; }
 
-/* Softer scrims: only where the controls are. */
 :root[orbit-pip] #controls-bottom-gradient {
   background: linear-gradient(transparent, rgb(0 0 0 / .45)) !important;
   height: 120px !important;
 }
 
-/* Every button: same round glass, Lucide icon drawn with stroke. */
 :root[orbit-pip] .control-button {
   width: 30px !important;
   min-width: 30px !important;
@@ -53,7 +48,6 @@
 :root[orbit-pip] #unpip { left: 10px !important; background-image: url("chrome://orbit/content/icons/picture-in-picture-2.svg") !important; }
 :root[orbit-pip] :is(#close, #unpip):hover { background-color: rgb(40 40 48 / .8) !important; }
 
-/* Bottom: one floating glass bar, scrubber on top, controls below. */
 :root[orbit-pip] #controls-bottom {
   left: 10px;
   right: 10px;
@@ -94,7 +88,6 @@
 :root[orbit-pip] #playbackRate { background-image: url("chrome://orbit/content/icons/gauge.svg") !important; }
 :root[orbit-pip] #closed-caption { background-image: url("chrome://orbit/content/icons/captions.svg") !important; }
 
-/* Thin scrubbers that thicken on hover; accent progress. */
 :root[orbit-pip] :is(#scrubber, #audio-scrubber) {
   &, &::-moz-range-track, &::-moz-range-progress { height: 4px !important; border-radius: 4px !important; transition: height .15s; }
   &::-moz-range-track { background-color: rgb(255 255 255 / .22) !important; }
@@ -114,7 +107,6 @@
 }
 :root[orbit-pip] #timestamp { color: var(--o-dim) !important; font-size: 12px !important; }
 
-/* Tooltips: small dark pills. */
 :root[orbit-pip] .control-item:is(:hover, :focus-visible)::after {
   padding: 3px 8px !important;
   border-radius: 6px !important;
@@ -124,7 +116,6 @@
   box-shadow: 0 0 0 1px var(--o-line) !important;
 }
 
-/* Panels (speed, subtitles). */
 :root[orbit-pip] :is(.panel, #playbackRateSettings, #settings) {
   background: rgb(18 18 22 / .96) !important;
   color: var(--o-fg) !important;

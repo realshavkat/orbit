@@ -2,15 +2,9 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-/* Orbit browser chrome, on top of Firefox's native vertical tabs.
-   Layout (like Zen): one toolbar on top (navigation, address bar,
-   extensions, window controls), a simple tab sidebar on the left, and the
-   page in a rounded card. The window wears the active space's gradient. */
-
 @namespace xul url("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul");
 @namespace html url("http://www.w3.org/1999/xhtml");
 
-/* Bundled fonts (SIL OFL). The UI font is chosen in Settings (--orbit-font). */
 @font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
 @font-face { font-family: "Inter"; src: url("chrome://orbit/content/fonts/Inter.ttf"); font-weight: 100 900; }
 @font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
@@ -18,13 +12,9 @@
 @font-face { font-family: "DM Sans"; src: url("chrome://orbit/content/fonts/DMSans.ttf"); font-weight: 100 1000; }
 @font-face { font-family: "Syne"; src: url("chrome://orbit/content/fonts/Syne.ttf"); font-weight: 400 800; }
 
-/* Animatable theme colors: the gradient morphs when switching spaces. */
 @property --orbit-c1 { syntax: "<color>"; inherits: true; initial-value: #5b6cff; }
 @property --orbit-c2 { syntax: "<color>"; inherits: true; initial-value: #3a2bd0; }
 
-/* ==========================================================================
-   Tokens
-   ========================================================================== */
 :root {
   --orbit-gap: 8px;
   --orbit-radius: 7px;
@@ -35,7 +25,6 @@
   --orbit-ease: cubic-bezier(.2, .9, .25, 1);
   --orbit-spring: cubic-bezier(.34, 1.35, .64, 1);
 
-  /* dark (default) */
   --orbit-base: #030305;
   --orbit-card: #0b0b0e;
   --orbit-mix: 34%;
@@ -54,14 +43,12 @@
   --orbit-bg-2: color-mix(in oklch, var(--orbit-c2) var(--orbit-mix), var(--orbit-base));
   --orbit-accent: color-mix(in oklch, var(--orbit-c1) 72%, white);
 
-  /* Liquid glass: soft top light, faint rim, darker bottom edge. */
   --orbit-glass: linear-gradient(180deg, rgb(255 255 255 / .11), rgb(255 255 255 / .035) 60%, rgb(255 255 255 / .05));
   --orbit-glass-edge: inset 0 1px 0 rgb(255 255 255 / .16), inset 0 0 0 1px rgb(255 255 255 / .06), inset 0 -1px 0 rgb(0 0 0 / .3);
 
   transition: --orbit-c1 .7s var(--orbit-ease), --orbit-c2 .7s var(--orbit-ease);
   --orbit-font: "Outfit";
 
-  /* Firefox theme variables: transparent chrome so the gradient shows. */
   --toolbox-bgcolor: transparent !important;
   --toolbox-bgcolor-inactive: transparent !important;
   --toolbox-non-lwt-bgcolor: transparent !important;
@@ -108,11 +95,6 @@
   }
 }
 
-/* ==========================================================================
-   Window background: near-black with slow liquid ribbons in the space colors.
-   Two masked layers (shape rasterized once, then only transformed on the
-   compositor) plus an optional film grain.
-   ========================================================================== */
 :root:not([customizing]) {
   background: var(--orbit-base) !important;
   color: var(--orbit-fg);
@@ -143,7 +125,6 @@
   animation-duration: 36s;
   animation-direction: alternate-reverse;
 }
-/* A slow drift through several positions, so the motion never looks like a loop. */
 @keyframes orbit-liquid {
   0%   { transform: translate(0, 0) rotate(0deg) scale(1); }
   25%  { transform: translate(2.5%, -3%) rotate(2.5deg) scale(1.06); }
@@ -151,7 +132,6 @@
   75%  { transform: translate(-3%, 2.5%) rotate(-3deg) scale(1.07); }
   100% { transform: translate(1.5%, 1.5%) rotate(1.5deg) scale(1); }
 }
-/* Saturation is baked into the gradients: a filter on this layer would re-run every frame. */
 :root:is(:-moz-window-inactive, [orbit-no-nebula], [orbit-no-motion]) #orbit-liquid :is(*, ::before, ::after),
 :root:is(:-moz-window-inactive, [orbit-no-nebula], [orbit-no-motion]) #orbit-liquid::before,
 :root:is(:-moz-window-inactive, [orbit-no-nebula], [orbit-no-motion]) #orbit-liquid::after {
@@ -178,9 +158,6 @@
   box-shadow: none !important;
 }
 
-/* ==========================================================================
-   Top toolbar: nav buttons | address bar | extensions + window controls
-   ========================================================================== */
 :root:not([customizing], [inDOMFullscreen]) {
   & #toolbar-menubar[autohide="true"]:not([inactive="false"]),
   & #TabsToolbar,
@@ -198,7 +175,6 @@
     align-items: center;
   }
 
-  /* Address bar centered between the nav buttons and the right-hand group. */
   & #urlbar-container {
     flex: 1 1 auto !important;
     max-width: clamp(560px, 58vw, 1180px) !important;
@@ -214,7 +190,6 @@
   & #nav-bar .titlebar-close:hover { background-color: #e5484d !important; }
 }
 
-/* Address bar: quiet pill; the results open as a rounded panel. */
 #urlbar {
   --urlbar-background-color-focus: var(--orbit-panel) !important;
   --urlbar-background-border-radius: var(--orbit-radius) !important;
@@ -247,8 +222,6 @@
 #urlbar[open] .urlbarView-row:nth-child(n+5) { animation-delay: 60ms; }
 @keyframes orbit-row-in { from { opacity: 0; transform: translateY(-4px); } }
 
-/* Command bar (Ctrl+T): the address bar floats in the middle of the window.
-   No transforms on #urlbar: the results popover is anchored to it. */
 :root[orbit-commandbar] #urlbar:is([focused], [open]) {
   position: fixed !important;
   top: 22vh !important;
@@ -273,7 +246,6 @@
 }
 :root[orbit-commandbar] #orbit-urlbar-backdrop { opacity: 1; }
 
-/* Lucide icons for navigation. */
 #back-button { list-style-image: url("chrome://orbit/content/icons/arrow-left.svg") !important; }
 #forward-button { list-style-image: url("chrome://orbit/content/icons/arrow-right.svg") !important; }
 #reload-button { list-style-image: url("chrome://orbit/content/icons/rotate-cw.svg") !important; }
@@ -289,9 +261,6 @@
   transition: transform .2s var(--orbit-spring), background-color .15s;
 }
 
-/* ==========================================================================
-   Sidebar
-   ========================================================================== */
 :root:not([customizing], [inDOMFullscreen]) {
   & #sidebar-container {
     flex-direction: column !important;
@@ -311,7 +280,6 @@
     cursor: ew-resize;
   }
 
-  /* The page lives in a rounded card. */
   & #tabbrowser-tabbox {
     margin: 0 var(--orbit-gap) var(--orbit-gap) 0 !important;
     border-radius: var(--orbit-radius) !important;
@@ -331,7 +299,6 @@
   padding-inline: 8px 4px !important;
 }
 
-/* Tabs */
 #vertical-tabs .tabbrowser-tab {
   padding-block: 1px !important;
 
@@ -361,7 +328,6 @@
 }
 @keyframes orbit-tab-in { from { opacity: 0; transform: translateX(-8px); } }
 
-/* Essentials: pinned tabs as 3-per-row tiles, shared by every space. */
 #pinned-tabs-container[orient="vertical"] {
   margin-bottom: 4px !important;
 }
@@ -380,7 +346,6 @@
 }
 #vertical-pinned-tabs-splitter { display: none !important; }
 
-/* Space label between the essentials and the tabs. */
 #orbit-sidebar-header {
   padding: 6px 4px 6px 8px;
   margin-bottom: 4px;
@@ -405,13 +370,11 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 
 #orbit-space-title #orbit-space-clear { margin-inline-start: auto; opacity: .7; }
 #orbit-space-title #orbit-space-clear + .orbit-icon-button { margin-inline-start: 0; }
-/* Ctrl+click selected tabs: kept by the clear button. */
 #tabbrowser-tabs .tabbrowser-tab[multiselected] > .tab-stack > .tab-background {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-accent) 55%, transparent) !important;
   background-color: color-mix(in srgb, var(--orbit-accent) 12%, transparent) !important;
 }
 
-/* "+ New Tab" row on top of the list, with its shortcut. */
 #tabs-newtab-button::after {
   content: "Ctrl T";
   margin-inline-start: auto;
@@ -437,7 +400,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   }
 }
 
-/* Footer: compact mode, spaces, new space. */
 #orbit-sidebar-footer {
   gap: 2px;
   padding: 4px 4px 0 8px;
@@ -449,7 +411,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   display: flex;
   justify-content: safe center;
   gap: 4px;
-  /* Many spaces in a narrow sidebar scroll instead of being cut off. */
   overflow-x: auto;
   scrollbar-width: none;
   & > .orbit-space-button { flex-shrink: 0; }
@@ -484,13 +445,9 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   &[active] { color: var(--orbit-fg); }
 }
 
-/* Empty sidebar chrome drags the window. */
 #orbit-sidebar-footer, #orbit-space-switcher { -moz-window-dragging: drag; }
 #orbit-sidebar-footer button { -moz-window-dragging: no-drag; }
 
-/* ==========================================================================
-   Shared controls
-   ========================================================================== */
 .orbit-icon {
   width: 16px;
   height: 16px;
@@ -540,9 +497,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   &.danger:hover { background: #e5484d; color: white; }
 }
 
-/* ==========================================================================
-   Space editor popover
-   ========================================================================== */
 #orbit-space-editor {
   position: fixed;
   left: 10px;
@@ -614,9 +568,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 .orbit-editor-actions { display: flex; gap: 6px; margin-top: 6px; }
 .orbit-spacer { flex: 1; }
 
-/* ==========================================================================
-   Compact mode: sidebar hidden, peeks from the left edge
-   ========================================================================== */
 :root[orbit-compact]:not([customizing]) {
   & #sidebar-container {
     position: fixed !important;
@@ -636,9 +587,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   &[orbit-peek] #sidebar-container { left: var(--orbit-gap); }
 }
 
-/* ==========================================================================
-   Glance
-   ========================================================================== */
 #orbit-glance {
   position: absolute;
   inset: 0;
@@ -693,9 +641,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   }
 }
 
-/* ==========================================================================
-   Liquid glass
-   ========================================================================== */
 #vertical-tabs .tabbrowser-tab:not([pinned]) .tab-background[selected],
 #vertical-tabs .tabbrowser-tab[pinned] .tab-background,
 #orbit-space-indicator {
@@ -714,7 +659,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   box-shadow: var(--orbit-glass-edge), 0 24px 70px rgb(0 0 0 / .55) !important;
 }
 
-/* Liquid shine: a highlight glides across a tab on hover. */
 #vertical-tabs .tabbrowser-tab .tab-background { overflow: clip; }
 #vertical-tabs .tabbrowser-tab .tab-background::after {
   content: "";
@@ -729,9 +673,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 }
 @keyframes orbit-shine { to { transform: translateX(120%); } }
 
-
-
-/* Page card: thin luminous rim. */
 :root:not([customizing], [inDOMFullscreen]) #tabbrowser-tabbox {
   box-shadow: 0 0 0 1px var(--orbit-border), 0 8px 30px rgb(0 0 0 / .35) !important;
 }
@@ -740,16 +681,11 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   #orbit-liquid::before, #orbit-liquid::after, .tab-background::after { animation: none !important; }
 }
 
-/* The nav-bar is its own stacking context (will-change): lift the whole
-   toolbox above the backdrop so the floating command bar stays on top. */
 :root[orbit-commandbar] #navigator-toolbox {
   position: relative;
   z-index: 11;
 }
 
-/* ==========================================================================
-   Command bar (Ctrl+T), Zen style: a clean floating search field
-   ========================================================================== */
 :root[orbit-commandbar] #urlbar:is([focused], [open]) {
   top: 24vh !important;
   left: calc(50% - min(680px, 86vw) / 2) !important;
@@ -776,19 +712,13 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   & .urlbarView-row { min-height: 40px; }
 }
 
-/* Automation stripes (only shown under test tools): keep the robot cue,
-   drop the red stripes. */
 :root[remotecontrol] #urlbar .urlbar-background { background-image: none !important; }
 :root[remotecontrol] #urlbar:not([focused], [open]) .urlbar-background { background-image: var(--orbit-glass) !important; }
 
-/* Sidebar on the right: mirror the page card margins. */
 :root[orbit-sidebar-end]:not([customizing], [inDOMFullscreen]) #tabbrowser-tabbox {
   margin: 0 0 var(--orbit-gap) var(--orbit-gap) !important;
 }
 
-/* ==========================================================================
-   Effect switches (Settings)
-   ========================================================================== */
 :root[orbit-no-glass] {
   & #vertical-tabs .tabbrowser-tab .tab-background,
   & #orbit-space-indicator,
@@ -807,9 +737,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   & *, & *::before, & *::after { animation: none !important; transition: none !important; }
 }
 
-/* ==========================================================================
-   Settings sheet
-   ========================================================================== */
 #orbit-settings {
   position: fixed;
   inset: 0;
@@ -915,7 +842,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 }
 .orbit-restart { margin-top: 8px; height: 28px; font-size: 12px; }
 
-/* Switch */
 .orbit-switch {
   appearance: none;
   border: none;
@@ -944,7 +870,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 .orbit-switch[on] > .orbit-switch-knob { transform: translateX(18px); }
 .orbit-switch[on]:active > .orbit-switch-knob { transform: translateX(14px); }
 
-/* Custom slider */
 .orbit-slider {
   display: flex;
   align-items: center;
@@ -992,7 +917,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   font-variant-numeric: tabular-nums;
 }
 
-/* Segmented control with a gliding pill */
 .orbit-segmented {
   position: relative;
   display: flex;
@@ -1027,7 +951,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   transition: transform .35s var(--orbit-spring), width .35s var(--orbit-spring);
 }
 
-/* Custom dropdown */
 .orbit-dropdown { position: relative; }
 .orbit-dropdown-button {
   appearance: none;
@@ -1087,7 +1010,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 .orbit-dropdown-add { justify-content: flex-start; color: var(--orbit-fg-dim); }
 .orbit-dropdown-sep { height: 1px; margin: 5px 4px; background: var(--orbit-border); }
 
-/* Space colors */
 .orbit-custom-colors {
   display: flex;
   align-items: center;
@@ -1109,7 +1031,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 }
 .orbit-custom-colors[active] .orbit-swatch { box-shadow: 0 0 0 2px var(--orbit-panel), 0 0 0 3.5px var(--orbit-fg-dim); }
 
-/* About */
 .orbit-about {
   display: flex;
   flex-direction: column;
@@ -1141,7 +1062,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 .orbit-about-actions { display: flex; gap: 8px; margin: 18px 0 14px; }
 .orbit-about-fine { font-size: 11.5px; color: var(--orbit-fg-dim); max-width: 440px; }
 
-/* One font everywhere in the chrome (menus and panels included). */
 :root, :root :is(*, *::before, *::after):not(.titlebar-buttonbox-container *) {
   font-family: var(--orbit-font), "Segoe UI Variable Text", system-ui, sans-serif !important;
 }
@@ -1158,9 +1078,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
   & .urlbar-input-container { outline: none !important; }
 }
 
-/* ==========================================================================
-   App menu (Orbit's own) and native menus / panels in Orbit colors
-   ========================================================================== */
 :is(#orbit-menu, .orbit-ctx, .orbit-panel) {
   position: fixed;
   z-index: 45;
@@ -1217,7 +1134,6 @@ sidebar-main:not([expanded]) ~ #orbit-sidebar-footer #orbit-space-switcher,
 }
 #PanelUI-menu-button[open] > .toolbarbutton-badge-stack { background: var(--orbit-active) !important; }
 
-/* Native context menus and panels (extensions, downloads, permissions...) */
 :root {
   --menu-background-color: var(--orbit-panel) !important;
   --menu-color: var(--orbit-fg) !important;
@@ -1261,14 +1177,8 @@ panel {
 }
 #unified-extensions-panel .panel-subview-body { padding-inline: 6px !important; }
 
-
-/* ==========================================================================
-   Harmony pass: one radius, one rhythm (8px), pointer cursors, no glows
-   ========================================================================== */
-
 :root[orbit-no-glass] { --orbit-glass-edge: none; }
 
-/* The hand cursor is for buttons with text; icon buttons keep the arrow. */
 :is(.orbit-button, .orbit-toast-b1, .orbit-toast-b2, .orbit-toast-never, .orbit-toast-link, .orbit-settings-reset,
     .orbit-settings-tab, .orbit-menu-item, .orbit-edit-chip,
     .orbit-segmented > button, .orbit-setting-link, .orbit-mem-name, .orbit-media-text) {
@@ -1277,7 +1187,6 @@ panel {
 :is(.orbit-icon-button, .orbit-toast-close, .orbit-space-button, .orbit-swatch, .orbit-pick-theme) { cursor: default !important; }
 :is(button, toolbarbutton)[disabled] { cursor: default !important; }
 
-/* Toolbar and sidebar share the same 8px inset. */
 :root:not([customizing], [inDOMFullscreen]) #nav-bar {
   padding-inline: 8px 0 !important;
   min-height: 42px !important;
@@ -1298,7 +1207,6 @@ panel {
 #orbit-sidebar-footer { padding: 6px 8px 0 !important; }
 #tabs-newtab-button { padding-inline: 8px !important; }
 
-/* Tabs: flat selection, no glossy edges or drop shadows. */
 #vertical-tabs .tabbrowser-tab .tab-background {
   box-shadow: none !important;
   background-image: none !important;
@@ -1310,7 +1218,6 @@ panel {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-fg) 16%, transparent) !important;
 }
 
-/* Drag a tab up: a clear "drop to pin" zone appears above the tabs. */
 #pinned-drop-indicator {
   color: var(--orbit-fg-dim) !important;
   outline: 1.5px dashed color-mix(in srgb, var(--orbit-fg) 30%, transparent) !important;
@@ -1331,9 +1238,6 @@ panel {
 }
 .tab-drop-indicator { border-radius: 2px; background: var(--orbit-c1) !important; }
 
-/* ==========================================================================
-   Tooltips
-   ========================================================================== */
 tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-button-tooltip, #forward-button-tooltip {
   appearance: none !important;
   --tooltip-background-color: var(--orbit-panel) !important;
@@ -1350,9 +1254,6 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
   & .tooltip-label + .tooltip-label { color: var(--orbit-fg-dim) !important; margin-top: 2px !important; }
 }
 
-/* ==========================================================================
-   Extensions panel: no illustrations, Orbit rows
-   ========================================================================== */
 #unified-extensions-empty-state > img {
   content: url("chrome://orbit/content/icons/puzzle.svg") !important;
   width: 40px !important;
@@ -1386,14 +1287,8 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
   border-radius: var(--orbit-radius) !important;
 }
 
-/* ==========================================================================
-   Bookmark panel (star)
-   ========================================================================== */
 #star-button-box:hover { background: var(--orbit-hover) !important; border-radius: var(--orbit-radius) !important; }
 
-/* ==========================================================================
-   App menu header
-   ========================================================================== */
 .orbit-menu-header {
   display: flex;
   align-items: center;
@@ -1406,9 +1301,6 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
   & span { font-size: 11.5px; color: var(--orbit-fg-dim); }
 }
 
-/* ==========================================================================
-   Responsive
-   ========================================================================== */
 @media (max-width: 900px) {
   #urlbar-container { max-width: none !important; }
   .orbit-settings-side { width: 64px; padding-inline: 8px; }
@@ -1424,7 +1316,6 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
   #orbit-menu { min-width: 230px; }
 }
 
-/* 8px gutter: every row's left edge lines up with the toolbar's first button. */
 #vertical-tabs .tabbrowser-tab { padding-inline: 0 !important; margin-inline: 0 !important; }
 #vertical-tabs .tabbrowser-tab .tab-background { margin-inline: 0 !important; }
 #vertical-tabs .tabbrowser-tab:not([pinned]) .tab-content { padding-inline: 8px 6px !important; }
@@ -1441,9 +1332,6 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
   color: var(--orbit-accent);
 }
 
-/* ==========================================================================
-   Sheets (orbit://memoire), toasts, sidebar media player
-   ========================================================================== */
 .orbit-sheet {
   position: fixed;
   inset: 0;
@@ -1670,8 +1558,6 @@ tooltip, #tabbrowser-tab-tooltip, #aHTMLTooltip, #remoteBrowserTooltip, #back-bu
 }
 sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 
-
-/* Reader view: a visible "Lecture" pill in the address bar. */
 #reader-mode-button:not([hidden]) {
   width: auto !important;
   padding: 0 8px !important;
@@ -1699,9 +1585,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   stroke: var(--orbit-fg-dim);
 }
 
-/* ==========================================================================
-   Sidebar, design v3: header, clear button, drop zones, collapsed rail
-   ========================================================================== */
 #orbit-sidebar-header {
   padding: 10px 2px 4px 8px !important;
   margin-bottom: 0;
@@ -1719,17 +1602,14 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & #orbit-space-clear:hover { opacity: 1; }
   & .orbit-icon-button { width: 26px; height: 26px; }
 }
-/* Thin rule under "New tab", as in the design. */
 #tabbrowser-tabs #tabs-newtab-button {
   margin: 0 0 4px !important;
   box-shadow: 0 5px 0 -4px var(--orbit-border);
 }
 #tabbrowser-tabs[orient="vertical"] { --tab-min-height: 34px !important; }
 
-/* Essentials fold away when the space name is clicked. */
 :root[orbit-essentials-folded] #pinned-tabs-container { display: none !important; }
 
-/* Smooth drag: no background motion, hover effects or transitions meanwhile. */
 :root[orbit-dragging] {
   & #orbit-liquid::before, & #orbit-liquid::after { animation-play-state: paused !important; }
   & #vertical-tabs .tabbrowser-tab .tab-background::after { animation: none !important; }
@@ -1763,7 +1643,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   transform: scale(1.12);
 }
 
-/* Collapsed sidebar: a tidy icon rail. */
 #tabbrowser-tabs[orient="vertical"]:not([expanded]) {
   padding-inline: 6px !important;
   & #tabs-newtab-button::after { display: none; }
@@ -1778,7 +1657,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & #orbit-media, & #orbit-drop-hint { display: none; }
 }
 
-/* Sidebar context menu and edit mode. */
 .orbit-ctx { min-width: 230px; transform-origin: top left; }
 #orbit-edit-bar {
   position: fixed;
@@ -1855,9 +1733,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & .orbit-icon { width: 10px; height: 10px; }
 }
 
-/* ==========================================================================
-   Settings, design v3: dark nav with search, Syne titles, card rows
-   ========================================================================== */
 .orbit-settings-card {
   width: min(1040px, calc(100vw - 40px));
   height: min(700px, calc(100vh - 60px));
@@ -1930,8 +1805,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 }
 .orbit-settings-body { min-height: 0; padding: 0 36px 28px; display: flex; flex-direction: column; gap: 10px; }
 .orbit-settings-body > .orbit-setting, .orbit-shortcuts > .orbit-setting {
-  /* The sheet is a fixed-height column. flex-shrink would crush a tall card
-     (the privacy vault) down to one row and paint the rest on top of the next cards. */
   flex: 0 0 auto;
   min-height: 58px;
   height: max-content;
@@ -1974,7 +1847,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   &:focus { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-accent) 60%, transparent); }
   &[invalid] { box-shadow: inset 0 0 0 1px #e5484d; }
 }
-/* Orbit VPN toolbar button. */
 #orbit-vpn-button {
   list-style-image: url("chrome://orbit/content/icons/shield.svg");
   -moz-context-properties: fill, stroke;
@@ -2004,9 +1876,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-accent) 60%, transparent);
 }
 
-/* ==========================================================================
-   Fixes v3.1: close button, essentials grid, split view, motion, responsive
-   ========================================================================== */
 #tabs-newtab-button { position: relative; }
 #vertical-tabs .tabbrowser-tab:not([pinned]) .tab-close-button {
   margin-inline: 4px 0 !important;
@@ -2015,7 +1884,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   height: 24px !important;
 }
 
-/* Essentials: three even tiles per row with the design's 6px gap. */
 #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"]::part(items-wrapper) {
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
@@ -2035,7 +1903,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & .tabbrowser-tab[pinned]:not([orbit-kept]) .tab-stack { height: 46px; }
   & .tabbrowser-tab[pinned]:not([orbit-kept]) .tab-content { justify-content: center !important; padding: 0 !important; }
 }
-/* Collapsed rail: every icon in the same 36px square. */
 #tabbrowser-tabs[orient="vertical"]:not([expanded]) {
   & #pinned-tabs-container::part(items-wrapper) { display: flex !important; flex-direction: column; gap: 4px !important; }
   & .tabbrowser-tab, & #tabs-newtab-button { width: 36px !important; min-width: 36px !important; margin-inline: auto !important; }
@@ -2043,8 +1910,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & .tabbrowser-tab[pinned] .tab-background { background: var(--orbit-tile) !important; }
 }
 
-/* Split view: each page in its own rounded card, the active one outlined,
-   a slim pill handle between them. */
 :root:not([inDOMFullscreen]) #tabbrowser-tabbox:has(#tabbrowser-tabpanels[splitview]) {
   background: transparent !important;
   box-shadow: none !important;
@@ -2083,23 +1948,18 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
     &:hover::after { background: var(--orbit-accent); height: 72px; }
   }
 }
-/* The split pair in the sidebar reads as one capsule. */
 #vertical-tabs tab-split-view-wrapper {
   border-radius: var(--orbit-radius-lg) !important;
   background: var(--orbit-tile) !important;
   box-shadow: inset 0 0 0 1px var(--orbit-border);
   padding: 2px !important;
   margin-block: 2px !important;
-  /* As wide as the other rows, cells of equal width. */
   margin-inline: 0 !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  /* Firefox draws a separator before the last tab, meant for two tabs side by side. */
   & .tabbrowser-tab { min-width: 0 !important; border-inline: none !important; }
-  /* The close button shows on hover only, so every cell keeps the same room for its title. */
   & .tabbrowser-tab:not(:hover) .tab-close-button { display: none !important; }
 }
 
-/* Motion: compositor-friendly properties only, one easing, no replays. */
 #vertical-tabs .tabbrowser-tab .tab-background { transition: background-color .15s ease-out, box-shadow .15s ease-out !important; }
 #vertical-tabs .tabbrowser-tab .tab-background::after { display: none; }
 #tabbrowser-arrowscrollbox .tabbrowser-tab[orbit-new]:not([pinned]) { animation: orbit-tab-in .28s var(--orbit-ease) both; }
@@ -2110,7 +1970,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
 
-/* Responsive: narrow windows tighten everything. */
 @media (max-width: 1000px) {
   :root { --orbit-gap: 6px; }
   #urlbar-container { padding-inline: 8px !important; }
@@ -2123,7 +1982,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 #tabs-newtab-button > .toolbarbutton-text { flex: 1; text-align: start !important; padding-inline-start: 8px !important; }
 #tabbrowser-tabs:not([expanded]) > #tabs-newtab-button > .toolbarbutton-text { display: none; }
 
-/* Orbit VPN panel. */
 .orbit-panel { width: 320px; min-width: 0; padding: 0; overflow: hidden; z-index: 47 !important; }
 .orbit-vpn-hero {
   display: flex;
@@ -2163,9 +2021,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   border-top: 1px solid var(--orbit-border); font-size: 12px; color: var(--orbit-fg-dim); }
 #orbit-vpn-button[orbit-on] { list-style-image: url("chrome://orbit/content/icons/shield-check.svg"); }
 
-/* ==========================================================================
-   Folders (tab groups), as in the design: chevron, dot or icon, name, count
-   ========================================================================== */
 #vertical-tabs tab-group {
   &[orbit-folder-hidden] { display: none !important; }
   & .tab-group-line, & .tab-group-overflow-count-container { display: none !important; }
@@ -2224,10 +2079,8 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & > .tabbrowser-tab .tab-background { box-shadow: none !important; border: none !important; }
 }
 
-/* Sleeping (unloaded) tabs: dimmed, with a moon. */
 #vertical-tabs .tabbrowser-tab[pending]:not([pinned]) {
   & .tab-label-container { opacity: .55; }
-  /* A moon by default: fits any width and any language. */
   & .tab-content::after {
     content: "";
     flex-shrink: 0;
@@ -2253,12 +2106,8 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 }
 .orbit-vpn-presets { display: flex; flex-wrap: wrap; gap: 6px; }
 
-
 #vertical-tabs .tabbrowser-tab .tab-label-container { flex: 1 1 0 !important; min-width: 0 !important; }
 
-/* ==========================================================================
-   Bookmark popup: compact Orbit card
-   ========================================================================== */
 #editBookmarkPanel {
   --panel-width: 340px;
   --arrowpanel-padding: 0;
@@ -2336,7 +2185,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
     &:hover { filter: brightness(1.08); } }
 }
 
-/* Update window. */
 .orbit-update-card { width: min(520px, calc(100vw - 40px)); padding: 24px; gap: 18px; }
 .orbit-update-head { display: flex; gap: 16px; align-items: center;
   & img { width: 52px; height: 52px; padding: 10px; box-sizing: border-box; border-radius: 12px; background: #000; box-shadow: 0 0 0 1px rgb(255 255 255 / .1); } }
@@ -2349,9 +2197,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & li { margin: 3px 0; } }
 .orbit-update-actions { display: flex; justify-content: flex-end; gap: 8px; }
 
-/* ==========================================================================
-   Firefox themes: an add-on theme takes over Orbit's colors
-   ========================================================================== */
 :root[orbit-addon-theme] {
   --orbit-base: var(--lwt-accent-color, #030305) !important;
   --orbit-fg: var(--lwt-text-color, #ececf1) !important;
@@ -2369,13 +2214,11 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   }
 }
 
-/* Mods list in Settings. */
 .orbit-mods-list { display: flex; flex-direction: column; gap: 4px; }
 .orbit-mods-item { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 0;
   font-size: 13px; border-top: 1px solid var(--orbit-border); }
 .orbit-mods-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Import window. */
 .orbit-import-card { width: min(560px, calc(100vw - 40px)); padding: 0 24px 22px; gap: 14px; }
 .orbit-import-top { padding: 24px 0 4px !important; align-items: flex-start !important; & > div { flex: 1; } }
 .orbit-import-list { display: flex; flex-direction: column; gap: 8px; }
@@ -2397,7 +2240,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
   & span { font-size: 11px; padding: 2px 7px; border-radius: 5px; background: var(--orbit-field); color: var(--orbit-fg-dim); } }
 .orbit-import-more { align-self: flex-start; font-size: 12.5px; }
 
-/* Container tabs: a slim colored bar on the left of the tab, and color dots in menus. */
 #vertical-tabs .tabbrowser-tab[usercontextid] .tab-context-line {
   position: absolute !important;
   inset-inline-start: 2px;
@@ -2415,7 +2257,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 }
 .orbit-ctx-container .orbit-icon { color: var(--identity-icon-color, var(--identity-tab-color)); }
 
-/* Tabs, folders and essentials always fill the sidebar's width. */
 #vertical-tabs :is(.tabbrowser-tab, tab-group, tab-split-view-wrapper, #tabs-newtab-button) {
   max-width: none !important;
   width: auto !important;
@@ -2425,7 +2266,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 sidebar-main[expanded] #vertical-tabs, sidebar-main[expanded] { width: 100% !important; }
 sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 
-/* Anti-theft vault (Settings › Privacy). */
 .orbit-vault-status { flex-shrink: 0; font-size: 11.5px; font-weight: 600; padding: 4px 9px; border-radius: 6px;
   color: #ff9a76; background: rgb(255 154 118 / .12);
   &[ok] { color: #7ee2a8; background: rgb(126 226 168 / .12); } }
@@ -2436,9 +2276,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   & b { font-size: 13.5px; font-weight: 500; }
   & small { font-size: 12px; color: var(--orbit-fg-dim); line-height: 1.35; } }
 
-/* ==========================================================================
-   Downloads panel: Orbit cards with a clear progress bar
-   ========================================================================== */
 #downloadsPanel { --panel-width: 320px; }
 #downloadsListBox {
   padding: 8px !important;
@@ -2483,13 +2320,9 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
     &:hover { background: var(--orbit-hover) !important; }
   }
 }
-/* Toolbar button: the arrow fills with the accent while downloading. */
 #downloads-button[progress] #downloads-indicator-progress-inner { background-color: var(--orbit-accent) !important; }
 #downloads-button[attention="success"] #downloads-indicator-icon { fill: #7ee2a8 !important; }
 
-/* ==========================================================================
-   Space-pinned rows (under the essentials, above the space name)
-   ========================================================================== */
 #pinned-tabs-container .tabbrowser-tab[orbit-kept] {
   grid-column: 1 / -1 !important;
   order: 1;
@@ -2511,9 +2344,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 :root[orbit-has-kept] #pinned-tabs-container[orient="vertical"] { padding-bottom: 6px !important;
   box-shadow: 0 1px 0 var(--orbit-border); }
 
-/* ==========================================================================
-   "New tab" row: the same shape as a tab
-   ========================================================================== */
 #tabbrowser-tabs #tabs-newtab-button {
   height: 34px !important;
   min-height: 34px !important;
@@ -2533,13 +2363,9 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   & > .toolbarbutton-text { padding-inline-start: 10px !important; font-size: 13px !important; }
   &::after { opacity: .5 !important; }
 }
-/* Its separator moved under it as a thin line, with air like the design. */
 #tabbrowser-tabs #tabs-newtab-button { margin-bottom: 6px !important; }
 #tabbrowser-tabs #tabs-newtab-button + * { border-top: 1px solid var(--orbit-border); padding-top: 4px; }
 
-/* ==========================================================================
-   Motion everywhere: short, springy, compositor-only
-   ========================================================================== */
 @keyframes orbit-pin-pop {
   0% { transform: scale(.86); opacity: .4; }
   60% { transform: scale(1.04); opacity: 1; }
@@ -2554,14 +2380,12 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #vertical-tabs .tabbrowser-tab[pinned]:not([orbit-kept]) .tab-stack { transition: transform .2s var(--orbit-spring) !important; }
 #vertical-tabs .tabbrowser-tab[pinned]:not([orbit-kept]):hover .tab-stack { transform: translateY(-1px); }
 
-/* Folders: children fold in and out. */
 @keyframes orbit-fold-in { from { opacity: 0; transform: translateY(-6px); } }
 #vertical-tabs tab-group:not([collapsed]) > .tabbrowser-tab { animation: orbit-fold-in .26s var(--orbit-ease) both; }
 #vertical-tabs tab-group:not([collapsed]) > .tabbrowser-tab:nth-of-type(2) { animation-delay: 20ms; }
 #vertical-tabs tab-group:not([collapsed]) > .tabbrowser-tab:nth-of-type(3) { animation-delay: 40ms; }
 #vertical-tabs tab-group:not([collapsed]) > .tabbrowser-tab:nth-of-type(n+4) { animation-delay: 60ms; }
 
-/* Buttons and rows respond to the pointer. */
 :is(.orbit-icon-button, .orbit-button, .orbit-toast-b1, .orbit-toast-b2, .orbit-edit-chip, .orbit-settings-tab) {
   transition: background-color .15s ease-out, color .15s ease-out, transform .2s var(--orbit-spring), filter .15s;
 }
@@ -2573,16 +2397,13 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-settings-body > .orbit-setting:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--orbit-fg) 14%, transparent); }
 .orbit-switch, .orbit-switch-knob { transition: background-color .2s, transform .25s var(--orbit-spring) !important; }
 
-/* Panels and menus grow from their anchor. */
 @keyframes orbit-panel-in { from { opacity: 0; transform: translateY(-6px) scale(.98); } }
 :is(#orbit-vpn-panel, #orbit-icon-picker, .orbit-ctx) { animation: orbit-panel-in .2s var(--orbit-ease); }
 :is(#orbit-vpn-panel)[closing] { animation: orbit-fade-out .14s ease-in forwards; }
 
-/* Page swaps: the content card fades in when the tab changes. */
 @keyframes orbit-page-in { from { opacity: .6; } }
 :root:not([orbit-no-motion]) #tabbrowser-tabpanels > .deck-selected .browserStack { animation: orbit-page-in .18s ease-out; }
 
-/* Toolbar: the address bar breathes on focus. */
 #urlbar[focused] .urlbar-background { transition: box-shadow .2s ease-out, background-color .2s ease-out; }
 
 :root[orbit-no-motion] *, :root[orbit-no-motion] *::before, :root[orbit-no-motion] *::after {
@@ -2592,9 +2413,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #pinned-tabs-container .tabbrowser-tab[orbit-kept] .tab-content { background-image: none !important; }
 #pinned-tabs-container .tabbrowser-tab[orbit-kept] :is(.tab-icon-overlay:not([soundplaying], [muted]), .tab-sharing-icon-overlay) { display: none !important; }
 
-/* ==========================================================================
-   One hover for every sidebar row (design): flat 7px fill, no border, no bubble
-   ========================================================================== */
 #vertical-tabs {
   & #tabs-newtab-button,
   & #tabs-newtab-button:is(:hover, :active, :focus, [open]),
@@ -2624,14 +2442,12 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   & #tabs-newtab-button:focus-visible { box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--orbit-accent) 60%, transparent) !important; }
 }
 
-/* Orbit Turbo progress card. */
 .orbit-turbo .orbit-toast-icon { color: #ffd166; background: rgb(255 209 102 / .12); }
 .orbit-turbo-bar { height: 4px; border-radius: 2px; overflow: hidden; background: var(--orbit-field);
   & i { display: block; height: 100%; background: var(--orbit-accent); transform-origin: left; transform: scaleX(0);
     transition: transform .4s var(--orbit-ease); } }
 .orbit-turbo[data-tone="ok"] .orbit-turbo-bar i { background: #7ee2a8; }
 #tabContextMenu [orbit-hidden] { display: none !important; }
-/* Compact downloads panel that always fits next to the button. */
 #downloadsPanel-mainView { width: 320px !important; max-width: calc(100vw - 16px) !important; }
 #downloadsListBox {
   width: auto !important;
@@ -2651,7 +2467,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #downloadsPanel-mainView > vbox, #downloadsFooter { width: auto !important; max-width: 100% !important; }
 #downloadsListBox .downloadTarget, #downloadsListBox .downloadDetails { min-width: 0 !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Custom window background: picture, video or color. */
 #orbit-bg {
   position: fixed;
   inset: 0;
@@ -2673,7 +2488,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-bg-extra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; &:empty { display: none; } }
 .orbit-bg-color { width: 44px; height: 32px; padding: 0; border: none; border-radius: var(--orbit-radius); background: none; }
 
-/* Sidebar rhythm: even, tighter gaps around the pinned rows and the space name. */
 :root[orbit-has-kept] #pinned-tabs-container[orient="vertical"] {
   padding-bottom: 8px !important;
   margin-bottom: 4px !important;
@@ -2684,12 +2498,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { margin-bottom: 4px !important; }
 .orbit-fortress[on] { box-shadow: inset 0 0 0 1px rgb(126 226 168 / .35) !important; background: rgb(126 226 168 / .05) !important; }
 
-/* ==========================================================================
-   Sidebar rhythm (final): one grid for everything
-   - 8px gutters, 34px rows, 2px between rows, 6px between tiles
-   - every separator has 8px above and 8px below
-   - all row texts start at the same x (gutter + 8px padding + 16px icon + 10px)
-   ========================================================================== */
 #tabbrowser-tabs[orient="vertical"][expanded] { padding-inline: 8px !important; }
 #vertical-tabs .tabbrowser-tab:not([pinned]) { padding-block: 1px !important; }
 #vertical-tabs :is(.tabbrowser-tab:not([pinned]), #tabs-newtab-button, tab-group .tab-group-label-container) .tab-content,
@@ -2697,25 +2505,20 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #vertical-tabs .tabbrowser-tab .tab-icon-stack, #tabbrowser-tabs #tabs-newtab-button > .toolbarbutton-icon { margin: 0 !important; }
 #tabbrowser-tabs #tabs-newtab-button > .toolbarbutton-text { padding-inline-start: 0 !important; margin-inline-start: 10px !important; }
 
-/* Essentials, then space-pinned rows, then a separator. */
 #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { margin: 0 !important; padding: 0 !important; }
 :root[orbit-has-kept] #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] {
   padding-bottom: 8px !important;
   box-shadow: 0 1px 0 var(--orbit-border) !important;
 }
-/* Pinned rows keep the grid's 6px gap, same as between the essentials. */
 #pinned-tabs-container .tabbrowser-tab[orbit-kept] .tab-background,
 #pinned-tabs-container .tabbrowser-tab[orbit-kept] .tab-background[selected] { box-shadow: none !important; outline: none !important; border: none !important; }
 
-/* Space name: 8px under the separator (or the essentials), aligned with the rows. */
 #orbit-sidebar-header { margin: 8px 0 0 !important; padding: 0 0 0 8px !important; height: 34px; display: flex; align-items: center; border: none !important; }
 #orbit-space-title { flex: 1; height: 34px; }
 
-/* "New tab", then a separator with 8px on each side, then the tabs. */
 #tabbrowser-tabs #tabs-newtab-button { margin: 0 0 8px !important; }
 #tabbrowser-tabs #tabs-newtab-button + * { border-top: 1px solid var(--orbit-border); padding-top: 8px !important; margin-top: 0 !important; }
 
-/* Folders sit on the same 34px rows. */
 #vertical-tabs tab-group { margin-block: 1px !important; }
 #orbit-sidebar-header { align-self: stretch !important; width: auto !important; }
 #orbit-space-title { width: 100%; justify-content: flex-start !important; }
@@ -2726,7 +2529,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #pinned-tabs-container .tabbrowser-tab { margin-inline: 0 !important; }
 #vertical-tabs .tabbrowser-tab .tab-icon-stack { width: 16px !important; min-width: 16px !important; max-width: 16px !important; overflow: visible; }
 
-/* Performance presets (planets). */
 .orbit-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .orbit-preset {
   appearance: none;
@@ -2760,7 +2562,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-preset:nth-child(3) .orbit-planet { box-shadow: 0 0 0 1px rgb(255 255 255 / .08), 0 0 0 4px color-mix(in srgb, var(--planet) 30%, transparent); }
 @media (max-width: 760px) { .orbit-presets { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 
-/* Import running in the background. */
 .orbit-import-progress .orbit-toast-icon { color: #7c86ff; }
 .orbit-import-steps {
   list-style: none;
@@ -2788,9 +2589,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 @keyframes orbit-import-pulse { to { opacity: .35; transform: scale(.7); } }
 .orbit-import-progress[data-tone="ok"] .orbit-turbo-bar i { background: #7ee2a8; }
 
-/* ==========================================================================
-   Tags on tabs, rename popover
-   ========================================================================== */
 .orbit-tab-tag {
   flex-shrink: 0;
   max-width: 96px;
@@ -2804,7 +2602,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   letter-spacing: .04em;
 }
 #vertical-tabs .tabbrowser-tab[orbit-tagged] .tab-content { gap: 6px; }
-/* Essentials tiles: no room for text, a colored corner dot instead. */
 #pinned-tabs-container .tabbrowser-tab[orbit-tagged]:not([orbit-kept]) .orbit-tab-tag {
   position: absolute;
   top: 5px;
@@ -2838,9 +2635,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 }
 .orbit-tag-presets { display: flex; flex-wrap: wrap; gap: 6px; & .orbit-tab-tag { cursor: pointer; font-size: 10px; padding: 4px 8px; } }
 
-/* ==========================================================================
-   Sidebar drag and drop (OrbitDnD)
-   ========================================================================== */
 #orbit-dnd-ghost {
   position: fixed;
   z-index: 1000;
@@ -2873,7 +2667,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   &[hidden] { display: none; }
 }
 [orbit-drag-source] { opacity: .35 !important; }
-/* Rows being dragged leave the list; the slot shows where they will land. */
 :is(.tabbrowser-tab[orbit-kept], .tabbrowser-tab:not([pinned]), tab-group)[orbit-drag-source] { display: none !important; }
 #orbit-dnd-slot {
   position: fixed;
@@ -2934,7 +2727,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   transform: scale(1.12);
 }
 
-/* Mini player: seek and volume bars appear on hover. */
 .orbit-media-row { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .orbit-media-more {
   display: grid;
@@ -2982,10 +2774,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   &:is(:hover, [dragging]) i { background: var(--orbit-accent); }
 }
 
-/* ==========================================================================
-   Settings v4: grouped navigation, section heading + description, rows
-   grouped in cards with hairline separators, theme previews.
-   ========================================================================== */
 #orbit-settings { background: rgb(0 0 0 / .5); }
 .orbit-settings-card {
   width: min(1040px, calc(100vw - 48px)) !important;
@@ -3053,7 +2841,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-settings-body { padding: 20px 32px 32px !important; gap: 14px !important; }
 .orbit-settings-group { margin: 8px 2px -6px !important; font-size: 12px; font-weight: 600; color: var(--orbit-fg-dim); }
 
-/* A card holds one or several rows, separated by hairlines. */
 .orbit-card {
   flex: 0 0 auto;
   border-radius: 12px;
@@ -3076,7 +2863,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-settings-body .orbit-setting-label { font-size: 13.5px !important; font-weight: 500 !important; }
 .orbit-settings-body .orbit-setting-desc { font-size: 12.5px !important; line-height: 1.4; }
 
-/* Theme previews */
 .orbit-schemes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .orbit-scheme {
   appearance: none;
@@ -3118,9 +2904,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   .orbit-settings-top, .orbit-settings-body { padding-inline: 18px !important; }
 }
 
-/* ==========================================================================
-   Update window v2
-   ========================================================================== */
 .orbit-update-card {
   width: min(560px, calc(100vw - 40px)) !important;
   max-height: calc(100vh - 60px);
@@ -3194,10 +2977,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-update-actions { align-items: center; padding: 18px 26px 22px; }
 .orbit-update-status { flex: 1; font-size: 12px; color: var(--orbit-fg-dim); }
 
-/* ==========================================================================
-   First-run setup v2 (OrbitWelcome). Follows the theme being picked, so a
-   choice previews instantly. Static background, one small demo at a time.
-   ========================================================================== */
 :root[orbit-welcome-open] #orbit-liquid::before, :root[orbit-welcome-open] #orbit-liquid::after { animation-play-state: paused !important; }
 #orbit-welcome.ow {
   position: fixed;
@@ -3345,7 +3124,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   &[active] { box-shadow: 0 0 0 2px var(--orbit-base), 0 0 0 4px var(--orbit-fg); }
 }
 
-/* Feature list */
 .ow-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; width: min(720px, 100%); text-align: start; }
 .ow-feat { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px; border-radius: 12px;
   background: var(--orbit-tile); box-shadow: inset 0 0 0 1px var(--orbit-border);
@@ -3376,9 +3154,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 }
 @media (max-height: 640px) { .ow-stage { min-height: 0; } }
 
-/* ==========================================================================
-   Edit mode v2 panel
-   ========================================================================== */
 #orbit-edit-bar {
   width: min(820px, calc(100vw - 32px)) !important;
   max-height: min(520px, calc(100vh - 140px));
@@ -3441,7 +3216,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #orbit-ref-button { list-style-image: url("chrome://orbit/content/icons/picture-in-picture-2.svg"); }
 :is(#orbit-ai-button, #orbit-ref-button) { -moz-context-properties: fill, stroke; stroke: currentColor; fill: none; }
 
-/* About v2: hero, live updater card, links. */
 .orbit-about { align-items: stretch !important; text-align: start !important; gap: 14px !important; padding: 4px 0 10px !important; }
 .orbit-about-hero { display: flex; align-items: center; gap: 18px; padding: 6px 2px 8px;
   & .orbit-about-logo { width: 72px; height: 72px; }
@@ -3462,9 +3236,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   & b { font-size: 14px; font-weight: 600; } & span { font-size: 12.5px; color: var(--orbit-fg-dim); } & span:empty { display: none; } }
 .orbit-upd .orbit-button[hidden] { display: none; }
 
-/* ==========================================================================
-   Quick colors (OrbitColors)
-   ========================================================================== */
 #orbit-colors { width: 340px; min-width: 0 !important; padding: 10px !important; display: flex; flex-direction: column; gap: 10px; transform-origin: top left; }
 .oc-box { position: relative; height: 300px; border-radius: 12px; overflow: hidden;
   background: radial-gradient(circle, color-mix(in srgb, var(--orbit-fg) 14%, transparent) 1px, transparent 1.4px) 0 0 / 10px 10px, var(--orbit-tile);
@@ -3500,9 +3271,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .oc-knob-cap { position: absolute; inset: 9px; border-radius: 50%; background: var(--orbit-field); box-shadow: inset 0 0 0 1px var(--orbit-border), 0 4px 10px rgb(0 0 0 / .3);
   & i { position: absolute; left: 50%; top: 4px; width: 3px; height: 8px; margin-left: -1.5px; border-radius: 2px; background: var(--orbit-fg); } }
 
-/* ==========================================================================
-   Mods page; Zen's variables so Zen mods find their colors
-   ========================================================================== */
 :root {
   --zen-primary-color: var(--orbit-accent);
   --zen-colors-primary: var(--orbit-accent);
@@ -3533,14 +3301,9 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   & .orbit-setting { margin: 0 !important; padding: 10px 2px !important; min-height: 0 !important; background: none !important; box-shadow: none !important; }
   & .orbit-input { width: 180px; } }
 
-/* ==========================================================================
-   Orbit menu v2: sections, checks, shortcuts, submenu. Native menus (tabs,
-   pages, toolbar) get the same rhythm and icons (OrbitExtras.menuIcons).
-   ========================================================================== */
 #orbit-ctx { min-width: 250px !important; padding: 6px !important; }
 .orbit-menu-section { padding: 8px 10px 4px; font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--orbit-fg-dim);
   &:empty { display: none; } }
-/* box-sizing: the container entry is a div, which would otherwise be 20px too wide. */
 .orbit-menu-item { height: 32px !important; position: relative; box-sizing: border-box; }
 .orbit-menu-check { width: 28px; height: 16px; flex-shrink: 0; border-radius: 8px; background: var(--orbit-field); box-shadow: inset 0 0 0 1px var(--orbit-border); position: relative;
   &::after { content: ""; position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--orbit-fg-dim); transition: transform .2s var(--orbit-spring), background-color .2s; }
@@ -3548,13 +3311,11 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-menu-more { width: 14px !important; height: 14px !important; }
 .orbit-ctx-sub { display: none; position: absolute !important; top: -6px; left: calc(100% + 10px); min-width: 200px !important; animation: none !important; z-index: 1;
   &[left] { left: auto; right: calc(100% + 10px); } }
-/* An invisible bridge over the gap keeps the submenu open on the way to it. */
 .orbit-ctx-sub::before { content: ""; position: absolute; top: 0; bottom: 0; left: -14px; width: 14px; }
 .orbit-ctx-sub[left]::before { left: auto; right: -14px; }
 .orbit-menu-parent:is(:hover, :focus-within) > .orbit-ctx-sub { display: block; }
 .orbit-menu-parent:is(:hover, :focus-within) { background: var(--orbit-hover); }
 
-/* Native menus with Orbit's rhythm. */
 menupopup:not(.in-menulist) > :is(menuitem, menu) { min-height: 32px !important; padding-inline: 10px !important; font-size: 13px; }
 menupopup:not(.in-menulist) > menuseparator { margin: 5px 8px !important; padding: 0 !important; border-top: 1px solid var(--orbit-border) !important; }
 menupopup:not(.in-menulist) { --panel-padding: 6px !important; }
@@ -3563,11 +3324,6 @@ menupopup > :is(menuitem, menu)[orbit-icon] .menu-icon {
   -moz-context-properties: stroke; stroke: var(--orbit-fg-dim); fill: none;
 }
 
-/* ==========================================================================
-   Folders v2: whole row toggles, closed folders fade, open folders show
-   their tabs indented along a guide line; pinned folders sit above the
-   space name with the pinned tabs. (tab-group is display: contents.)
-   ========================================================================== */
 #vertical-tabs tab-group {
   & .tab-group-label-container { cursor: default; }
   &[collapsed] .tab-group-label-container { opacity: .55; transition: opacity .15s; }
@@ -3585,13 +3341,9 @@ menupopup > :is(menuitem, menu)[orbit-icon] .menu-icon {
 .orbit-tag-icons { display: flex; flex-wrap: wrap; gap: 2px;
   & .orbit-icon-button { width: 26px !important; height: 26px !important; }
   & .orbit-icon-button[active] { background: var(--orbit-active); box-shadow: inset 0 0 0 1px var(--orbit-border); } }
-/* Pinned folders join the pinned tabs: one separator, above the space name. */
 :root[orbit-has-pinned-folders] #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { box-shadow: none !important; border-bottom: none !important; }
 :root[orbit-has-pinned-folders] #orbit-sidebar-header { margin-top: 6px !important; padding-top: 8px !important; border-top: 1px solid var(--orbit-border) !important; }
 
-/* ==========================================================================
-   Downloads panel v2: header with Turbo, Turbo jobs, empty state
-   ========================================================================== */
 #orbit-dl-head {
   display: flex;
   align-items: center;
@@ -3657,11 +3409,6 @@ menupopup > :is(menuitem, menu)[orbit-icon] .menu-icon {
 }
 #downloadsPanel[hasdownloads] #emptyDownloads, #emptyDownloads[hidden] { display: none !important; }
 
-/* ==========================================================================
-   Folders v3: icon tile in the folder color, name, contents preview (the
-   tabs' icons when closed, a count when open), chevron at the end; open
-   folders hold their tabs on a thin guide line under the tile.
-   ========================================================================== */
 #vertical-tabs tab-group {
   --orbit-folder-c: var(--tab-group-color, var(--orbit-accent));
   & .tab-group-label-hover-highlight { gap: 10px !important; padding-inline: 6px 8px !important; color: var(--orbit-fg) !important; }
@@ -3719,20 +3466,15 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 }
 #vertical-tabs tab-group[collapsed] .orbit-folder-chevron { transform: rotate(-90deg) !important; }
 #vertical-tabs tab-group .tab-group-label-hover-highlight:hover .orbit-folder-chevron { opacity: .9; }
-/* Tabs inside: a thin neutral line under the tile, then the tab. */
 #vertical-tabs #tabbrowser-arrowscrollbox tab-group > .tabbrowser-tab:not([pinned]) .tab-content {
   padding-inline-start: calc(32px + var(--orbit-folder-depth, 0) * 14px) !important;
   background: linear-gradient(color-mix(in srgb, var(--orbit-fg) 14%, transparent), color-mix(in srgb, var(--orbit-fg) 14%, transparent))
     no-repeat calc(16.5px + var(--orbit-folder-depth, 0) * 14px) 0 / 1px 100% !important;
 }
 
-/* Wider downloads panel. */
 #downloadsPanel { --panel-width: 400px !important; }
 #downloadsPanel-mainView { width: 400px !important; }
 
-/* ==========================================================================
-   Command palette (Ctrl+K)
-   ========================================================================== */
 #orbit-palette {
   position: fixed;
   inset: 0;
@@ -3822,9 +3564,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   opacity: .7;
 }
 
-/* ==========================================================================
-   Color picker (pipette)
-   ========================================================================== */
 #orbit-picker {
   position: fixed;
   inset: 0;
@@ -3915,9 +3654,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 #orbit-picker-button { list-style-image: url("chrome://orbit/content/icons/pipette.svg"); }
 #orbit-picker-button { -moz-context-properties: fill, stroke; stroke: currentColor; fill: none; }
 
-/* ==========================================================================
-   Lock screen
-   ========================================================================== */
 #orbit-lock {
   position: fixed;
   inset: 0;
@@ -3926,7 +3662,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   align-items: center;
   justify-content: center;
   color: var(--orbit-fg);
-  /* Opaque: nothing of the pages shows through. */
   background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--orbit-accent, #7c86ff) 22%, #0b0b0e), #0b0b0e 70%);
   animation: orbit-fade-in .2s ease-out;
 }
@@ -3945,24 +3680,29 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 .orbit-lock-text { font-size: 13.5px; color: rgb(255 255 255 / .6); }
 .orbit-lock-unlock { margin-top: 8px; }
 .orbit-lock-error { min-height: 18px; font-size: 12.5px; color: #ff8a7a; }
+#orbit-beta-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--orbit-fg);
+  background: #030305;
+  animation: orbit-fade-in .2s ease-out;
+}
+#orbit-beta-gate .orbit-lock-text { max-width: 420px; font-size: 14px; line-height: 1.5; }
+.orbit-beta-logo { width: 56px; height: auto; margin-bottom: 6px; }
+.orbit-beta-actions { display: flex; gap: 8px; margin-top: 10px; }
 
-/* ==========================================================================
-   Focus mode: the page alone
-   ========================================================================== */
 :root[orbit-focus]:not([customizing]) {
   & :is(#sidebar-container, #sidebar-launcher-splitter, #navigator-toolbox) { visibility: collapse !important; }
   & #tabbrowser-tabbox { margin: 0 !important; }
 }
 
-/* Saved sessions in settings */
 .orbit-sessions:empty { display: none; }
 .orbit-session-actions { display: flex; align-items: center; gap: 6px; }
 
-/* ==========================================================================
-   Tabs on top (sidebar.verticalTabs off): a Brave-like strip in Orbit's colors.
-   Row 1: tabs and window buttons. Row 2: the toolbar, the same color as the
-   selected tab, so the two read as one piece. Then the page card.
-   ========================================================================== */
 @media not -moz-pref("sidebar.verticalTabs") {
   :root:not([customizing], [inDOMFullscreen]) {
     --orbit-hz-bar: color-mix(in srgb, var(--orbit-fg) 7%, color-mix(in srgb, var(--orbit-card) 82%, transparent));
@@ -4016,7 +3756,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
       }
       &:hover:not([selected]) .tab-background { background: var(--orbit-hover) !important; margin-bottom: 4px !important; border-radius: 9px !important; }
       &[selected] .tab-background { background: var(--orbit-hz-bar) !important; }
-      /* Rounded feet joining the selected tab to the toolbar, like Chrome and Brave. */
       &[selected] .tab-stack::before, &[selected] .tab-stack::after {
         content: "";
         position: absolute;
@@ -4040,7 +3779,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
         &:hover { background: var(--orbit-active) !important; opacity: 1; }
       }
       &:not([selected], :hover) .tab-close-button { opacity: 0; }
-      /* Thin separators between tabs that are neither selected nor hovered. */
       &::after {
         content: "";
         position: absolute;
@@ -4054,7 +3792,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
       &:has(+ .tabbrowser-tab:is([selected], :hover))::after { opacity: 0; }
     }
 
-    /* The new tab "+" right after the last tab. */
     & #tabbrowser-arrowscrollbox #tabs-newtab-button {
       width: 30px !important;
       height: 30px !important;
@@ -4068,7 +3805,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
       &:hover { background: var(--orbit-hover) !important; }
     }
 
-    /* Split views: one pill holding its 2 to 4 tabs. */
     & #tabbrowser-tabs[orient="horizontal"] tab-split-view-wrapper {
       display: grid !important;
       grid-auto-flow: column;
@@ -4081,7 +3817,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
       border-radius: 9px !important;
       background: var(--orbit-tile) !important;
       box-shadow: inset 0 0 0 1px var(--orbit-border);
-      /* Grows like as many tabs as it holds. */
       flex: 200 200 !important;
       min-width: calc(var(--tab-min-width) * 2 + 6px) !important;
       max-width: calc(var(--tab-max-width) * 2) !important;
@@ -4096,9 +3831,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   }
 }
 
-/* ==========================================================================
-   Split view with 3 or 4 pages: in tab order, no splitter, grid or columns
-   ========================================================================== */
 #tabbrowser-tabpanels[splitview]:has(> .split-view-panel-active ~ .split-view-panel-active ~ .split-view-panel-active) {
   & > .split-view-splitter { display: none !important; }
   & > .split-view-panel-active { flex: 1 1 0 !important; width: auto !important; min-width: 0 !important; max-width: none !important; }
@@ -4113,7 +3845,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   }
 }
 
-/* Custom shortcuts in settings */
 .orbit-shortcuts .orbit-setting-label { display: flex; align-items: center; gap: 10px; & .orbit-icon { width: 15px; height: 15px; opacity: .6; } }
 .orbit-shortcuts-hint { margin: -4px 0 4px; }
 .orbit-keys-edit {
@@ -4135,9 +3866,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
 .orbit-keys-none { opacity: .4; }
 .orbit-lock-pin { width: 240px; text-align: center; letter-spacing: .2em; }
 
-/* ==========================================================================
-   Settings: reset buttons, clickable rows
-   ========================================================================== */
 .orbit-setting-clickable { transition: background-color .15s; }
 .orbit-setting-clickable:hover { background: color-mix(in srgb, var(--orbit-accent) 7%, var(--orbit-field)); }
 .orbit-setting-clickable { cursor: pointer; }
@@ -4159,9 +3887,6 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   &:hover { background: color-mix(in srgb, var(--orbit-accent) 24%, transparent); }
 }
 
-/* ==========================================================================
-   Settings: shortcuts page
-   ========================================================================== */
 .orbit-sc { display: flex; flex-direction: column; gap: 14px; }
 .orbit-sc-head { display: flex; align-items: center; gap: 10px; position: sticky; top: -1px; z-index: 2; padding-block: 2px 6px; background: var(--orbit-panel); }
 .orbit-sc-searchbox {

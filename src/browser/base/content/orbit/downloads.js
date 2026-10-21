@@ -2,9 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// orbit://downloads: every download grouped by day, week and month, with
-// search, filters, sorting, the file's folder and actions. Data comes from
-// the OrbitDownloads actor; this page has no privileges of its own.
 import { downloadGroup } from "./orbit-pure.mjs";
 
 const $ = id => document.getElementById(id);
@@ -13,7 +10,6 @@ let lang = "en";
 let items = new Map();
 let filter = "all";
 
-// Lucide icons, inline (this page cannot recolor icon files).
 const ICONS = {
   open: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
   folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
@@ -63,7 +59,6 @@ function host(url) {
   }
 }
 
-// File type badge: the extension, colored by kind.
 const KINDS = [
   [/^(zip|rar|7z|tar|gz|xz|bz2)$/, "#e3a33b"], [/^(exe|msi|msix|appx|bat|cmd)$/, "#4f8cff"],
   [/^(pdf)$/, "#ef4444"], [/^(png|jpe?g|gif|webp|svg|avif|heic|bmp|ico)$/, "#22c58b"],
@@ -168,7 +163,6 @@ function render() {
   for (const b of $("filters").children) b.toggleAttribute("active", b.dataset.f == filter);
   const list = $("list");
   list.replaceChildren();
-  // Date groups only make sense in date order.
   const byDate = sort == "newest" || sort == "oldest";
   let current = null;
   let box = null;

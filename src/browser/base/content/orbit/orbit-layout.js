@@ -2,7 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Layout: sidebar sizing, compact mode, shortcuts, floating command bar.
 var OrbitLayout = {
   init() {
     const root = document.documentElement;
@@ -10,22 +9,17 @@ var OrbitLayout = {
     this.toolbox = document.getElementById("navigator-toolbox");
     this.sidebar = document.getElementById("sidebar-container");
 
-    // Header/footer live around <sidebar-main>; spaces fill them in.
-    // Space label sits between the essentials grid and the tab list.
     document.getElementById("tabbrowser-tabs").insertBefore(
       Orbit.h("xul:vbox", { id: "orbit-sidebar-header" }),
       document.getElementById("tabbrowser-arrowscrollbox")
     );
     this.sidebar.append(Orbit.h("xul:hbox", { id: "orbit-sidebar-footer", align: "center" }));
     document.body.append(Orbit.h("div", { id: "orbit-urlbar-backdrop" }));
-    // Liquid background + grain (see orbit.css): two cheap fixed layers.
     document.body.prepend(Orbit.h("div", { id: "orbit-liquid" }), Orbit.h("div", { id: "orbit-grain" }));
 
-    // Keep CSS vars in sync with real sizes.
     new ResizeObserver(([e]) =>
       root.style.setProperty("--orbit-toolbox-height", `${Math.ceil(e.borderBoxSize[0].blockSize)}px`)
     ).observe(this.toolbox);
-    // Our own resize handle: the width pref is the single source of truth.
     document.getElementById("sidebar-launcher-splitter").addEventListener("mousedown", e => {
       if (e.button != 0) return;
       e.preventDefault();
@@ -58,17 +52,13 @@ var OrbitLayout = {
   },
 
   onReady() {
-    // Always show the full (expanded) vertical tab strip.
     SidebarController.promiseInitialized.then(() => {
       if (!SidebarController._state.launcherExpanded) SidebarController._state.updateVisibility(true, true);
     }).catch(e => console.error("Orbit: could not expand sidebar", e));
-    // First run (or layout upgrade): Zen-like toolbar order. Users can still
-    // customize afterwards; we only apply this once per layout version.
     if (Orbit.pref("orbit.layout.version", 0) < 1) {
       Services.prefs.setIntPref("orbit.layout.version", 1);
       this.resetToolbar();
     }
-    // Hide the stock tool buttons inside <sidebar-main>'s shadow DOM.
     const sm = document.querySelector("sidebar-main");
     const hideTools = () => {
       if (!sm.shadowRoot || sm.shadowRoot.getElementById("orbit-style")) return;
@@ -82,7 +72,6 @@ var OrbitLayout = {
     customElements.whenDefined("sidebar-main").then(() => sm.updateComplete?.then(hideTools));
   },
 
-  // Never wider than 45% of the window, so the page keeps its room.
   clampWidth(w) {
     const max = Math.max(180, Math.min(600, window.innerWidth * 0.45));
     return Math.round(Math.min(max, Math.max(180, w)));
@@ -105,12 +94,9 @@ var OrbitLayout = {
       if (id == "spring") return;
       CustomizableUI.addWidgetToArea(id, area, i);
     });
-    // Springs are special (new id each time): add the two around the URL bar.
     const urlbarPos = () => CustomizableUI.getPlacementOfWidget("urlbar-container").position;
     CustomizableUI.addWidgetToArea("spring", area, urlbarPos());
     CustomizableUI.addWidgetToArea("spring", area, urlbarPos() + 1);
-    // Moving widgets in an already-built toolbar can leave the DOM out of
-    // order; re-append in placement order (later windows build correctly).
     const target = CustomizableUI.getCustomizationTarget(document.getElementById(area));
     for (const id of CustomizableUI.getWidgetIdsInArea(area)) {
       const node = document.getElementById(id);
@@ -118,8 +104,6 @@ var OrbitLayout = {
     }
   },
 
-  // Built-in pages (orbit://preferences...) get Orbit's look and font via
-  // process-wide user sheets; registering again is a no-op.
   applyPageSheets() {
     const sss = Cc["@mozilla.org/content/style-sheet-service;1"].getService(Ci.nsIStyleSheetService);
     const base = Services.io.newURI(`${Orbit.BASE}orbit-pages.css`);
@@ -154,7 +138,6 @@ var OrbitLayout = {
     }
   },
 
-  // Fonts the user added live in <profile>/orbit-fonts/.
   loadCustomFonts() {
     this._loadedFonts ??= new Set();
     for (const { name, file } of this.customFonts()) {
@@ -174,7 +157,6 @@ var OrbitLayout = {
     if (topic == "nsPref:changed") this.applyPrefs();
   },
 
-  // Prefs -> root attributes / CSS variables (live in every window).
   applyPrefs() {
     const root = this.root;
     const flag = (attr, pref, def = true) => root.toggleAttribute(attr, !Orbit.pref(pref, def));
@@ -201,7 +183,6 @@ var OrbitLayout = {
     this.root.removeAttribute("orbit-peek");
   },
 
-  // Focus mode: only the page, no sidebar or toolbar (Ctrl+Shift+F again to leave).
   toggleFocus() {
     const on = this.root.toggleAttribute("orbit-focus");
     if (on) {
@@ -217,7 +198,6 @@ var OrbitLayout = {
   handleEvent(e) {
     switch (e.type) {
       case "mousemove":
-        // Reveal the floating sidebar when the pointer touches the left edge.
         if (this.root.hasAttribute("orbit-compact") && !this.root.hasAttribute("orbit-peek") && e.screenX - window.mozInnerScreenX <= 6) {
           clearTimeout(this._hideTimer);
           this.root.setAttribute("orbit-peek", "true");
@@ -246,7 +226,6 @@ var OrbitLayout = {
   },
 
   onKey(e) {
-    // AltGr reports Ctrl+Alt on Windows; never steal AltGr characters.
     if (e.getModifierState("AltGraph") || OrbitPalette.recording || OrbitPalette.runShortcut(e)) return;
     if (e.ctrlKey && !e.altKey && !e.shiftKey && e.code == "Comma") {
       OrbitSettings.toggle();

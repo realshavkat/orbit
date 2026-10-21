@@ -1,15 +1,4 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
-// License, v. 2.0. If a copy of the MPL was not distributed with this
-// file, You can obtain one at http://mozilla.org/MPL/2.0/.
-
-// Fast UI loop: runs Orbit's chrome code (src/browser/base/content/orbit)
-// live on top of an existing Gecko runtime, without compiling Firefox.
-// Edit a file, restart with `npm run dev`, done. The real build bakes the
-// same files in through jar.mn + browser.xhtml patches.
-//
-//   npm run dev                 launch
-//   npm run dev -- --marionette launch with Marionette on port 2828 (tools/mn.mjs)
-//   npm run dev -- --reset      wipe the dev profile first
 
 import { cpSync, existsSync, mkdirSync, rmSync, writeFileSync, copyFileSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -21,13 +10,9 @@ const devDir = join(root, ".dev");
 const runtime = join(devDir, "runtime");
 const profile = join(devDir, "profile");
 const srcUiDir = join(root, "src/browser/base/content/orbit");
-// Copied into the install dir: sandboxed content processes can read it there
-// (Glance's actor child module is loaded in web content processes).
 const uiDir = join(runtime, "browser/orbit");
 const args = process.argv.slice(2);
 
-// shortcut: dev runtime is copied from the local Firefox install; point
-// ORBIT_GECKO at another Gecko build (e.g. engine/obj-*/dist/bin) to change it.
 const gecko = process.env.ORBIT_GECKO || "C:/Program Files/Mozilla Firefox";
 
 if (!existsSync(join(runtime, "firefox.exe"))) {
@@ -44,8 +29,6 @@ rmSync(uiDir, { recursive: true, force: true, maxRetries: 20, retryDelay: 250 })
 cpSync(srcUiDir, uiDir, { recursive: true });
 mkdirSync(profile, { recursive: true });
 
-// Autoconfig bootstrap: registers chrome://orbit/content/ -> src folder and
-// injects the same <link>/<script> tags the browser.xhtml patch adds.
 writeFileSync(
   join(runtime, "defaults/pref/autoconfig.js"),
   `pref("general.config.filename", "orbit-dev.cfg");
@@ -53,10 +36,8 @@ pref("general.config.obscure_value", 0);
 pref("general.config.sandbox_enabled", false);
 `
 );
-// App-level defaults load after firefox.js, like the #include in the real build.
 mkdirSync(join(runtime, "browser/defaults/preferences"), { recursive: true });
 copyFileSync(join(root, "src/browser/app/profile/orbit.js"), join(runtime, "browser/defaults/preferences/orbit-prefs.js"));
-// Dev Marionette port (2829) so a real Orbit build can keep 2828.
 writeFileSync(join(runtime, "browser/defaults/preferences/orbit-dev.js"), 'pref("marionette.port", 2829);\n');
 rmSync(join(runtime, "defaults/pref/orbit-prefs.js"), { force: true });
 writeFileSync(
@@ -92,8 +73,6 @@ try {
 `
 );
 
-// -app gives the dev build its own identity (profile root, remoting name).
-// The ini must sit in browser/ so resource:/// still resolves to the app dir.
 const ini = join(runtime, "browser/application.ini");
 writeFileSync(
   ini,

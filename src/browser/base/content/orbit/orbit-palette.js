@@ -2,10 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Command palette (Ctrl+K): every Orbit action, the tabs of
-// every space, recently closed tabs, saved sessions, bookmarks and history,
-// in one list driven by the keyboard. Native actions go through the
-// browser's own commands, so they behave exactly like their menus.
 var OrbitPalette = {
   init() {
     window.addEventListener("keydown", e => {
@@ -16,6 +12,7 @@ var OrbitPalette = {
         this.toggle();
       }
     }, true);
+    this.watchSync();
   },
 
   toggle() {
@@ -28,10 +25,6 @@ var OrbitPalette = {
     if (c && !c.hasAttribute("disabled")) c.doCommand();
   },
 
-  // ---- Orbit community (orbit.community.url; empty = hidden) ------------------------
-  // Only what the user clicks reaches the service: a page they open, or the
-  // domain of the current site when they choose "Share this site". Never in
-  // private windows, never history or tabs.
   community() {
     const url = Orbit.pref("orbit.community.url", "");
     return /^https?:\/\//.test(url) && !PrivateBrowsingUtils.isWindowPrivate(window) ? url.replace(/\/$/, "") : null;
@@ -48,7 +41,9 @@ var OrbitPalette = {
     const open = path => () => openTrustedLinkIn(`${base}${path}`, "tab");
     const host = this.currentHost();
     return [
-      ["user", T("My Orbit account", "Mon compte Orbit"), open("/me")],
+      ["user", T("My Orbit account", "Mon compte Orbit"), async () => {
+        if (this.communitySignedIn() || !(await this.communitySignIn())) open("/me")();
+      }],
       ["bell", T("Orbit notifications", "Notifications Orbit"), open("/notifications")],
       ...(host ? [
         ["link", T("Share this site on my profile", "Partager ce site sur mon profil"), open(`/share?domain=${encodeURIComponent(host)}`)],
@@ -57,7 +52,55 @@ var OrbitPalette = {
     ];
   },
 
-  // ---- custom shortcuts: {command id: "Ctrl Maj K"} in orbit.shortcuts -----------
+  watchSync() {
+    const topics = ["fxaccounts:onlogin", "fxaccounts:onverified", "fxaccounts:onlogout"];
+    const obs = (subject, topic) => {
+      if (window != Services.wm.getMostRecentWindow("navigator:browser")) return;
+      if (topic == "fxaccounts:onlogout") this.communitySignOut();
+      else this.communitySignIn().catch(e => console.error("Orbit account", e));
+    };
+    for (const t of topics) Services.obs.addObserver(obs, t);
+    window.addEventListener("unload", () => topics.forEach(t => Services.obs.removeObserver(obs, t)), { once: true });
+  },
+
+  communityHost() {
+    const base = this.community();
+    return base ? new URL(base).hostname : null;
+  },
+
+  communitySignedIn() {
+    const host = this.communityHost();
+    return !!host && Services.cookies.getCookiesFromHost(host, {}).some(c => c.name == "orbit_session");
+  },
+
+  async communitySignIn() {
+    const base = this.community();
+    if (!base || this._signingIn) return false;
+    this._signingIn = true;
+    try {
+      const { getFxAccountsSingleton } = ChromeUtils.importESModule("resource://gre/modules/FxAccounts.sys.mjs");
+      const fxa = getFxAccountsSingleton();
+      if (!(await fxa.getSignedInUser())?.verified) return false;
+      const token = await fxa.getOAuthToken({ scope: "profile" });
+      const res = await fetch(`${base}/api/v1/auth/mozilla`, {
+        method: "POST", credentials: "omit",
+        headers: { "content-type": "application/json", "x-orbit-request": "1" },
+        body: JSON.stringify({ token }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.code) return false;
+      openTrustedLinkIn(`${base}/connect#code=${encodeURIComponent(out.code)}`, "tab");
+      return true;
+    } finally {
+      this._signingIn = false;
+    }
+  },
+
+  communitySignOut() {
+    const host = this.communityHost();
+    if (host) Services.cookies.removeCookiesFromExactHost(host, "{}");
+  },
+
   recording: false,
 
   custom() {
@@ -76,8 +119,6 @@ var OrbitPalette = {
     Services.prefs.setStringPref("orbit.shortcuts", JSON.stringify(map));
   },
 
-  // "Ctrl Maj K" for a key press, or null. A shortcut needs Ctrl or Alt
-  // (or is an F key), so typing in pages is never taken over.
   combo(e) {
     if (["Control", "Shift", "Alt", "Meta", "AltGraph"].includes(e.key) || e.getModifierState("AltGraph")) return null;
     const key = /^Key[A-Z]$/.test(e.code) ? e.code.slice(3) : /^Digit\d$/.test(e.code) ? e.code.slice(5) : e.code == "Space" ? "Espace"
@@ -87,12 +128,10 @@ var OrbitPalette = {
     return [e.ctrlKey && "Ctrl", e.altKey && "Alt", e.shiftKey && "Maj", key].filter(Boolean).join(" ");
   },
 
-  // Every command that has an id (the per-space entries have none).
   flat() {
     return this.commands().flatMap(([, cmds]) => cmds).filter(c => c[4]);
   },
 
-  // Called first by OrbitLayout's key handler: a custom shortcut wins.
   runShortcut(e) {
     if (this.recording || window.OrbitLock?.locked) return false;
     const map = this.custom();
@@ -111,7 +150,6 @@ var OrbitPalette = {
     return true;
   },
 
-  // [icon, label, run, keys?, id] grouped by section; id is the English label.
   commands() {
     const ids = new Map();
     const T = (en, fr) => {
@@ -204,8 +242,6 @@ var OrbitPalette = {
     })]);
   },
 
-  // The tabs an action on "selected tabs" works on: the Ctrl+click selection,
-  // else the current space's tabs (at most 6).
   chosenTabs() {
     const sel = gBrowser.selectedTabs;
     if (sel.length > 1) return sel;
@@ -240,7 +276,6 @@ var OrbitPalette = {
     return words.every(w => t.includes(w));
   },
 
-  // Bookmarks and history from the Places database, best first.
   async places(q) {
     if (q.length < 2) return { bookmarks: [], history: [] };
     const db = await PlacesUtils.promiseDBConnection();
@@ -255,13 +290,11 @@ var OrbitPalette = {
     return { bookmarks, history };
   },
 
-  // Key names as the UI language writes them (the lists use French names).
   keyName(k) {
     if (Orbit.lang() == "fr") return k;
     return { Maj: "Shift", "Échap": "Esc", Suppr: "Del", "Entrée": "Enter", Espace: "Space", clic: "click" }[k] ?? k;
   },
 
-  // The palette as a single text field: Enter gives the text to onDone.
   ask(placeholder, onDone, { secret = false } = {}) {
     this.open({ placeholder, onDone, secret });
   },
@@ -316,7 +349,6 @@ var OrbitPalette = {
       const words = this.norm(raw).split(/\s+/).filter(Boolean);
       const sections = [];
       const row = (icon, title, sub, runIt, keys) => ({ icon, title, sub, run: runIt, keys });
-      // Tabs of every space (and the space they are in).
       if (words.length) {
         const tabs = gBrowser.tabs.filter(t => !t.closing && this.matches(`${t.label} ${t.linkedBrowser.currentURI.spec}`, words)).slice(0, 8)
           .map(t => row(t.getAttribute("image") || "icons/globe.svg", t.label,

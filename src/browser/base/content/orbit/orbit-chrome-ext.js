@@ -2,11 +2,6 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-// Chrome extensions. On a Chrome Web Store page Orbit offers "Add to Orbit":
-// it downloads the extension (.crx) from Google, turns it into a Gecko
-// add-on (manifest tweaks) and installs it. Extensions from addons.mozilla.org
-// install as usual. Chrome extensions are not signed by Mozilla, so the user
-// first allows unsigned extensions (a clear, one-time choice).
 var OrbitChromeExt = {
   STORE: /^https:\/\/(?:chromewebstore\.google\.com\/detail\/(?:[^/]+\/)?|chrome\.google\.com\/webstore\/detail\/(?:[^/]+\/)?)([a-p]{32})/,
   CRX_URL: id => `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0&acceptformat=crx2,crx3&x=id%3D${id}%26installsource%3Dondemand%26uc`,
@@ -20,16 +15,14 @@ var OrbitChromeExt = {
 
   init() {
     this.migrateSignatures();
-    // Store pages get an "Add to Orbit" button (actors/OrbitStore*). App-wide:
-    // later windows get "already registered".
+    const site = OrbitMods.community();
     try {
       ChromeUtils.registerWindowActor("OrbitStore", {
         parent: { esModuleURI: "resource://orbit/actors/OrbitStoreParent.sys.mjs" },
         child: { esModuleURI: "resource://orbit/actors/OrbitStoreChild.sys.mjs", events: { DOMContentLoaded: {} } },
         matches: ["https://chromewebstore.google.com/*", "https://chrome.google.com/webstore/*",
-          "https://addons.mozilla.org/*", "https://zen-browser.app/*"],
+          "https://addons.mozilla.org/*", "https://zen-browser.app/*", ...(site ? [`${new URL(site).protocol}//${new URL(site).hostname}/*`] : [])],
         messageManagerGroups: ["browsers"],
-        // The parent checks the page's address and the id of every request.
         safeForUntrustedWebProcess: true,
       });
     } catch {}
@@ -56,7 +49,6 @@ var OrbitChromeExt = {
     setTimeout(() => this.checkUpdates().catch(e => console.error("Orbit: Chrome extension update", e)), 15000);
   },
 
-  // Older builds turned signature checks off for the whole browser. Put that back.
   migrateSignatures() {
     if (Orbit.pref("orbit.chrome.migrated", false)) return;
     const p = Services.prefs;
@@ -107,8 +99,6 @@ var OrbitChromeExt = {
     }
   },
 
-  // The uninstall listener lives on one window. The flag has to be visible there
-  // even when Settings or a store page in another window starts the install.
   setKeeping(on) {
     for (const win of Services.wm.getEnumerator("navigator:browser")) {
       if (win.OrbitChromeExt) win.OrbitChromeExt._keeping = on;
@@ -209,14 +199,12 @@ var OrbitChromeExt = {
     }
   },
 
-  // Chrome manifest -> Gecko manifest.
   adaptManifest(manifest, id) {
     manifest.browser_specific_settings ??= {};
     manifest.browser_specific_settings.gecko ??= {};
     manifest.browser_specific_settings.gecko.id ??= `${id}@chrome-web-store`;
     delete manifest.update_url;
     delete manifest.key;
-    // Gecko runs MV3 backgrounds as event pages (scripts), not service workers.
     const sw = manifest.background?.service_worker;
     if (sw) {
       manifest.background.scripts = [sw];
@@ -225,7 +213,6 @@ var OrbitChromeExt = {
     return manifest;
   },
 
-  // Writes an installable .xpi into the profile's temp folder.
   async toXpi(crx, id) {
     const dir = PathUtils.join(PathUtils.tempDir, "orbit-chrome-ext");
     await IOUtils.makeDirectory(dir, { ignoreExisting: true });
@@ -237,12 +224,11 @@ var OrbitChromeExt = {
     reader.open(new FileUtils.File(zipPath));
     try {
       await IOUtils.remove(xpiPath, { ignoreAbsent: true });
-      writer.open(new FileUtils.File(xpiPath), 0x04 | 0x08 | 0x20); // RDWR | CREATE | TRUNCATE
+      writer.open(new FileUtils.File(xpiPath), 0x04 | 0x08 | 0x20);
       for (const entry of reader.findEntries(null)) {
         if (entry.endsWith("/") || entry.startsWith("_metadata/")) continue;
         if (entry == "manifest.json") {
           const raw = new TextDecoder().decode(NetUtil.readInputStream(reader.getInputStream(entry), reader.getEntry(entry).realSize));
-          // Chrome tolerates comments in manifest.json; JSON.parse does not.
           const manifest = this.adaptManifest(JSON.parse(raw.replace(/^\s*\/\/.*$/gm, "")), id);
           const stream = Cc["@mozilla.org/io/string-input-stream;1"].createInstance(Ci.nsIStringInputStream);
           stream.setUTF8Data(JSON.stringify(manifest, null, 2));
@@ -259,7 +245,6 @@ var OrbitChromeExt = {
     return xpiPath;
   },
 
-  // Gecko's own install flow (its permission prompt included).
   async installFile(path) {
     const install = await AddonManager.getInstallForFile(new FileUtils.File(path));
     if (!install || install.error) throw new Error(`install error ${install?.error}`);
@@ -273,7 +258,6 @@ var OrbitChromeExt = {
     }));
   },
 
-  // Settings: install a .crx, .zip or .xpi file from disk.
   async installFromDisk() {
     const fp = Cc["@mozilla.org/filepicker;1"].createInstance(Ci.nsIFilePicker);
     fp.init(window.browsingContext, Orbit.tr("Install an extension", "Installer une extension"), Ci.nsIFilePicker.modeOpen);
