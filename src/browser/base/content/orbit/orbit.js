@@ -105,6 +105,7 @@ var Orbit = {
       OrbitMemory.init();
       OrbitNotify.init();
       OrbitWelcome.maybeShow();
+      OrbitForum.maybeOpen();
       document.documentElement.setAttribute("orbit-ready", "true");
     };
     if (gBrowserInit.delayedStartupFinished) ready();

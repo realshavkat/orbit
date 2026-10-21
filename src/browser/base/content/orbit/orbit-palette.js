@@ -418,3 +418,17 @@ var OrbitPalette = {
     setTimeout(() => root.remove(), 140);
   },
 };
+
+var OrbitForum = {
+  async maybeOpen() {
+    if (!Orbit.pref("orbit.forum.onStartup", true) || !Orbit.pref("orbit.welcome.done", false)) return;
+    if ([...Services.wm.getEnumerator("navigator:browser")].length > 1) return;
+    const base = OrbitPalette.community();
+    if (!base) return;
+    await SessionStore.promiseAllWindowsRestored.catch(() => {});
+    if (window.closed) return;
+    const url = `${base}/forum`;
+    const tab = gBrowser.tabs.find(t => t.linkedBrowser?.currentURI?.spec.startsWith(url));
+    gBrowser.selectedTab = tab ?? gBrowser.addTab(`${url}?from=orbit`, { triggeringPrincipal: Services.scriptSecurityManager.getSystemPrincipal() });
+  },
+};

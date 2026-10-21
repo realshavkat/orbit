@@ -55,6 +55,7 @@ var OrbitSettings = {
       items: [
         { kind: "toggle", pref: "orbit.urlbar.replace-newtab", label: "commandbar" },
         { kind: "toggle", pref: "orbit.glance.enabled", label: "glance" },
+        { kind: "toggle", pref: "orbit.forum.onStartup", label: "forumStartup" },
                 { kind: "toggle", pref: "orbit.media.sidebar-player", label: "mediaPlayer" },
         { kind: "link", label: "advanced", icon: "external-link", action: () => openPreferences() },
         { kind: "link", label: "import", icon: "upload", action: () => OrbitImport.open() },
@@ -235,6 +236,7 @@ var OrbitSettings = {
       gap: "Marge autour de la page",
       commandbar: "Barre de commande", "commandbar.d": "Ctrl+T ouvre une recherche flottante au lieu d'un onglet vide",
       glance: "Glance", "glance.d": "Alt+clic sur un lien pour l'ouvrir en aperçu",
+      forumStartup: "Forum au démarrage", "forumStartup.d": "Ouvre le forum Orbit dans un onglet quand Orbit démarre",
       unload: "Mise en veille des onglets",
       "unload.never": "Jamais",
       advanced: "Paramètres avancés", import: "Importer depuis un autre navigateur",
@@ -333,6 +335,7 @@ var OrbitSettings = {
       sidebarRight: "Sidebar on the right", sidebarWidth: "Sidebar width", gap: "Space around the page",
       commandbar: "Command bar", "commandbar.d": "Ctrl+T opens a floating search instead of an empty tab",
       glance: "Glance", "glance.d": "Alt+click a link to preview it",
+      forumStartup: "Forum at launch", "forumStartup.d": "Opens the Orbit forum in a tab when Orbit starts",
       unload: "Put idle tabs to sleep",
       "unload.never": "Never",
       advanced: "Advanced settings", import: "Import from another browser",
