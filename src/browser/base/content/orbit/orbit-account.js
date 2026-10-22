@@ -56,12 +56,59 @@ var OrbitAccount = {
     return id ? `${this.base() ?? ""}/api/v1/users/media/${id}` : null;
   },
 
+  blob(url) {
+    this._blobs ??= new Map();
+    if (!this._blobs.has(url)) {
+      if (this._blobs.size >= 200) {
+        const [oldest, src] = this._blobs.entries().next().value;
+        this._blobs.delete(oldest);
+        src.then(u => URL.revokeObjectURL(u), () => {});
+      }
+      this._blobs.set(url, fetch(url, { credentials: "include", cache: "force-cache" })
+        .then(r => (r.ok ? r.blob() : Promise.reject(new Error(String(r.status)))))
+        .then(b => URL.createObjectURL(b))
+        .catch(e => {
+          this._blobs.delete(url);
+          throw e;
+        }));
+    }
+    return this._blobs.get(url);
+  },
+
+  paint(el, url) {
+    if (!url) return el;
+    this.blob(url).then(src => {
+      el.style.backgroundImage = `url("${src}")`;
+      el.setAttribute("loaded", "true");
+    }).catch(() => {});
+    return el;
+  },
+
   avatar(user, size = 32) {
     const h = Orbit.h.bind(Orbit);
     const url = user?.avatar_url ? `${this.base() ?? ""}${user.avatar_url}` : this.media(user?.avatar_media_id);
     const style = `width:${size}px;height:${size}px;--c:${this.COLORS[user?.theme_color] ?? this.COLORS.violet};font-size:${Math.round(size * 0.4)}px`;
-    if (url) return h("img", { class: "orbit-avatar", src: url, alt: "", style });
-    return h("span", { class: "orbit-avatar", style }, (user?.display_name || user?.username || "?")[0].toUpperCase());
+    return this.paint(h("span", { class: "orbit-avatar", style }, h("span", {}, (user?.display_name || user?.username || "?")[0].toUpperCase())), url);
+  },
+
+  async fxa() {
+    try {
+      const { getFxAccountsSingleton } = ChromeUtils.importESModule("resource://gre/modules/FxAccounts.sys.mjs");
+      return { service: getFxAccountsSingleton(), user: await getFxAccountsSingleton().getSignedInUser() };
+    } catch {
+      return { service: null, user: null };
+    }
+  },
+
+  async linkMozilla() {
+    const { service, user } = await this.fxa();
+    if (!user) throw Object.assign(new Error("fxa_signed_out"), { code: "fxa_signed_out" });
+    if (!user.verified) throw Object.assign(new Error("fxa_unverified"), { code: "fxa_unverified" });
+    const token = await service.getOAuthToken({ scope: "profile" });
+    const { code } = await this.api("/auth/mozilla", { method: "POST", body: { token } });
+    const out = await this.api("/auth/mozilla/redeem", { method: "POST", body: { code } });
+    this.forget();
+    return out;
   },
 
   async signOut() {
@@ -110,6 +157,7 @@ var OrbitAccount = {
     root.replaceChildren(
       this.hero(me, { threads: threads?.total ?? 0, sites: sites?.sites?.length ?? 0 }, root),
       h("div", { class: "orbit-account-grid" }, this.keyCard(beta), this.shortcuts(me, { threads: threads?.total ?? 0, mods: mods?.mods ?? [], unread: unread?.unread ?? 0 })),
+      await this.syncCard(me, root),
       this.visibility(me));
   },
 
@@ -130,7 +178,11 @@ var OrbitAccount = {
       h("div", { class: "orbit-account-actions" },
         h("button", { class: "orbit-button primary", onclick: () => this.open("/login?next=/me") }, tr("Sign in", "Se connecter")),
         h("button", { class: "orbit-button", onclick: () => this.open("/register") }, tr("Create an account", "Créer un compte"))),
-      OrbitPalette.secureCommunity() ? h("button", { class: "orbit-link", onclick: () => OrbitPalette.communitySignIn() }, tr("Use Firefox Sync", "Utiliser Firefox Sync")) : null);
+      h("button", { class: "orbit-link", onclick: async () => {
+        const { user } = await this.fxa();
+        if (user?.verified) OrbitPalette.communitySignIn();
+        else (OrbitSettings.close(), openPreferences("paneSync"));
+      } }, tr("Continue with Firefox Sync", "Continuer avec Firefox Sync")));
   },
 
   hero(me, stats, root) {
@@ -138,11 +190,11 @@ var OrbitAccount = {
     const tr = Orbit.tr.bind(Orbit);
     const role = (me.roles ?? []).map(r => this.ROLES[r]).find(Boolean);
     const banner = this.media(me.banner_media_id);
+    const bannerEl = h("div", { class: "orbit-account-banner" }, banner ? null : h("span", { class: "orbit-account-rings" }));
     const since = new Intl.DateTimeFormat(Orbit.lang(), { month: "long", year: "numeric" }).format(new Date(me.created_at));
     const stat = (n, one, many) => h("span", {}, h("b", {}, String(n)), ` ${n == 1 ? one : many}`);
     return h("section", { class: "orbit-account-hero", style: `--c:${this.COLORS[me.theme_color] ?? this.COLORS.violet}` },
-      h("div", { class: "orbit-account-banner", style: banner ? `background-image:url("${banner}")` : null },
-        banner ? null : h("span", { class: "orbit-account-rings" })),
+      this.paint(bannerEl, banner),
       h("div", { class: "orbit-account-id" },
         this.avatar(me, 84),
         h("div", { class: "orbit-account-who" },
@@ -210,6 +262,50 @@ var OrbitAccount = {
       } }, tr("Use on this device", "Utiliser sur cet appareil")) : null,
       h("button", { class: "orbit-link", onclick: () => this.open("/me/payments") }, tr("Manage my devices on the site", "Gérer mes appareils sur le site")),
       remote ? null : h("button", { class: "orbit-link", onclick: enter }, tr("Change", "Changer"))));
+    return card;
+  },
+
+  async syncCard(me, root) {
+    const h = Orbit.h.bind(Orbit);
+    const tr = Orbit.tr.bind(Orbit);
+    const { user } = await this.fxa();
+    const status = h("span", { class: "orbit-account-muted" });
+    const card = h("section", { class: "orbit-account-card orbit-account-sync" },
+      h("header", {}, h("h3", {}, this.svg("refresh-cw", 16), "Firefox Sync"),
+        h("span", { class: `orbit-account-pill${me.mozilla_linked ? " ok" : ""}` }, h("i"),
+          me.mozilla_linked ? tr("Linked to Orbit", "Lié à Orbit") : user ? tr("Not linked", "Pas lié") : tr("Signed out", "Déconnecté"))));
+    const manage = h("button", { class: "orbit-button", onclick: () => (OrbitSettings.close(), openPreferences("paneSync")) },
+      user ? tr("Manage sync", "Gérer la synchronisation") : tr("Sign in to Firefox Sync", "Se connecter à Firefox Sync"));
+    const link = async btn => {
+      if (btn) btn.disabled = true;
+      status.textContent = tr("Linking…", "Liaison…");
+      try {
+        const out = await this.linkMozilla();
+        if (out.needs_username) status.textContent = tr("Finish on the site.", "Termine sur le site.");
+        Services.prefs.setBoolPref("orbit.account.mozilla-linked", true);
+        this.fill(root);
+      } catch (e) {
+        status.textContent = {
+          mozilla_already_linked: tr("Your Orbit account is already linked to another Firefox account.", "Ton compte Orbit est déjà lié à un autre compte Firefox."),
+          fxa_unverified: tr("Confirm your Mozilla e-mail first.", "Confirme d'abord ton e-mail Mozilla."),
+          email_in_use: tr("This e-mail is used by an unconfirmed Orbit account.", "Cet e-mail est utilisé par un compte Orbit non confirmé."),
+        }[e.code] ?? tr("Could not link the accounts. Try again.", "Impossible de lier les comptes. Réessaie.");
+        if (btn) btn.disabled = false;
+      }
+    };
+    let text;
+    if (!user) text = tr("Sign in to Firefox Sync to sync bookmarks, passwords and tabs. Your Orbit account is linked automatically.",
+      "Connecte-toi à Firefox Sync pour synchroniser favoris, mots de passe et onglets. Ton compte Orbit y sera lié automatiquement.");
+    else if (me.mozilla_linked) text = tr(`Signed in as ${user.email}. Signing in to Firefox Sync on another PC signs you in to Orbit there too.`,
+      `Connecté en tant que ${user.email}. Te connecter à Firefox Sync sur un autre PC t'y connecte aussi à Orbit.`);
+    else text = tr(`Signed in as ${user.email}. Link it so Firefox Sync signs you in to Orbit everywhere.`,
+      `Connecté en tant que ${user.email}. Lie-le pour que Firefox Sync te connecte à Orbit partout.`);
+    const linkBtn = user && !me.mozilla_linked ? h("button", { class: "orbit-button primary", onclick: e => link(e.currentTarget) }, tr("Link to my Orbit account", "Lier à mon compte Orbit")) : null;
+    card.append(h("p", { class: "orbit-account-muted" }, text), h("div", { class: "orbit-account-actions start" }, linkBtn, manage), status);
+    if (linkBtn && user.verified && !this._autoLinked) {
+      this._autoLinked = true;
+      link(linkBtn);
+    }
     return card;
   },
 

@@ -21,6 +21,7 @@ var OrbitSettings = {
       items: [
         { kind: "scheme" },
         { kind: "spacecolors" },
+        { kind: "sidebartext" },
         { kind: "background" },
         { kind: "link", label: "quickColors", icon: "palette", action: () => OrbitColors.open(document.getElementById("orbit-space-title")) },
         { kind: "range", pref: "orbit.theme.intensity", label: "intensity", min: 0, max: 80, unit: "%" },
@@ -74,6 +75,8 @@ var OrbitSettings = {
         { kind: "presets" },
         { kind: "choice", pref: "orbit.tabs.unload-after-minutes", label: "unload",
           options: [[0, "unload.never"], [5, "5 min"], [20, "20 min"], [60, "1 h"], [-1, "unload.adaptive"]] },
+        { kind: "choice", pref: "orbit.tabs.max-awake", label: "maxAwake",
+          options: [[0, "budget.off"], [8, "8"], [15, "15"], [25, "25"], [40, "40"]] },
         { kind: "choice", pref: "orbit.memory.budget-mb", label: "budget",
           options: [[0, "budget.off"], [1024, "1 Go"], [2048, "2 Go"], [4096, "4 Go"]] },
         { kind: "eco" },
@@ -196,6 +199,7 @@ var OrbitSettings = {
       privacyAdvanced: "Tous les réglages de vie privée",
       "unload.adaptive": "Adaptatif", "unload.d": "Un onglet en veille ne consomme presque rien et se recharge au clic",
       budget: "Plafond mémoire", "budget.d": "Au-delà, les onglets les plus anciens passent en veille", "budget.off": "Aucun",
+      maxAwake: "Onglets actifs au maximum", "maxAwake.d": "Avec 50 onglets ouverts, seuls les plus récents restent chargés. Les autres dorment après 2 minutes sans être vus",
       eco: "Mode éco", "eco.d": "2 processus au lieu de 4 (au prochain démarrage), fond figé, cache d'images réduit",
       memoryPage: "Voir la mémoire par onglet (orbit://memoire)",
       processes: "Processus pour les pages", "processes.d": "Moins = moins de mémoire ; plus = un site lourd gêne moins les autres. Au prochain démarrage",
@@ -296,6 +300,7 @@ var OrbitSettings = {
       privacyAdvanced: "All privacy settings",
       "unload.adaptive": "Adaptive", "unload.d": "A sleeping tab uses almost nothing and reloads on click",
       budget: "Memory limit", "budget.d": "Above it, the oldest tabs go to sleep", "budget.off": "None",
+      maxAwake: "Most tabs kept loaded", "maxAwake.d": "With 50 tabs open, only the most recent stay loaded. The others sleep after 2 minutes out of sight",
       eco: "Eco mode", "eco.d": "2 processes instead of 4 (next start), still background, smaller image cache",
       memoryPage: "Memory per tab (orbit://memory)",
       processes: "Processes for pages", "processes.d": "Fewer = less memory; more = a heavy site slows the others less. Next start",
@@ -665,6 +670,8 @@ var OrbitSettings = {
       }
       case "spacecolors":
         return this.renderSpaceColors();
+      case "sidebartext":
+        return this.renderSidebarText();
       case "language":
         return this.renderLanguage();
       case "font":
@@ -768,6 +775,7 @@ var OrbitSettings = {
           this.slider({ min: 0, max: 85, unit: " %", value: Orbit.pref("orbit.background.dim", 35),
             onInput: v => p.setIntPref("orbit.background.dim", v) }));
       }
+      kids.push(this.renderBgEditor(t));
       extra.replaceChildren(...kids);
     };
     fillExtra(type);
@@ -782,6 +790,107 @@ var OrbitSettings = {
             if (v == "liquid" || v == "color" || Orbit.pref("orbit.background.file", "")) p.setStringPref("orbit.background.type", v);
           })),
       extra);
+  },
+
+  renderBgEditor(type) {
+    const h = Orbit.h.bind(Orbit);
+    const p = Services.prefs;
+    const media = (type == "image" || type == "video") && OrbitBackground.url();
+    const cur = OrbitBackground.fit();
+    const W = window.innerWidth, H = window.innerHeight;
+    const stage = h("div", { class: "orbit-bgedit-stage", style: `aspect-ratio:${W} / ${H}` });
+    const shown = media
+      ? (type == "video"
+        ? h("video", { class: "orbit-bgedit-media", src: media, autoplay: true, loop: true, muted: true, playsinline: true })
+        : h("img", { class: "orbit-bgedit-media", src: media, alt: "" }))
+      : h("div", { class: "orbit-bgedit-media orbit-bgedit-flat" });
+    if (shown.localName == "video") shown.muted = true;
+    const dot = h("span", { class: "orbit-bgedit-dot" });
+    const layout = h("div", { class: "orbit-bgedit-layout" },
+      h("i", { class: "orbit-bgedit-bar" }), h("i", { class: "orbit-bgedit-side" }), h("i", { class: "orbit-bgedit-page" }));
+    stage.append(shown, h("div", { class: "orbit-bgedit-dim" }), layout, media ? dot : null);
+    const paint = () => {
+      const { fit, x, y, zoom, blur, frame } = OrbitBackground.fit();
+      const k = stage.clientWidth / W || 0.3;
+      stage.style.setProperty("--fit", fit);
+      stage.style.setProperty("--pos", `${x}% ${y}%`);
+      stage.style.setProperty("--zoom", String(zoom / 100 + (blur ? blur / 200 : 0)));
+      stage.style.setProperty("--blur", `${blur * k}px`);
+      stage.style.setProperty("--dim", String(type == "liquid" ? 0 : Orbit.pref("orbit.background.dim", 35) / 100));
+      const side = document.getElementById("sidebar-container")?.getBoundingClientRect().width || Orbit.pref("orbit.view.sidebar-width", 240);
+      const gap = frame || Orbit.pref("orbit.view.gap", 8);
+      const bar = document.getElementById("navigator-toolbox")?.getBoundingClientRect().height || 44;
+      layout.style.setProperty("--bar", `${(bar / H) * 100}%`);
+      layout.style.setProperty("--side", `${(side / W) * 100}%`);
+      layout.style.setProperty("--gx", `${(gap / W) * 100}%`);
+      layout.style.setProperty("--gy", `${(gap / H) * 100}%`);
+      dot.style.left = `${x}%`;
+      dot.style.top = `${y}%`;
+    };
+    const setInt = (pref, v) => {
+      p.setIntPref(pref, Math.round(v));
+      paint();
+    };
+    const move = e => {
+      const r = stage.getBoundingClientRect();
+      setInt("orbit.background.x", Math.min(100, Math.max(0, ((e.clientX - r.left) / r.width) * 100)));
+      setInt("orbit.background.y", Math.min(100, Math.max(0, ((e.clientY - r.top) / r.height) * 100)));
+    };
+    if (media) {
+      stage.tabIndex = 0;
+      stage.setAttribute("role", "slider");
+      stage.setAttribute("aria-label", Orbit.tr("Focal point", "Point focal"));
+      stage.addEventListener("pointerdown", e => {
+        stage.setPointerCapture(e.pointerId);
+        stage.setAttribute("dragging", "true");
+        move(e);
+      });
+      stage.addEventListener("pointermove", e => stage.hasPointerCapture(e.pointerId) && move(e));
+      stage.addEventListener("pointerup", () => stage.removeAttribute("dragging"));
+      stage.addEventListener("keydown", e => {
+        const d = { ArrowLeft: [-2, 0], ArrowRight: [2, 0], ArrowUp: [0, -2], ArrowDown: [0, 2] }[e.key];
+        if (!d) return;
+        e.preventDefault();
+        const f = OrbitBackground.fit();
+        setInt("orbit.background.x", Math.min(100, Math.max(0, f.x + d[0])));
+        setInt("orbit.background.y", Math.min(100, Math.max(0, f.y + d[1])));
+      });
+    }
+    const frames = [[0, Orbit.tr("Edge", "Bord")], [16, Orbit.tr("Thin", "Fin")], [32, Orbit.tr("Frame", "Cadre")], [64, Orbit.tr("Gallery", "Galerie")]];
+    const frameSlider = this.slider({ min: 0, max: 120, unit: " px", value: cur.frame, onInput: v => {
+      setInt("orbit.background.frame", v);
+      for (const b of templates.children) b.toggleAttribute("active", +b.dataset.v == v);
+    } });
+    const templates = h("div", { class: "orbit-bgedit-templates" }, ...frames.map(([v, label]) => h("button", {
+      class: "orbit-bgedit-template", "data-v": v, active: cur.frame == v, style: `--g:${Math.max(v, 4) / 6}px`,
+      onclick: () => {
+        setInt("orbit.background.frame", v);
+        frameSlider.setValue(v);
+        for (const b of templates.children) b.toggleAttribute("active", b.dataset.v == String(v));
+      },
+    }, h("span", { class: "orbit-bgedit-thumb" }, h("i")), label)));
+    const ctl = (label, el) => h("label", { class: "orbit-bgedit-ctl" }, h("span", {}, label), el);
+    const controls = h("div", { class: "orbit-bgedit-controls" },
+      ctl(Orbit.tr("Space around the page", "Espace autour de la page"), frameSlider));
+    if (media) {
+      controls.prepend(
+        ctl(Orbit.tr("Fit", "Ajustement"), this.segmented([["cover", Orbit.tr("Fill", "Remplir")], ["contain", Orbit.tr("Whole", "Entier")], ["fill", Orbit.tr("Stretch", "Étirer")]],
+          cur.fit, v => (p.setStringPref("orbit.background.fit", v), paint()))),
+        ctl(Orbit.tr("Zoom", "Zoom"), this.slider({ min: 100, max: 250, unit: " %", value: cur.zoom, onInput: v => setInt("orbit.background.zoom", v) })),
+        ctl(Orbit.tr("Blur", "Flou"), this.slider({ min: 0, max: 40, unit: " px", value: cur.blur, onInput: v => setInt("orbit.background.blur", v) })));
+      controls.append(h("button", { class: "orbit-button", onclick: () => {
+        for (const k of ["fit", "x", "y", "zoom", "blur", "frame"]) p.clearUserPref(`orbit.background.${k}`);
+        this.show(this._last);
+      } }, Orbit.icon("rotate-ccw"), Orbit.tr("Reset framing", "Réinitialiser le cadrage")));
+    }
+    requestAnimationFrame(paint);
+    return h("div", { class: "orbit-bgedit" },
+      h("div", { class: "orbit-bgedit-head" },
+        h("b", {}, Orbit.tr("Framing", "Cadrage")),
+        h("span", { class: "orbit-setting-desc" }, media
+          ? Orbit.tr("Drag the picture to choose what stays visible. The frame keeps it in view around every site.", "Fais glisser l'image pour choisir ce qui reste visible. Le cadre la garde visible autour de chaque site.")
+          : Orbit.tr("Leave space around the page so the background stays visible.", "Laisse de l'espace autour de la page pour garder le fond visible."))),
+      templates, h("div", { class: "orbit-bgedit-body" }, stage, controls));
   },
 
   renderPresets() {
@@ -1121,6 +1230,7 @@ var OrbitSettings = {
       }
     });
     set(value, false);
+    el.setValue = v => set(v, false);
     return el;
   },
 
@@ -1272,6 +1382,31 @@ var OrbitSettings = {
       h("div", { class: "orbit-custom-colors", active: space.theme == "custom" },
         h("span", {}, this.t("custom")), picker("c1"), picker("c2")));
   },
+
+  renderSidebarText() {
+    const h = Orbit.h.bind(Orbit);
+    const PREF = "orbit.theme.sidebar-text";
+    const cur = Orbit.pref(PREF, "");
+    const set = v => {
+      Services.prefs.setStringPref(PREF, v);
+      this.show("look");
+    };
+    const swatch = (v, title) => h("button", {
+      class: "orbit-pick-theme orbit-text-swatch", active: cur == v, title, "aria-label": title,
+      style: v ? `--c1:${v};--c2:${v}` : null, onclick: () => set(v),
+    }, v ? null : h("span", {}, "A"));
+    const custom = cur && !this.SIDEBAR_TEXT.includes(cur);
+    return h("div", { class: "orbit-setting orbit-setting-col" },
+      h("div", { class: "orbit-setting-label" }, Orbit.tr("Sidebar text", "Texte de la barre latérale")),
+      h("div", { class: "orbit-setting-desc" }, Orbit.tr("Color of tab titles, folders and the space name.", "Couleur des titres d'onglets, des dossiers et du nom de l'espace.")),
+      h("div", { class: "orbit-theme-grid orbit-text-grid" },
+        swatch("", Orbit.tr("Automatic", "Automatique")),
+        ...this.SIDEBAR_TEXT.map(c => swatch(c, c)),
+        h("label", { class: "orbit-swatch", active: custom, title: Orbit.tr("Custom", "Personnalisée"), style: `--c:${custom ? cur : "conic-gradient(#ff6b6b, #ffd58a, #8ef0c4, #9ad7ff, #a99bff, #ffb3c7, #ff6b6b)"}` },
+          h("input", { type: "color", value: cur || "#ffffff", onchange: e => set(e.target.value) }))));
+  },
+
+  SIDEBAR_TEXT: ["#ffffff", "#d6d0ff", "#a99bff", "#9ad7ff", "#8ef0c4", "#ffd58a", "#ffb3c7", "#9a9aa8", "#16161c"],
 
   renderAbout() {
     const h = Orbit.h.bind(Orbit);

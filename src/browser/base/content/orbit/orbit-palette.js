@@ -56,8 +56,9 @@ var OrbitPalette = {
     const topics = ["fxaccounts:onlogin", "fxaccounts:onverified", "fxaccounts:onlogout"];
     const obs = (subject, topic) => {
       if (window != Services.wm.getMostRecentWindow("navigator:browser")) return;
-      if (topic == "fxaccounts:onlogout") this.communitySignOut();
-      else this.communitySignIn().catch(e => console.error("Orbit account", e));
+      if (topic == "fxaccounts:onlogout") return;
+      OrbitAccount.me(true).then(me => (me ? !me.mozilla_linked && OrbitAccount.linkMozilla() : this.communitySignIn()))
+        .catch(e => console.error("Orbit account", e));
     };
     for (const t of topics) Services.obs.addObserver(obs, t);
     window.addEventListener("unload", () => topics.forEach(t => Services.obs.removeObserver(obs, t)), { once: true });
@@ -81,7 +82,7 @@ var OrbitPalette = {
   },
 
   async communitySignIn() {
-    const base = this.secureCommunity();
+    const base = this.community();
     if (!base || this._signingIn) return false;
     this._signingIn = true;
     try {

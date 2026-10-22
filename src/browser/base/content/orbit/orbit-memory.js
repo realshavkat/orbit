@@ -97,6 +97,7 @@ var OrbitMemory = {
       const minutes = mem.idleMinutes();
       if (minutes > 0) slept += mem.sleepIdle(minutes * 60_000);
     }
+    slept += this.enforceAwakeCap();
     const budgetMb = Orbit.pref("orbit.memory.budget-mb", 0);
     let discarded = 0;
     if (budgetMb > 0) {
@@ -110,6 +111,29 @@ var OrbitMemory = {
     }
     const n = slept + discarded;
     if (n >= 3) OrbitNotify.tabsSlept(n);
+  },
+
+  enforceAwakeCap(now = Date.now()) {
+    const cap = Orbit.pref("orbit.tabs.max-awake", 15);
+    if (cap <= 0) return 0;
+    let awake = 0;
+    const idle = [];
+    for (const win of Services.wm.getEnumerator("navigator:browser")) {
+      const mem = win.OrbitMemory;
+      if (!mem || win.closed) continue;
+      for (const tab of win.gBrowser.tabs) {
+        if (!tab.linkedPanel || tab.hasAttribute("pending")) continue;
+        awake++;
+        if (!tab.pinned && mem.canSleep(tab) && tab.lastAccessed < now - 2 * 60_000) idle.push({ tab, win });
+      }
+    }
+    idle.sort((a, b) => a.tab.lastAccessed - b.tab.lastAccessed);
+    let n = 0;
+    for (const { tab, win } of idle) {
+      if (awake - n <= cap) break;
+      if (win.gBrowser.discardBrowser(tab)) n++;
+    }
+    return n;
   },
 
   async oldestAwake() {
@@ -160,22 +184,22 @@ var OrbitMemory = {
 
   PRESETS: {
     mercure: {
-      "dom.ipc.processCount": 8, "dom.ipc.processPrelaunch.enabled": true, "orbit.tabs.unload-after-minutes": 60,
+      "orbit.tabs.max-awake": 40, "dom.ipc.processCount": 8, "dom.ipc.processPrelaunch.enabled": true, "orbit.tabs.unload-after-minutes": 60,
       "orbit.memory.budget-mb": 0, "orbit.memory.eco": false, "orbit.effects.nebula": true, "orbit.effects.animations": true,
       "orbit.effects.grain": true, "image.mem.surfacecache.max_size_kb": 524288,
     },
     venus: {
-      "dom.ipc.processCount": 4, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
+      "orbit.tabs.max-awake": 15, "dom.ipc.processCount": 4, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
       "orbit.memory.budget-mb": 0, "orbit.memory.eco": false, "orbit.effects.nebula": true, "orbit.effects.animations": true,
       "orbit.effects.grain": true, "image.mem.surfacecache.max_size_kb": 262144,
     },
     saturne: {
-      "dom.ipc.processCount": 2, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
+      "orbit.tabs.max-awake": 8, "dom.ipc.processCount": 2, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": -1,
       "orbit.memory.budget-mb": 2048, "orbit.memory.eco": true, "orbit.effects.nebula": false, "orbit.effects.animations": true,
       "orbit.effects.grain": true, "image.mem.surfacecache.max_size_kb": 131072,
     },
     neptune: {
-      "dom.ipc.processCount": 1, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": 5,
+      "orbit.tabs.max-awake": 8, "dom.ipc.processCount": 1, "dom.ipc.processPrelaunch.enabled": false, "orbit.tabs.unload-after-minutes": 5,
       "orbit.memory.budget-mb": 1024, "orbit.memory.eco": true, "orbit.effects.nebula": false, "orbit.effects.animations": false,
       "orbit.effects.grain": false, "image.mem.surfacecache.max_size_kb": 65536,
     },

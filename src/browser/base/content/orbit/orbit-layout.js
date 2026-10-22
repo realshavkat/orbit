@@ -46,6 +46,8 @@ var OrbitLayout = {
       for (const branch of ["orbit.", "sidebar.position_start"]) Services.prefs.removeObserver(branch, this);
     }, { once: true });
 
+    FullScreen._watchLauncherEdge = () => MousePosTracker.removeListener(FullScreen._launcherEdgeListener);
+    window.addEventListener("fullscreen", () => this.root.removeAttribute("orbit-peek"));
     document.addEventListener("mousemove", this, { passive: true });
     for (const el of [this.toolbox, this.sidebar]) el.addEventListener("mouseleave", this);
     window.addEventListener("keydown", this, true);
@@ -170,12 +172,19 @@ var OrbitLayout = {
     root.style.setProperty("--orbit-grain-size", `${Orbit.pref("orbit.theme.grain-size", 200)}px`);
     root.style.setProperty("--orbit-radius", `${Orbit.pref("orbit.theme.radius", 7)}px`);
     root.style.setProperty("--orbit-gap", `${Orbit.pref("orbit.view.gap", 8)}px`);
+    const text = Orbit.pref("orbit.theme.sidebar-text", "");
+    root.toggleAttribute("orbit-sidebar-text", /^#[0-9a-f]{6}$/i.test(text));
+    root.style.setProperty("--orbit-sidebar-fg", text || "inherit");
     this.setWidth(Orbit.pref("orbit.view.sidebar-width", 240));
     this.loadCustomFonts();
     root.style.setProperty("--orbit-font", JSON.stringify(Orbit.pref("orbit.theme.font", "Outfit")));
     this.applyPageSheets();
     const compact = Orbit.pref("orbit.view.compact", false);
     if (compact != root.hasAttribute("orbit-compact")) this.setCompact(compact);
+  },
+
+  peekable() {
+    return this.root.hasAttribute("orbit-compact") || (window.fullScreen && !this.root.hasAttribute("inDOMFullscreen"));
   },
 
   setCompact(on) {
@@ -198,9 +207,11 @@ var OrbitLayout = {
   handleEvent(e) {
     switch (e.type) {
       case "mousemove":
-        if (this.root.hasAttribute("orbit-compact") && !this.root.hasAttribute("orbit-peek") && e.screenX - window.mozInnerScreenX <= 6) {
+        this._x = e.screenX - window.mozInnerScreenX;
+        if (this.peekable() && !this.root.hasAttribute("orbit-peek") && this._x <= 6) {
           clearTimeout(this._hideTimer);
           this.root.setAttribute("orbit-peek", "true");
+          this.scheduleHide();
         }
         break;
       case "mouseleave":
@@ -218,6 +229,7 @@ var OrbitLayout = {
       const busy =
         this.toolbox.matches(":hover") ||
         this.sidebar.matches(":hover") ||
+        this._x <= this.sidebar.getBoundingClientRect().right + 12 ||
         gURLBar.focused ||
         document.querySelector("#navigator-toolbox [open], #sidebar-container [open], #orbit-space-editor");
       if (busy) this.scheduleHide();
