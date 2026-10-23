@@ -12,6 +12,8 @@ export MOZ_APP_BASENAME=Orbit
 export MOZ_BRANDING_DIRECTORY=${brandingDir}
 export MOZ_OFFICIAL_BRANDING_DIRECTORY=${brandingDir}
 ac_add_options --with-distribution-id=app.orbit-browser
+# Report the same User-Agent as Firefox: sites gate features (Discord voice, Netflix) on browsers they know.
+ac_add_options MOZ_APP_UA_NAME=Firefox
 
 export MOZ_SOURCE_REPO=https://github.com/realshavkat/orbit
 export MOZ_SOURCE_CHANGESET=${changeset}

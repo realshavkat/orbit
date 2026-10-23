@@ -156,14 +156,45 @@ var OrbitFolders = {
     this.placeHeader();
   },
 
+  isZoneRow(row) {
+    if (row.localName == "tab-group") return !!this.meta[row.id]?.pinned && !row.hasAttribute("orbit-folder-hidden");
+    return row.getAttribute("orbit-kept") == OrbitSpaces.activeId;
+  },
+
+  rows() {
+    const out = [];
+    for (const t of gBrowser.tabs) {
+      if (t.localName != "tab" || t.pinned || t.closing || t.hidden) continue;
+      const item = t.group ?? t.splitview ?? t;
+      if (!out.includes(item)) out.push(item);
+    }
+    return out;
+  },
+
+  zoneRows() {
+    return this.rows().filter(r => this.isZoneRow(r));
+  },
+
   placeHeader() {
     const header = document.getElementById("orbit-sidebar-header");
     const newTab = document.getElementById("tabs-newtab-button");
     const list = document.getElementById("tabbrowser-arrowscrollbox");
     if (!header || !newTab || !list) return;
-    const pinned = this.groups().filter(g => g.hasAttribute("orbit-pinned") && g.tabs.some(t => !t.hidden) &&
-      !g.hasAttribute("orbit-folder-hidden"));
-    const last = pinned.at(-1);
+    if (!this._normalizing) {
+      const rows = this.rows();
+      let lastZone = -1;
+      rows.forEach((r, i) => this.isZoneRow(r) && (lastZone = i));
+      const strays = rows.slice(0, lastZone).filter(r => !this.isZoneRow(r));
+      if (strays.length) {
+        this._normalizing = true;
+        try {
+          for (const r of strays.reverse()) gBrowser.moveTabAfter(r, rows[lastZone]);
+        } finally {
+          this._normalizing = false;
+        }
+      }
+    }
+    const last = this.zoneRows().at(-1);
     document.documentElement.toggleAttribute("orbit-has-pinned-folders", !!last);
     const moved = Orbit.pref("sidebar.verticalTabs", true) ? [header, newTab] : [header];
     if (last) {

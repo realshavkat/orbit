@@ -15,13 +15,7 @@ var OrbitKept = {
 
   init() {
     const tc = gBrowser.tabContainer;
-    tc.addEventListener("TabUnpinned", e => {
-      const space = e.target.getAttribute(this.KEY);
-      if (!space) return;
-      this.forget(e.target);
-      if (OrbitSpaces.byId(space)) OrbitSpaces.setTabSpace(e.target, space);
-      this.sync();
-    });
+    tc.addEventListener("TabPinned", e => this.isKept(e.target) && !this._moving && this.forget(e.target));
     for (const type of ["TabOpen", "TabClose", "TabPinned", "TabSelect"]) {
       tc.addEventListener(type, () => setTimeout(() => this.sync(), 0));
     }
@@ -36,7 +30,7 @@ var OrbitKept = {
     const origClose = BrowserCommands.closeTabOrWindow.bind(BrowserCommands);
     BrowserCommands.closeTabOrWindow = event => {
       const tab = gBrowser.selectedTab;
-      if ((tab.pinned || OrbitFolders.isPinnedTab(tab)) && !gBrowser.multiSelectedTabsCount && window.location.href == AppConstants.BROWSER_CHROME_URL) {
+      if ((tab.pinned || this.isKept(tab) || OrbitFolders.isPinnedTab(tab)) && !gBrowser.multiSelectedTabsCount && window.location.href == AppConstants.BROWSER_CHROME_URL) {
         this.sleep(tab);
         return;
       }
@@ -44,10 +38,14 @@ var OrbitKept = {
     };
     this.addMenu();
     const restoreAll = () => {
+      const legacy = [];
       for (const tab of gBrowser.tabs) {
         const space = SessionStore.getCustomTabValue(tab, this.KEY);
-        if (space && tab.pinned) tab.setAttribute(this.KEY, space);
+        if (!space) continue;
+        tab.setAttribute(this.KEY, space);
+        if (tab.pinned) legacy.push(tab);
       }
+      this.migrate(legacy);
       this.sync();
     };
     window.addEventListener("SSWindowRestored", restoreAll);
@@ -65,18 +63,54 @@ var OrbitKept = {
     SessionStore.deleteCustomTabValue(tab, this.KEY);
   },
 
+  migrate(tabs) {
+    if (!tabs.length) return;
+    this._moving = true;
+    try {
+      for (const tab of tabs.reverse()) {
+        const space = tab.getAttribute(this.KEY);
+        gBrowser.unpinTab(tab);
+        if (OrbitSpaces.byId(space)) OrbitSpaces.setTabSpace(tab, space);
+      }
+    } finally {
+      this._moving = false;
+    }
+    OrbitSpaces.syncVisibility();
+  },
+
+  mark(tab, kept) {
+    if (!tab) return;
+    if (!kept) {
+      this.forget(tab);
+      return;
+    }
+    if (tab.pinned) {
+      this._moving = true;
+      try {
+        gBrowser.unpinTab(tab);
+      } finally {
+        this._moving = false;
+      }
+    }
+    const space = OrbitSpaces.spaceOf(tab) || OrbitSpaces.activeId;
+    OrbitSpaces.setTabSpace(tab, space);
+    tab.setAttribute(this.KEY, space);
+    SessionStore.setCustomTabValue(tab, this.KEY, space);
+  },
+
   set(tab, kept) {
     if (!tab) return;
+    const zone = OrbitFolders.zoneRows().filter(r => r != tab && r != tab.group);
+    this.mark(tab, kept);
     if (kept) {
-      const space = OrbitSpaces.spaceOf(tab) || OrbitSpaces.activeId;
-      tab.setAttribute(this.KEY, space);
-      SessionStore.setCustomTabValue(tab, this.KEY, space);
-      if (!tab.pinned) gBrowser.pinTab(tab);
+      if (tab.group) gBrowser.ungroupTab?.(tab);
+      if (zone.length) gBrowser.moveTabAfter(tab, zone.at(-1));
+      else gBrowser.moveTabTo(tab, { tabIndex: gBrowser.pinnedTabCount });
       this.pop(tab);
-    } else if (tab.pinned) {
-      gBrowser.unpinTab(tab);
+    } else if (zone.length) {
+      gBrowser.moveTabAfter(tab, zone.at(-1));
     }
-    this.sync();
+    OrbitSpaces.syncVisibility();
   },
 
   pop(tab) {
@@ -95,15 +129,7 @@ var OrbitKept = {
   },
 
   sync() {
-    const active = OrbitSpaces.activeId;
-    let any = false;
-    for (const tab of gBrowser.tabs) {
-      if (!tab.pinned) continue;
-      const space = tab.getAttribute(this.KEY);
-      tab.toggleAttribute("orbit-elsewhere", !!space && space != active);
-      if (space == active) any = true;
-    }
-    document.documentElement.toggleAttribute("orbit-has-kept", any);
+    OrbitFolders.placeHeader();
   },
 
   addMenu() {
@@ -117,7 +143,7 @@ var OrbitKept = {
     menu.addEventListener("popupshowing", e => {
       if (e.target != menu) return;
       const tab = TabContextMenu.contextTab;
-      item.hidden = !tab || (tab.pinned && !this.isKept(tab));
+      item.hidden = !tab || tab.pinned;
       item.setAttribute("label", this.isKept(tab) ? this.t("unkeep") : this.t("keep"));
     });
   },

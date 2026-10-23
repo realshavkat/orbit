@@ -91,15 +91,28 @@ var OrbitSitePerms = {
     this.update();
   },
 
+  STREAMING_SITES: ["https://www.netflix.com", "https://www.disneyplus.com", "https://www.primevideo.com", "https://www.max.com",
+    "https://www.canalplus.com", "https://www.crunchyroll.com", "https://tv.apple.com", "https://open.spotify.com",
+    "https://www.deezer.com", "https://www.twitch.tv", "https://www.youtube.com"],
+
   exemptCallSites() {
-    if (Orbit.pref("orbit.calls.exempted", 0) >= 1) return;
-    for (const origin of this.CALL_SITES) {
+    const done = Orbit.pref("orbit.calls.exempted", 0);
+    if (done >= 2) return;
+    const sites = done >= 1 ? this.STREAMING_SITES : [...this.CALL_SITES, ...this.STREAMING_SITES];
+    let overrides = [];
+    try {
+      overrides = JSON.parse(Orbit.pref("privacy.fingerprintingProtection.granularOverrides", "[]")) || [];
+    } catch {}
+    for (const origin of sites) {
       const principal = Services.scriptSecurityManager.createContentPrincipalFromOrigin(origin);
       if (Services.perms.testExactPermissionFromPrincipal(principal, "trackingprotection") == Services.perms.UNKNOWN_ACTION) {
         Services.perms.addFromPrincipal(principal, "trackingprotection", Services.perms.ALLOW_ACTION);
       }
+      const site = principal.baseDomain;
+      if (!overrides.some(o => o.firstPartyDomain == site)) overrides.push({ firstPartyDomain: site, overrides: "-AllTargets" });
     }
-    Services.prefs.setIntPref("orbit.calls.exempted", 1);
+    Services.prefs.setStringPref("privacy.fingerprintingProtection.granularOverrides", JSON.stringify(overrides));
+    Services.prefs.setIntPref("orbit.calls.exempted", 2);
   },
 
   sharing(tab = gBrowser.selectedTab) {

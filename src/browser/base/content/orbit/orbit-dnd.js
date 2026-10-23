@@ -20,6 +20,7 @@ var OrbitDnD = {
       dzKept: Orbit.tr("Pinned in {s}", "Épinglés dans {s}"),
       folderPin: Orbit.tr("Pin folder in {s}", "Épingler le dossier dans {s}"),
       folderUnpin: Orbit.tr("Unpin folder", "Désépingler le dossier"),
+      tabUnpin: Orbit.tr("Unpin tab", "Désépingler l'onglet"),
     }[k].replace("{s}", arg);
   },
 
@@ -88,7 +89,7 @@ var OrbitDnD = {
       item,
       isGroup,
       tabs: isGroup ? [] : item.multiselected ? gBrowser.selectedTabs : [item],
-      kind: isGroup ? "folder" : !item.pinned ? "tab" : OrbitKept.isKept(item) ? "kept" : "essential",
+      kind: isGroup ? "folder" : OrbitKept.isKept(item) ? "kept" : item.pinned ? "essential" : "tab",
     });
     const moving = isGroup ? [item] : drag.tabs;
     if (isGroup) {
@@ -122,7 +123,7 @@ var OrbitDnD = {
       tabsEl.insertBefore(dz, pinned);
       this.zones.push(dz);
     }
-    if (!gBrowser.tabs.some(t => t.getAttribute(OrbitKept.KEY) == OrbitSpaces.activeId && others(t))) {
+    if (!OrbitFolders.zoneRows().some(r => !moving.includes(r))) {
       const dz = h("div", { id: "orbit-dz-kept", class: "orbit-dz" }, Orbit.icon("pin"),
         h("span", {}, this.t("dzKept", OrbitSpaces.active?.name ?? "")));
       pinned.after(dz);
@@ -170,7 +171,7 @@ var OrbitDnD = {
   snapshot() {
     this.nat = new Map();
     this.scroll0 = this.listScroll();
-    const els = [...this.keptRows(), ...gBrowser.visibleTabs.filter(t => !t.pinned && !this.isMoving(t)),
+    const els = [...gBrowser.visibleTabs.filter(t => !t.pinned && !this.isMoving(t)),
       ...gBrowser.tabContainer.querySelectorAll("tab-group, .tab-group-label-container"),
       document.getElementById("tabbrowser-arrowscrollbox")];
     for (const el of els) this.rect(el);
@@ -180,16 +181,11 @@ var OrbitDnD = {
     return el == this.drag.item || this.drag.tabs.includes(el);
   },
 
-  keptRows() {
-    return [...document.querySelectorAll("#pinned-tabs-container .tabbrowser-tab[orbit-kept]:not([orbit-elsewhere])")]
-      .filter(t => !this.isMoving(t));
-  },
-
   listItems() {
     const out = [];
-    for (const t of gBrowser.visibleTabs) {
-      if (t.pinned || t.closing || this.isMoving(t)) continue;
-      const item = t.group ?? t;
+    for (const t of gBrowser.tabs) {
+      if (t.localName != "tab" || t.pinned || t.closing || t.hidden || this.isMoving(t)) continue;
+      const item = t.group ?? t.splitview ?? t;
       if (!out.includes(item) && !this.isMoving(item)) out.push(item);
     }
     return out;
@@ -286,59 +282,31 @@ var OrbitDnD = {
     }
 
     if (el.closest("#pinned-tabs-container")) {
-      const rows = this.keptRows();
-      const tile = el.closest(".tabbrowser-tab");
-      const rowsTop = rows[0] ? this.nat.get(rows[0])?.top ?? this.rect(rows[0]).top : null;
-      const inRows = OrbitKept.isKept(tile) || (rowsTop != null && y >= rowsTop - 3) || drag.isGroup;
-      if (!inRows) {
-        const label = drag.kind == "essential" ? this.t("moveEssential") : this.t("essentials");
-        if (!tile || this.isMoving(tile)) return { type: "essentials", label, zone: pinnedBox };
-        const r = tile.getBoundingClientRect();
-        const before = x < r.left + r.width / 2;
-        return { type: "essentials", ref: tile, before, label, line: vLine(r, before) };
-      }
       if (drag.isGroup) return { type: "kept", label: keptLabel, zone: pinnedBox };
-      return { type: "kept", label: keptLabel, rows, index: this.indexAt(rows, y) };
+      const tile = el.closest(".tabbrowser-tab");
+      const label = drag.kind == "essential" ? this.t("moveEssential") : this.t("essentials");
+      if (!tile || this.isMoving(tile)) return { type: "essentials", label, zone: pinnedBox };
+      const r = tile.getBoundingClientRect();
+      const before = x < r.left + r.width / 2;
+      return { type: "essentials", ref: tile, before, label, line: vLine(r, before) };
     }
 
     if (!el.closest("#tabbrowser-arrowscrollbox, #orbit-sidebar-header, #tabs-newtab-button, #vertical-tabs")) return null;
     const rows = this.listItems();
-    const listLabel = drag.kind == "tab" || drag.isGroup ? this.t("reorder") : this.t("list");
-    if (drag.isGroup) {
-      const pinnedCount = rows.filter(r => r.localName == "tab-group" && r.hasAttribute("orbit-pinned")).length;
-      const header = document.getElementById("orbit-sidebar-header");
-      const onHeader = !!el.closest("#orbit-sidebar-header, #tabs-newtab-button");
-      let index = onHeader ? pinnedCount : this.indexAt(rows, y);
-      let pinned = index < pinnedCount;
-      if (index == pinnedCount && pinnedCount && !onHeader && header?.closest("#tabbrowser-arrowscrollbox")) {
-        const hr = this.rect(header);
-        pinned = y < hr.top + hr.height / 2;
-      }
-      if (onHeader) pinned = false;
-      const label = pinned ? (drag.pinned ? this.t("reorder") : this.t("folderPin", space)) : drag.pinned ? this.t("folderUnpin") : this.t("reorder");
-      return { type: "list", pinned, label, rows, index, tail: pinned && index == pinnedCount && index > 0, inList: true, anchor: this.rect(listBox) };
+    const header = document.getElementById("orbit-sidebar-header");
+    const onHeader = !!el.closest("#orbit-sidebar-header, #tabs-newtab-button");
+    const zoneCount = rows.filter(r => OrbitFolders.isZoneRow(r)).length;
+    let index = onHeader ? zoneCount : this.indexAt(rows, y);
+    let pinned = index < zoneCount;
+    if (index == zoneCount && zoneCount && !onHeader && header?.closest("#tabbrowser-arrowscrollbox")) {
+      const hr = this.rect(header);
+      pinned = y < hr.top + hr.height / 2;
     }
-    if (el.closest("#orbit-sidebar-header, #tabs-newtab-button")) {
-      const index = rows.findIndex(r => !(r.localName == "tab-group" && r.hasAttribute("orbit-pinned")));
-      return { type: "list", label: listLabel, rows, index: index < 0 ? rows.length : index, inList: true, anchor: this.rect(listBox) };
-    }
-    if (!drag.isGroup) {
-      for (const g of rows) {
-        if (g.localName != "tab-group") continue;
-        const gr = this.rect(g);
-        if (y < gr.top || y > gr.bottom) continue;
-        const lab = g.querySelector(".tab-group-label-container");
-        const labBottom = lab ? this.rect(lab).bottom : gr.top + this.ROW;
-        if (y <= labBottom || g.collapsed) {
-          return { type: "folder", ref: g, label: this.t("folder", g.label || "…"), zone: lab };
-        }
-        const inner = g.tabs.filter(t => t.visible !== false && !t.hidden && !this.isMoving(t));
-        const after = rows.slice(rows.indexOf(g) + 1);
-        return { type: "group", group: g, label: this.t("folder", g.label || "…"), rows: inner, index: this.indexAt(inner, y),
-          after, inList: true, anchor: { left: gr.left + 12, width: gr.width - 12, top: labBottom + 2 } };
-      }
-    }
-    return { type: "list", label: listLabel, rows, index: this.indexAt(rows, y), inList: true, anchor: this.rect(listBox) };
+    const was = drag.isGroup ? drag.pinned : drag.kind == "kept";
+    const label = pinned
+      ? (was ? this.t("reorder") : drag.isGroup ? this.t("folderPin", space) : this.t("kept", space))
+      : was ? (drag.isGroup ? this.t("folderUnpin") : this.t("tabUnpin")) : drag.kind == "essential" ? this.t("list") : this.t("reorder");
+    return { type: "list", pinned, label, rows, index, tail: pinned && index == zoneCount && index > 0, inList: true, anchor: this.rect(listBox) };
   },
 
   end(drop) {
@@ -381,7 +349,10 @@ var OrbitDnD = {
     const spot = target.rows ? this.spot(target) : target.ref ? { ref: target.ref, before: target.before } : null;
     switch (target.type) {
       case "space":
-        for (const t of tabs) if (t.pinned) gBrowser.unpinTab(t);
+        for (const t of tabs) {
+          OrbitKept.mark(t, false);
+          if (t.pinned) gBrowser.unpinTab(t);
+        }
         OrbitSpaces.moveTabs(tabs, target.ref);
         break;
       case "essentials":
@@ -394,23 +365,32 @@ var OrbitDnD = {
         OrbitKept.sync();
         break;
       case "kept":
-        for (const t of tabs) if (!OrbitKept.isKept(t)) OrbitKept.set(t, true);
-        this.place(tabs, spot);
+        for (const t of tabs) OrbitKept.set(t, true);
         break;
       case "folder":
         for (const t of tabs) {
+          OrbitKept.mark(t, false);
           if (t.pinned) gBrowser.unpinTab(t);
           gBrowser.moveTabToExistingGroup(t, target.ref);
         }
         if (target.ref.collapsed) target.ref.collapsed = false;
         break;
       case "group":
-        for (const t of tabs) if (t.pinned) gBrowser.unpinTab(t);
+        for (const t of tabs) {
+          OrbitKept.mark(t, false);
+          if (t.pinned) gBrowser.unpinTab(t);
+        }
         if (spot) this.place(tabs, spot);
         else for (const t of tabs) gBrowser.moveTabToExistingGroup(t, target.group);
         break;
       case "list":
-        for (const t of tabs) if (t.pinned) gBrowser.unpinTab(t);
+        for (const t of tabs) {
+          if (target.pinned) OrbitKept.mark(t, true);
+          else {
+            OrbitKept.mark(t, false);
+            if (t.pinned) gBrowser.unpinTab(t);
+          }
+        }
         if (spot) this.place(tabs, spot);
         OrbitSpaces.syncVisibility();
         break;
@@ -426,15 +406,11 @@ var OrbitDnD = {
   applyGroup(group, target) {
     const current = OrbitFolders.meta[group.id]?.pinned;
     if (target.type == "kept") {
-      const items = [];
-      for (const t of gBrowser.visibleTabs) {
-        const item = t.group ?? t;
-        if (!t.pinned && !t.closing && item != group && !items.includes(item)) items.push(item);
-      }
-      const last = items.filter(r => r.localName == "tab-group" && r.hasAttribute("orbit-pinned")).at(-1);
+      const zone = OrbitFolders.zoneRows().filter(r => r != group);
+      const first = OrbitFolders.rows().find(r => r != group);
       OrbitFolders.setMeta(group.id, { pinned: current || OrbitSpaces.activeId });
-      if (last) gBrowser.moveTabAfter(group, last);
-      else if (items[0]) gBrowser.moveTabBefore(group, items[0]);
+      if (zone.length) gBrowser.moveTabAfter(group, zone.at(-1));
+      else if (first) gBrowser.moveTabBefore(group, first);
       OrbitSpaces.syncVisibility();
       return;
     }

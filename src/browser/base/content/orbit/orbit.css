@@ -2360,26 +2360,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #downloads-button[progress] #downloads-indicator-progress-inner { background-color: var(--orbit-accent) !important; }
 #downloads-button[attention="success"] #downloads-indicator-icon { fill: #7ee2a8 !important; }
 
-#pinned-tabs-container .tabbrowser-tab[orbit-kept] {
-  grid-column: 1 / -1 !important;
-  order: 1;
-  width: auto !important;
-  height: 34px !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  &[orbit-elsewhere] { display: none !important; }
-  & .tab-stack { height: 34px; }
-  & .tab-background { background: none !important; border-radius: var(--orbit-radius) !important; box-shadow: none !important; }
-  &:hover .tab-background { background: var(--orbit-hover) !important; }
-  & .tab-background[selected] { background: var(--orbit-active) !important; }
-  & .tab-content { justify-content: flex-start !important; padding-inline: 8px 6px !important; gap: 10px; }
-  & .tab-label-container { display: flex !important; flex: 1 1 0 !important; min-width: 0 !important; }
-  & .tab-label { font-size: 13px; color: var(--orbit-fg) !important; }
-  & .tab-close-button { display: flex !important; opacity: 0; }
-  &:hover .tab-close-button, &[selected] .tab-close-button { opacity: .7; }
-}
-:root[orbit-has-kept] #pinned-tabs-container[orient="vertical"] { padding-bottom: 6px !important;
-  box-shadow: 0 1px 0 var(--orbit-border); }
 
 #tabbrowser-tabs #tabs-newtab-button {
   height: 34px !important;
@@ -2447,8 +2427,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
   animation: none !important;
   transition: none !important;
 }
-#pinned-tabs-container .tabbrowser-tab[orbit-kept] .tab-content { background-image: none !important; }
-#pinned-tabs-container .tabbrowser-tab[orbit-kept] :is(.tab-icon-overlay:not([soundplaying], [muted]), .tab-sharing-icon-overlay) { display: none !important; }
 
 #vertical-tabs {
   & #tabs-newtab-button,
@@ -2535,10 +2513,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 .orbit-bg-extra { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; &:empty { display: none; } }
 .orbit-bg-color { width: 44px; height: 32px; padding: 0; border: none; border-radius: var(--orbit-radius); background: none; }
 
-:root[orbit-has-kept] #pinned-tabs-container[orient="vertical"] {
-  padding-bottom: 8px !important;
-  margin-bottom: 4px !important;
-}
 #orbit-sidebar-header { padding: 6px 2px 2px 8px !important; }
 #tabbrowser-tabs #tabs-newtab-button { margin-bottom: 4px !important; }
 #tabbrowser-tabs #tabs-newtab-button + * { padding-top: 2px !important; }
@@ -2553,12 +2527,6 @@ sidebar-main { --sidebar-expanded-launcher-width: 100% !important; }
 #tabbrowser-tabs #tabs-newtab-button > .toolbarbutton-text { padding-inline-start: 0 !important; margin-inline-start: 10px !important; }
 
 #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] { margin: 0 !important; padding: 0 !important; }
-:root[orbit-has-kept] #tabbrowser-tabs[expanded] #pinned-tabs-container[orient="vertical"] {
-  padding-bottom: 8px !important;
-  box-shadow: 0 1px 0 var(--orbit-border) !important;
-}
-#pinned-tabs-container .tabbrowser-tab[orbit-kept] .tab-background,
-#pinned-tabs-container .tabbrowser-tab[orbit-kept] .tab-background[selected] { box-shadow: none !important; outline: none !important; border: none !important; }
 
 #orbit-sidebar-header { margin: 8px 0 0 !important; padding: 0 0 0 8px !important; height: 34px; display: flex; align-items: center; border: none !important; }
 #orbit-space-title { flex: 1; height: 34px; }

@@ -135,7 +135,7 @@ const updateButton = () => {
     b.disabled = true;
     b.lastChild.textContent = t("updating");
     document.body.classList.add("updating");
-    await send("updateNow");
+    await send("listsUpdateNow", { assetKeys: ["assets.json", ...selectedKeys()], preferOrigin: true });
     for (let i = 0; i < 120; i++) {
       await new Promise(r => setTimeout(r, 1500));
       await load();

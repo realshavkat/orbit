@@ -1,0 +1,13 @@
+diff --git a/browser/components/tabbrowser/content/tabs.mjs b/browser/components/tabbrowser/content/tabs.mjs
+index fe4d154c50..409bead8c7 100644
+--- a/browser/components/tabbrowser/content/tabs.mjs
++++ b/browser/components/tabbrowser/content/tabs.mjs
+@@ -874,6 +874,8 @@ export class MozTabbrowserTabs extends MozElements.TabsBase {
+         unpinnedChildren.splice(i, 1, ...unpinnedChildren[i].tabs);
+       }
+     }
++    // Orbit: the space header and the new tab button can sit in this list.
++    unpinnedChildren = unpinnedChildren.filter(c => c.tagName == "tab");
+ 
+     this.#allTabs = [...pinnedChildren, ...unpinnedChildren];
+     return this.#allTabs;
