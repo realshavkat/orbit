@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <updates>
-  <update type="minor" displayVersion="158.0.8" appVersion="158.0.8" platformVersion="158.0" buildID="20261022020242" detailsURL="https://github.com/realshavkat/orbit/releases/tag/158.0.8">
-    <patch type="complete" URL="https://github.com/realshavkat/orbit/releases/download/158.0.8/windows.mar" hashFunction="sha512" hashValue="99b8c16c65eb38f5048d640d595d1dc7779b6b3270b9ebed58b52b21f04492e8647096ee3ee0ac97051331ab511f9a2159f37a5a12c7652d926ee5c4e6c0bbda" size="112895810"/>
+  <update type="minor" displayVersion="158.0.9" appVersion="158.0.9" platformVersion="158.0" buildID="20261023163532" detailsURL="https://github.com/realshavkat/orbit/releases/tag/158.0.9">
+    <patch type="complete" URL="https://github.com/realshavkat/orbit/releases/download/158.0.9/windows.mar" hashFunction="sha512" hashValue="25dbb434e5d9ce29db14615e465324249b4e421240c9c00a53063afa37ad538b36e57aaf3b0281b10f11f86cbf70d548f71e47b21b055e7113a310d8ac9f37a3" size="108466378"/>
   </update>
 </updates>
