@@ -1,0 +1,11 @@
+diff --git a/browser/moz.configure b/browser/moz.configure
+index ef7de8397f..61cd4e79fa 100644
+--- a/browser/moz.configure
++++ b/browser/moz.configure
+@@ -264,3 +264,6 @@ set_config(
+     "MOZ_CHROME_LOCALE_ENTRIES",
+     ["@RESPATH@/browser/chrome/", "@RESPATH@/chrome/"],
+ )
++
++# Orbit: report the same User-Agent as Firefox, sites gate features (Discord voice, Netflix) on browsers they know.
++imply_option("MOZ_APP_UA_NAME", "Firefox")
