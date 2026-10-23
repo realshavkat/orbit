@@ -1,12 +1,8 @@
 ! Title: Orbit – Stealth
 ! Expires: 1 day
-! Description: Blocked requests answer with an empty, valid resource instead of a network error, so scripts that test whether ads loaded see them load.
+! Description: Blocked ad scripts and ad images answer with harmless stand-ins instead of a network error, so scripts that test whether ads loaded see them load.
 ! License: MPL-2.0
-*$script,redirect-rule=noopjs,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
 *$image,redirect-rule=32x32.png,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
-*$stylesheet,redirect-rule=noop.css,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
-*$subdocument,redirect-rule=noopframe,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
-*$media,redirect-rule=noopmp3-0.1s,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
 ||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$script,redirect=googlesyndication_adsbygoogle.js:5
 ||googletagservices.com/tag/js/gpt.js$script,redirect=googletagservices_gpt.js:5
 ||securepubads.g.doubleclick.net/tag/js/gpt.js$script,redirect=googletagservices_gpt.js:5
