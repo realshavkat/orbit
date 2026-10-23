@@ -2,20 +2,20 @@
 ! Expires: 7 days
 ! Description: Blocked requests answer with an empty, valid resource instead of a network error, so scripts that test whether ads loaded see them load.
 ! License: MPL-2.0
-*$script,redirect-rule=noopjs
-*$xhr,redirect-rule=nooptext
-*$image,redirect-rule=32x32.png
-*$stylesheet,redirect-rule=noop.css
-*$subdocument,redirect-rule=noopframe
-*$media,redirect-rule=noopmp3-0.1s
+*$script,redirect-rule=noopjs,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
+*$xhr,redirect-rule=nooptext,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
+*$image,redirect-rule=32x32.png,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
+*$stylesheet,redirect-rule=noop.css,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
+*$subdocument,redirect-rule=noopframe,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
+*$media,redirect-rule=noopmp3-0.1s,domain=~youtube.com|~youtube-nocookie.com|~youtubekids.com
 ||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$script,redirect=googlesyndication_adsbygoogle.js:5
 ||googletagservices.com/tag/js/gpt.js$script,redirect=googletagservices_gpt.js:5
 ||securepubads.g.doubleclick.net/tag/js/gpt.js$script,redirect=googletagservices_gpt.js:5
 ||imasdk.googleapis.com/js/sdkloader/ima3.js$script,redirect=google-ima.js:5
 ||google-analytics.com/analytics.js$script,redirect=google-analytics_analytics.js:5
 ||googletagmanager.com/gtag/js$script,redirect=googletagmanager_gtm.js:5
-||adservice.google.com^$xhr,redirect=nooptext:5
-||pagead2.googlesyndication.com^$xhr,redirect=nooptext:5
+||adservice.google.com^$xhr,domain=~youtube.com|~youtube-nocookie.com,redirect=nooptext:5
+||pagead2.googlesyndication.com^$xhr,domain=~youtube.com|~youtube-nocookie.com,redirect=nooptext:5
 @@||adblockanalytics.com/google-adsense.js^$script
 @@||adblockanalytics.com/ad-choices.png^$image
 @@||adsserver.adblockanalytics.com^$script
@@ -25,3 +25,4 @@
 @@/adsbygoogle-bait.js$script,1p
 @@/ad-blocker.js$script,1p
 @@/blockadblock.js$script,1p
+||accounts.google.com/gsi/iframe/select$subdocument,3p

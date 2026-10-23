@@ -1,6 +1,7 @@
-/* Orbit Blocker popup: a simple on/off switch per site by default, uBlock
- * Origin's full controls in advanced mode. Drives uBO's own power switch, so
- * every change goes through its normal code path. GPL-3.0 like the add-on. */
+/* Orbit Blocker popup: an on/off switch per site, the page's numbers and
+ * quick tools. Drives uBO's own controls, so every change goes through its
+ * normal code path; everything else lives on orbit-settings.html.
+ * GPL-3.0 like the add-on. */
 "use strict";
 (function () {
   const lang = (navigator.language || "").split("-")[0];
@@ -43,10 +44,12 @@
     return e;
   };
   const X = fr
-    ? { here: "bloqués ici", domains: "domaines", total: "au total", resume: "Réactiver la protection", settings: "Réglages du bloqueur",
+    ? { here: "bloqués ici", domains: "domaines", total: "au total", resume: "Réactiver la protection", settings: "Réglages du bloqueur", all: "Tous les réglages", stealthOn: "Furtif actif", stealthOff: "Furtif coupé",
+      fresh: "listes à jour {ago}", now: "à l'instant",
       popups: "Bloquer les pop-ups", media: "Couper les grosses vidéos", js: "Couper JavaScript", paused: "En pause sur ce site",
       pausedD: "Ce site s'affiche sans blocage. Les autres restent protégés.", onD: "Pubs, pisteurs et messages anti-adblock bloqués sans que le site le voie." }
-    : { here: "blocked here", domains: "domains", total: "in total", resume: "Turn protection back on", settings: "Blocker settings",
+    : { here: "blocked here", domains: "domains", total: "in total", resume: "Turn protection back on", settings: "Blocker settings", all: "All settings", stealthOn: "Stealth on", stealthOff: "Stealth off",
+      fresh: "lists updated {ago}", now: "just now",
       popups: "Block pop-ups", media: "Block large videos", js: "Turn off JavaScript", paused: "Paused on this site",
       pausedD: "This site loads without blocking. Other sites stay protected.", onD: "Ads, trackers and anti-adblock walls blocked without the site noticing." };
   const NS = "http://www.w3.org/2000/svg";
@@ -61,16 +64,19 @@
     }
     return s;
   };
-  const SHIELD = "M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z";
 
-  const ADV = "orbit-blocker-advanced";
   const on = () => !document.body.classList.contains("off");
   const host = () => $("#hostname")?.textContent.replace(/[­ ]/g, "").trim() ?? "";
   const stat = sel => ($(sel)?.textContent ?? "").trim().split(/,\s|\s\(|\s\/\s|\s(?:sur|of|out of|von|de|di|из|з|z)\s/)[0] || "0";
 
-  const mark = el("span", { id: "ob-mark" }, svg(SHIELD, "m9 12 2 2 4-4"));
+  const mark = el("img", { id: "ob-mark", src: "img/icon_64.png", alt: "" });
+  const openSettings = e => {
+    e?.preventDefault();
+    browser.tabs.create({ url: browser.runtime.getURL("orbit-settings.html") });
+    window.close();
+  };
   const hostEl = el("span");
-  const settings = el("a", { id: "ob-settings", href: "dashboard.html", target: "uBODashboard", title: X.settings, ariaLabel: X.settings },
+  const settings = el("a", { id: "ob-settings", href: "orbit-settings.html", title: X.settings, ariaLabel: X.settings, onclick: openSettings },
     svg("M20 7h-9", "M14 17H5", "M17 14a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "M7 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"));
   const head = el("div", { id: "ob-head" }, mark, el("div", {}, el("b", { textContent: "Orbit Blocker" }), hostEl), settings);
   const sw = el("button", { className: "ob-switch", role: "switch", ariaLabel: "Orbit Blocker" });
@@ -93,18 +99,16 @@
   });
   const rows = el("div", { id: "ob-rows" }, ...toggles.map(t => t[2]));
   const resume = el("button", { id: "ob-resume", textContent: X.resume, onclick: () => sw.click() });
-  const modeBtn = el("button");
-  const foot = el("div", { id: "ob-foot" }, el("i"), el("span", { textContent: T.by }), modeBtn);
+  const footText = el("span");
+  const foot = el("div", { id: "ob-foot" }, el("i"), footText, el("button", { textContent: X.all, onclick: openSettings }));
   const shell = el("div", { id: "ob-shell" }, head, status, statsEl, actions, rows, resume);
   $("#main").prepend(shell);
   document.body.append(foot);
 
-  const advanced = () => localStorage.getItem(ADV) == "1";
   const paint = () => {
     const h = host();
     const active = on() && !!h;
     document.body.classList.toggle("ob-paused", !!h && !on());
-    document.body.classList.toggle("ob-advanced", advanced());
     hostEl.textContent = h;
     sw.setAttribute("aria-checked", String(active));
     sw.disabled = !h;
@@ -117,15 +121,11 @@
       b.setAttribute("aria-checked", String(!!$(sel)?.classList.contains("on")));
       b.disabled = !active;
     }
-    modeBtn.textContent = advanced() ? T.simple : T.advanced;
+    mark.src = active ? "img/icon_64.png" : "img/icon_64-off.png";
   };
   sw.addEventListener("click", () => {
     $("#switch")?.click();
     setTimeout(paint, 60);
-  });
-  modeBtn.addEventListener("click", () => {
-    localStorage.setItem(ADV, advanced() ? "0" : "1");
-    paint();
   });
   const mo = new MutationObserver(paint);
   mo.observe(document.body, { attributes: true, attributeFilter: ["class"] });
@@ -134,4 +134,15 @@
     if (node) mo.observe(node, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["class"] });
   }
   paint();
+  vAPI.messaging.send("dashboard", { what: "getLists" }).then(L => {
+    const keys = Object.keys(L.available).filter(k => L.available[k].off !== true);
+    const last = Math.max(0, ...keys.map(k => L.cache?.[k]?.writeTime || 0));
+    const sec = (Date.now() - last) / 1000;
+    const rtf = new Intl.RelativeTimeFormat(navigator.language, { numeric: "auto" });
+    const when = sec < 60 ? X.now : sec < 3600 ? rtf.format(-Math.round(sec / 60), "minute")
+      : sec < 86400 ? rtf.format(-Math.round(sec / 3600), "hour") : rtf.format(-Math.round(sec / 86400), "day");
+    const stealth = L.available["orbit-stealth"]?.off !== true;
+    foot.classList.toggle("ob-weak", !stealth);
+    footText.textContent = `${stealth ? X.stealthOn : X.stealthOff} · ${X.fresh.replace("{ago}", last ? when : "—")}`;
+  }).catch(() => {});
 })();

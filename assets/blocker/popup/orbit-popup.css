@@ -31,10 +31,7 @@ body { width: 360px; margin: 0; }
 #ob-head > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 #ob-head b { font-size: 15px; font-weight: 600; }
 #ob-head > div > span { font-size: 12.5px; color: var(--ob-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#ob-mark { width: 36px; height: 36px; flex-shrink: 0; display: grid; place-items: center; border-radius: 11px; background: var(--ob-accent); color: #0b0b0e; transition: background .2s, color .2s; }
-#ob-mark svg { width: 18px !important; height: 18px !important; stroke-width: 2.2 !important; }
-body.ob-paused #ob-mark { background: var(--ob-field); color: var(--ob-dim); }
-body.ob-paused #ob-mark path:last-child { display: none; }
+#ob-mark { width: 36px; height: 36px; flex-shrink: 0; }
 #ob-settings { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; background: var(--ob-field); color: var(--ob-dim); transition: background .15s, color .15s; }
 #ob-settings:hover { background: var(--ob-line); color: var(--ob-fg); }
 
@@ -81,15 +78,11 @@ body.ob-paused :is(#ob-actions, #ob-rows) { display: none; }
 
 #ob-foot { display: flex; align-items: center; gap: 8px; padding: 14px 16px 16px; font-size: 12px; color: var(--ob-dim); }
 #ob-foot > i { width: 6px; height: 6px; border-radius: 50%; background: var(--ob-ok); }
+#ob-foot.ob-weak > i { background: var(--ob-warn); }
 #ob-foot > span { flex: 1; min-width: 0; }
 #ob-foot button { appearance: none; border: none; background: none; padding: 0; font-size: 12px; font-weight: 500; color: var(--ob-accent-fg); }
 #ob-foot button:hover { text-decoration: underline; }
 
-body:not(.ob-advanced) :is(#sticky, #extraTools, #main > hr, #basicStats, #basicTools, #firewall, #moreOrLess, #unprocessedRequestWarning) { display: none !important; }
-body.ob-advanced #ob-shell { display: none; }
-body.ob-advanced #sticky { background: transparent !important; }
-body.ob-advanced :is(#extraTools, #basicTools) { margin: 0 12px 10px !important; border-radius: 10px !important; background: var(--ob-field) !important; }
-body.ob-advanced #switch { color: var(--ob-accent) !important; }
-body.off.ob-advanced #switch { color: var(--ob-dim) !important; }
+:is(#sticky, #extraTools, #main > hr, #basicStats, #basicTools, #firewall, #moreOrLess, #unprocessedRequestWarning) { display: none !important; }
 
 @media (prefers-reduced-motion: reduce) { #ob-shell *, .ob-switch::after, .ob-mini::after { transition: none !important; } }
