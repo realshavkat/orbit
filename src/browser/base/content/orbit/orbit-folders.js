@@ -16,6 +16,9 @@ var OrbitFolders = {
       unpin: Orbit.tr("Unpin folder", "Désépingler le dossier"),
       sub: Orbit.tr("New sub-folder", "Nouveau sous-dossier"),
       tag: Orbit.tr("Add a tag…", "Ajouter un tag…"),
+      unload: Orbit.tr("Put all tabs to sleep", "Mettre tous les onglets en veille"),
+      collapseAll: Orbit.tr("Collapse all folders", "Replier tous les dossiers"),
+      expandAll: Orbit.tr("Expand all folders", "Déplier tous les dossiers"),
       subName: Orbit.tr("Sub-folder", "Sous-dossier"),
       newFolder: Orbit.tr("New folder", "Nouveau dossier"),
     }[k];
@@ -68,12 +71,53 @@ var OrbitFolders = {
       const group = box.closest("tab-group");
       if (!group) return;
       e.preventDefault();
-      group.collapsed = !group.collapsed;
+      this.toggle(group);
     });
     Services.prefs.addObserver(this.PREF, schedule);
     window.addEventListener("unload", () => Services.prefs.removeObserver(this.PREF, schedule), { once: true });
     this.extendEditor();
     schedule();
+  },
+
+  foldItems(group) {
+    const meta = this.meta;
+    const children = this.groups().filter(g => meta[g.id]?.parent == group.id && !g.hasAttribute("orbit-folder-hidden"));
+    return [...group.querySelectorAll(":scope > .tabbrowser-tab:not([visuallyselected], [multiselected]), :scope > tab-split-view-wrapper:not([hasactivetab])"), ...children];
+  },
+
+  async toggle(group) {
+    if (this._folding?.has(group)) return;
+    const vertical = gBrowser.tabContainer.verticalMode;
+    if (window.gReduceMotion || !vertical) {
+      group.collapsed = !group.collapsed;
+      return;
+    }
+    (this._folding ??= new Set()).add(group);
+    const fold = (el, from, to) => el.animate(
+      [{ height: `${from}px`, minHeight: "0px", opacity: from ? 1 : 0, overflow: "clip" }, { height: `${to}px`, minHeight: "0px", opacity: to ? 1 : 0, overflow: "clip" }],
+      { duration: 180, easing: "ease-in-out" }).finished.catch(() => {});
+    try {
+      if (group.collapsed) {
+        group.collapsed = false;
+        const items = this.foldItems(group);
+        await Promise.all(items.map(el => fold(el, 0, el.getBoundingClientRect().height)));
+      } else {
+        const items = this.foldItems(group);
+        await Promise.all(items.map(el => fold(el, el.getBoundingClientRect().height, 0).then(() => (el.style.height = "0px"))));
+        group.collapsed = true;
+        for (const el of items) el.style.removeProperty("height");
+      }
+    } finally {
+      this._folding.delete(group);
+    }
+  },
+
+  setAllCollapsed(collapsed) {
+    for (const group of this.groups()) if (group.collapsed != collapsed && !group.hasAttribute("orbit-folder-hidden")) this.toggle(group);
+  },
+
+  unloadAll(group) {
+    gBrowser.explicitUnloadTabs(group.tabs.filter(t => !t.selected && t.linkedPanel && !t.hasAttribute("pending")));
   },
 
   depth(id, meta = this.meta) {
@@ -150,6 +194,10 @@ var OrbitFolders = {
     const iconBtn = btn("orbit-folder-icon-btn", () => this.pickIcon(editor.activeGroup));
     const pinBtn = btn("orbit-folder-pin-btn", () => this.togglePin(editor.activeGroup));
     const subBtn = btn("orbit-folder-sub-btn", () => this.addSubFolder(editor.activeGroup));
+    const hide = () => gBrowser.tabGroupMenu.panel?.hidePopup?.();
+    const unloadBtn = btn("orbit-folder-unload-btn", () => (hide(), this.unloadAll(editor.activeGroup)));
+    const collapseBtn = btn("orbit-folder-collapse-all-btn", () => (hide(), this.setAllCollapsed(true)));
+    const expandBtn = btn("orbit-folder-expand-all-btn", () => (hide(), this.setAllCollapsed(false)));
     const tagBtn = btn("orbit-folder-tag-btn", () => {
       const group = editor.activeGroup;
       gBrowser.tabGroupMenu.panel?.hidePopup?.();
@@ -157,11 +205,15 @@ var OrbitFolders = {
     });
     panel.addEventListener("popupshowing", () => {
       const actions = panel.querySelector(".tab-group-edit-actions");
-      if (actions && !iconBtn.isConnected) actions.prepend(iconBtn, tagBtn, pinBtn, subBtn, h("xul:toolbarseparator"));
+      if (actions && !iconBtn.isConnected) actions.prepend(iconBtn, tagBtn, pinBtn, subBtn, h("xul:toolbarseparator"), unloadBtn, collapseBtn, expandBtn, h("xul:toolbarseparator"));
       const pinned = !!this.meta[editor.activeGroup?.id]?.pinned;
       iconBtn.setAttribute("label", this.t("icon"));
       pinBtn.setAttribute("label", pinned ? this.t("unpin") : this.t("pin"));
       subBtn.setAttribute("label", this.t("sub"));
+      unloadBtn.setAttribute("label", this.t("unload"));
+      collapseBtn.setAttribute("label", this.t("collapseAll"));
+      expandBtn.setAttribute("label", this.t("expandAll"));
+      unloadBtn.disabled = !editor.activeGroup?.tabs.some(t => !t.selected && t.linkedPanel && !t.hasAttribute("pending"));
       tagBtn.setAttribute("label", this.meta[editor.activeGroup?.id]?.tag ? OrbitExtras.t("editTag") : this.t("tag"));
     });
   },

@@ -1,0 +1,27 @@
+! Title: Orbit – Stealth
+! Expires: 7 days
+! Description: Blocked requests answer with an empty, valid resource instead of a network error, so scripts that test whether ads loaded see them load.
+! License: MPL-2.0
+*$script,redirect-rule=noopjs
+*$xhr,redirect-rule=nooptext
+*$image,redirect-rule=32x32.png
+*$stylesheet,redirect-rule=noop.css
+*$subdocument,redirect-rule=noopframe
+*$media,redirect-rule=noopmp3-0.1s
+||pagead2.googlesyndication.com/pagead/js/adsbygoogle.js$script,redirect=googlesyndication_adsbygoogle.js:5
+||googletagservices.com/tag/js/gpt.js$script,redirect=googletagservices_gpt.js:5
+||securepubads.g.doubleclick.net/tag/js/gpt.js$script,redirect=googletagservices_gpt.js:5
+||imasdk.googleapis.com/js/sdkloader/ima3.js$script,redirect=google-ima.js:5
+||google-analytics.com/analytics.js$script,redirect=google-analytics_analytics.js:5
+||googletagmanager.com/gtag/js$script,redirect=googletagmanager_gtm.js:5
+||adservice.google.com^$xhr,redirect=nooptext:5
+||pagead2.googlesyndication.com^$xhr,redirect=nooptext:5
+@@||adblockanalytics.com/google-adsense.js^$script
+@@||adblockanalytics.com/ad-choices.png^$image
+@@||adsserver.adblockanalytics.com^$script
+@@/ads.js$script,1p
+@@/advertisement.js$script,1p
+@@/ads-prebid.js$script,1p
+@@/adsbygoogle-bait.js$script,1p
+@@/ad-blocker.js$script,1p
+@@/blockadblock.js$script,1p

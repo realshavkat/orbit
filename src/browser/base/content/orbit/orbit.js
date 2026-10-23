@@ -107,6 +107,7 @@ var Orbit = {
       OrbitWelcome.maybeShow();
       OrbitForum.maybeOpen();
       OrbitSitePeople.init();
+      OrbitSitePerms.init();
       document.documentElement.setAttribute("orbit-ready", "true");
     };
     if (gBrowserInit.delayedStartupFinished) ready();
