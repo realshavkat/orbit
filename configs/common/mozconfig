@@ -19,6 +19,8 @@ export MOZ_INCLUDE_SOURCE_INFO=1
 
 # Fetch clang/rust/nasm/etc. toolchains automatically.
 ac_add_options --enable-bootstrap
+# Cache compiled objects: a rebuild after a version bump or a configure run reuses them.
+ac_add_options --with-ccache=sccache
 
 ac_add_options --enable-release
 ac_add_options --disable-debug-symbols

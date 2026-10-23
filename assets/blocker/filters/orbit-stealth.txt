@@ -21,3 +21,10 @@
 @@/ad-blocker.js$script,1p
 @@/blockadblock.js$script,1p
 ||accounts.google.com/gsi/iframe/select$subdocument,3p
+@@||netflix.com^$document
+@@||disneyplus.com^$document
+@@||primevideo.com^$document
+@@||max.com^$document
+@@||canalplus.com^$document
+@@||crunchyroll.com^$document
+@@||tv.apple.com^$document
