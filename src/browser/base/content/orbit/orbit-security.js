@@ -97,7 +97,7 @@ var OrbitSitePerms = {
 
   exemptCallSites() {
     const done = Orbit.pref("orbit.calls.exempted", 0);
-    if (done >= 3) return;
+    if (done >= 4) return;
     const sites = done >= 1 ? this.STREAMING_SITES : [...this.CALL_SITES, ...this.STREAMING_SITES];
     let overrides = [];
     try {
@@ -107,10 +107,14 @@ var OrbitSitePerms = {
       const principal = Services.scriptSecurityManager.createContentPrincipalFromOrigin(origin);
       if (done < 2 || this.STREAMING_SITES.includes(origin)) Services.perms.addFromPrincipal(principal, "trackingprotection", Services.perms.ALLOW_ACTION);
       const site = principal.baseDomain;
-      if (!overrides.some(o => o.firstPartyDomain == site)) overrides.push({ firstPartyDomain: site, overrides: "-AllTargets" });
+      for (const third of [undefined, "*"]) {
+        if (!overrides.some(o => o.firstPartyDomain == site && o.thirdPartyDomain == third)) {
+          overrides.push(third ? { firstPartyDomain: site, thirdPartyDomain: third, overrides: "-AllTargets" } : { firstPartyDomain: site, overrides: "-AllTargets" });
+        }
+      }
     }
     Services.prefs.setStringPref("privacy.fingerprintingProtection.granularOverrides", JSON.stringify(overrides));
-    Services.prefs.setIntPref("orbit.calls.exempted", 3);
+    Services.prefs.setIntPref("orbit.calls.exempted", 4);
   },
 
   sharing(tab = gBrowser.selectedTab) {
@@ -195,8 +199,8 @@ var OrbitSitePerms = {
     try {
       overrides = JSON.parse(Orbit.pref("privacy.fingerprintingProtection.granularOverrides", "[]")) || [];
     } catch {}
-    if (!overrides.some(o => o.firstPartyDomain == site)) {
-      overrides.push({ firstPartyDomain: site, overrides: "-AllTargets" });
+    if (!overrides.some(o => o.firstPartyDomain == site && o.thirdPartyDomain == "*")) {
+      overrides.push({ firstPartyDomain: site, overrides: "-AllTargets" }, { firstPartyDomain: site, thirdPartyDomain: "*", overrides: "-AllTargets" });
       Services.prefs.setStringPref("privacy.fingerprintingProtection.granularOverrides", JSON.stringify(overrides));
     }
     browser.reload();
