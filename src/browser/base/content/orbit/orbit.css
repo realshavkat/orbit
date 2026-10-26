@@ -113,7 +113,7 @@
   mask-position: center;
   mask-repeat: no-repeat;
   will-change: transform;
-  animation: orbit-liquid 28s ease-in-out infinite alternate;
+  animation: orbit-liquid 28s steps(60) infinite alternate;
 }
 #orbit-liquid::before {
   background: linear-gradient(135deg, color-mix(in oklch, var(--orbit-c1) 82%, white), var(--orbit-c1) 45%, color-mix(in oklch, var(--orbit-c2) 85%, #2a10ff));

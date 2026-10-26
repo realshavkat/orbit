@@ -68,12 +68,16 @@ var OrbitMods = {
         const prefs = await this.readJSON(PathUtils.join(path, "preferences.json"), []);
         out.push({ id: name, name: meta?.name || name, description: meta?.description ?? "", author: meta?.author ?? "",
           version: meta?.version ?? "", image: meta?.image ?? "", homepage: meta?.homepage ?? "", dir: path,
-          prefs: Array.isArray(prefs) ? prefs.filter(p => p?.property && p?.type) : [], zen: !!(meta?.style || meta?.zen), store: !!(meta?.style || meta?.zen || meta?.orbit) });
+          prefs: Array.isArray(prefs) ? prefs.filter(p => p?.property && p?.type && this.modPref(p.property)) : [], zen: !!(meta?.style || meta?.zen), store: !!(meta?.style || meta?.zen || meta?.orbit) });
       } else if (name.toLowerCase().endsWith(".css")) {
         out.push({ id: name, name: name.replace(/\.css$/i, ""), description: "", author: "", version: "", image: "", file: path, prefs: [] });
       }
     }
     return out.sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  modPref(name) {
+    return Services.prefs.getDefaultBranch("").getPrefType(String(name)) == Ci.nsIPrefBranch.PREF_INVALID;
   },
 
   sanitize(property) {
