@@ -385,7 +385,7 @@ var OrbitSitePeople = {
     this.sent = new Map();
     this._update = () => this.schedule();
     gBrowser.tabContainer.addEventListener("TabSelect", this._update);
-    this._progress = { onLocationChange: (b, p, r, uri, flags) => !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT) && this.schedule() };
+    this._progress = { onLocationChange: (p, r, uri, flags) => !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT) && this.schedule() };
     gBrowser.addProgressListener(this._progress);
     Services.prefs.addObserver(this.PREF, this._update);
     this._beat = setInterval(() => this.heartbeat(), this.HEARTBEAT);

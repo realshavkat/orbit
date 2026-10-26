@@ -79,7 +79,7 @@ var OrbitSitePerms = {
     this._update = () => this.update();
     gBrowser.tabContainer.addEventListener("TabSelect", this._update);
     gBrowser.tabContainer.addEventListener("TabAttrModified", this._update);
-    this._progress = { onLocationChange: (b, p, r, uri, flags) => !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT) && this.update() };
+    this._progress = { onLocationChange: (p, r, uri, flags) => !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT) && (this.update(), this.drmNotice(uri)) };
     gBrowser.addProgressListener(this._progress);
     this._perm = (subject, topic) => topic == "perm-changed" && this.update();
     Services.obs.addObserver(this._perm, "perm-changed");
@@ -94,6 +94,24 @@ var OrbitSitePerms = {
   STREAMING_SITES: ["https://www.netflix.com", "https://www.disneyplus.com", "https://www.primevideo.com", "https://www.max.com",
     "https://www.canalplus.com", "https://www.crunchyroll.com", "https://tv.apple.com", "https://open.spotify.com",
     "https://www.deezer.com", "https://www.twitch.tv", "https://www.youtube.com"],
+
+  DRM_SITES: ["netflix.com", "disneyplus.com", "primevideo.com", "max.com", "canalplus.com", "crunchyroll.com", "tv.apple.com"],
+
+  drmNotice(uri) {
+    let host;
+    try {
+      host = uri.host;
+    } catch {
+      return;
+    }
+    const site = this.DRM_SITES.find(d => host == d || host.endsWith("." + d));
+    if (!site || (this._drmShown ??= new Set()).has(site)) return;
+    this._drmShown.add(site);
+    OrbitNotify.show({ kind: "drm", icon: "film", tone: "warm", timeout: 15000,
+      title: Orbit.tr("This site won't play in Orbit", "Ce site ne fonctionnera pas dans Orbit"),
+      text: Orbit.tr("Netflix, Disney+ and co need a paid DRM licence that Orbit doesn't have. Use another browser to watch. Orbit is a passion project, and that licence costs far too much for it.",
+        "Netflix, Disney+ et compagnie demandent une licence DRM payante qu'Orbit n'a pas. Utilise un autre navigateur pour regarder. Orbit est un projet de passion, pas de quoi se ruiner : cette licence coûte bien trop cher.") });
+  },
 
   exemptCallSites() {
     const done = Orbit.pref("orbit.calls.exempted", 0);
