@@ -27,7 +27,7 @@ export class OrbitStoreParent extends JSWindowActorParent {
       if (msg.name == "OrbitStore:OrbitModRemove") await win.OrbitMods.remove(`orbit-${slug}`).catch(e => console.error("Orbit mods", e));
       return win.OrbitMods.isInstalledOrbit(slug);
     }
-    if (!HOSTS[msg.name]?.includes(host)) return null;
+    if (!HOSTS[msg.name]?.includes(host) || !origin.startsWith("https://")) return null;
     if (!win?.OrbitMods || !win.OrbitChromeExt) return null;
     const id = String(msg.data?.id ?? "");
     if (msg.name == "OrbitStore:Chrome") {

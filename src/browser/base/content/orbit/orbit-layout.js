@@ -117,7 +117,7 @@ var OrbitLayout = {
       f.append(file);
       return `@font-face { font-family: ${JSON.stringify(name)}; src: url("${Services.io.newFileURI(f).spec}"); }`;
     }).join(" ");
-    const css = `${faces} :root { --orbit-page-font: ${JSON.stringify(font)}; }`;
+    const css = `@-moz-document url-prefix("about:") { ${faces} :root { --orbit-page-font: ${JSON.stringify(font)}; } }`;
     const uri = Services.io.newURI(`data:text/css;charset=utf-8,${encodeURIComponent(css)}`);
     if (sss.sheetRegistered(uri, sss.USER_SHEET)) return;
     for (const prev of OrbitLayout.registeredFontSheets()) {

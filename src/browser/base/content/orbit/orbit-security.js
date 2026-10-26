@@ -78,7 +78,7 @@ var OrbitSitePerms = {
     urlbarBox.after(this.button);
     this._update = () => this.update();
     gBrowser.tabContainer.addEventListener("TabSelect", this._update);
-    gBrowser.tabContainer.addEventListener("TabAttrModified", this._update);
+    gBrowser.tabContainer.addEventListener("TabAttrModified", e => e.target.selected && e.detail.changed.includes("sharing") && this.update());
     this._progress = { onLocationChange: (p, r, uri, flags) => !(flags & Ci.nsIWebProgressListener.LOCATION_CHANGE_SAME_DOCUMENT) && (this.update(), this.drmNotice(uri)) };
     gBrowser.addProgressListener(this._progress);
     this._perm = (subject, topic) => topic == "perm-changed" && this.update();

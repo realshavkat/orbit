@@ -2,11 +2,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
-@font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
-@font-face { font-family: "Inter"; src: url("chrome://orbit/content/fonts/Inter.ttf"); font-weight: 100 900; }
-@font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
-@font-face { font-family: "Space Grotesk"; src: url("chrome://orbit/content/fonts/SpaceGrotesk.ttf"); font-weight: 300 700; }
-@font-face { font-family: "DM Sans"; src: url("chrome://orbit/content/fonts/DMSans.ttf"); font-weight: 100 1000; }
+@-moz-document url-prefix("about:") {
+  @font-face { font-family: "Outfit"; src: url("chrome://orbit/content/fonts/Outfit.ttf"); font-weight: 100 900; }
+  @font-face { font-family: "Inter"; src: url("chrome://orbit/content/fonts/Inter.ttf"); font-weight: 100 900; }
+  @font-face { font-family: "Manrope"; src: url("chrome://orbit/content/fonts/Manrope.ttf"); font-weight: 200 800; }
+  @font-face { font-family: "Space Grotesk"; src: url("chrome://orbit/content/fonts/SpaceGrotesk.ttf"); font-weight: 300 700; }
+  @font-face { font-family: "DM Sans"; src: url("chrome://orbit/content/fonts/DMSans.ttf"); font-weight: 100 1000; }
+}
 
 @-moz-document url-prefix("about:preferences"), url-prefix("about:settings"), url-prefix("about:addons"),
   url-prefix("about:downloads"), url-prefix("about:config"), url-prefix("about:logins"),

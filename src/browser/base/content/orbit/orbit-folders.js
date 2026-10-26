@@ -46,8 +46,8 @@ var OrbitFolders = {
 
   init() {
     const tc = gBrowser.tabContainer;
-    const schedule = () => {
-      if (this._timer) return;
+    const schedule = e => {
+      if (this._timer || (e?.type == "TabAttrModified" && !e.detail.changed.includes("image"))) return;
       this._timer = setTimeout(() => {
         this._timer = 0;
         this.decorateAll();
