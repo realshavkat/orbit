@@ -103,14 +103,9 @@ var OrbitSpaces = {
     return gBrowser.tabs.filter(t => !t.pinned && !t.closing && this.spaceOf(t) == id);
   },
 
-  toggleEssentials() {
-    document.documentElement.toggleAttribute("orbit-essentials-folded");
-  },
-
   clearTabs(all = false) {
     const tabs = this.tabsIn(this.activeId).filter(t => all ||
-      (!OrbitFolders.isPinnedTab(t) && !(t.selected || t.multiselected)));
-    if (all) tabs.push(...gBrowser.tabs.filter(t => t.getAttribute(OrbitKept.KEY) == this.activeId));
+      (!OrbitKept.isKept(t) && !OrbitFolders.isPinnedTab(t) && !(t.selected || t.multiselected)));
     if (!tabs.length) return;
     if (all) gBrowser.selectedTab = this.openTab();
     OrbitKept.closeForReal(tabs);
@@ -129,6 +124,10 @@ var OrbitSpaces = {
         break;
       }
       case "SSWindowRestored": {
+        for (const t of gBrowser.tabs) {
+          const id = SessionStore.getCustomTabValue(t, this.KEY);
+          if (!t.pinned && this.byId(id)) t.setAttribute("orbit-space", id);
+        }
         const saved = SessionStore.getCustomWindowValue(window, this.KEY);
         if (this.byId(saved) && saved != this.activeId) this.switchTo(saved, { animate: false });
         else this.syncVisibility();
@@ -251,7 +250,7 @@ var OrbitSpaces = {
     const header = document.getElementById("orbit-sidebar-header");
     header.replaceChildren(
       h("div", { id: "orbit-space-title", ondblclick: () => this.edit(space) },
-        h("span", { class: "orbit-space-name", title: t("space.collapse"), onclick: () => this.toggleEssentials() }, space.name),
+        h("span", { class: "orbit-space-name" }, space.name),
         h("button", { id: "orbit-space-colors", class: "orbit-icon-button", title: Orbit.tr("Colors", "Couleurs"),
           onclick: e => OrbitColors.toggle(e.currentTarget) }, icon("palette")),
         h("button", { id: "orbit-space-edit", class: "orbit-icon-button", title: t("space.edit"), onclick: () => this.edit(space) },

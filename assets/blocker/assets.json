@@ -986,14 +986,6 @@
   "contentURL": "https://raw.githubusercontent.com/brave/adblock-lists/master/brave-lists/brave-sugarcoat.txt",
   "supportURL": "https://github.com/brave/adblock-lists"
  },
- "brave-social": {
-  "content": "filters",
-  "group": "privacy",
-  "title": "Brave – Social",
-  "tags": "privacy",
-  "contentURL": "https://raw.githubusercontent.com/brave/adblock-lists/master/brave-lists/brave-social.txt",
-  "supportURL": "https://github.com/brave/adblock-lists"
- },
  "brave-cookie-specific": {
   "content": "filters",
   "group": "annoyances",

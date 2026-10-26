@@ -1645,7 +1645,6 @@ sidebar-main:not([expanded]) ~ #orbit-media { display: none; }
 }
 #tabbrowser-tabs[orient="vertical"] { --tab-min-height: 34px !important; }
 
-:root[orbit-essentials-folded] #pinned-tabs-container { display: none !important; }
 
 :root[orbit-dragging] {
   & #orbit-liquid::before, & #orbit-liquid::after { animation-play-state: paused !important; }
@@ -4234,3 +4233,44 @@ tab-group[collapsed] .orbit-folder-face ~ .orbit-folder-count { display: none; }
   & > .orbit-icon { width: 14px; height: 14px; color: #3dd68c; } }
 :root:has(#orbit-perms-button:not([hidden])) #identity-permission-box :is(#webrtc-sharing-icon, .blocked-permission-icon:is([data-permission-id="camera"], [data-permission-id="microphone"], [data-permission-id="screen"])) { display: none !important; }
 @media (prefers-reduced-motion: reduce) { #orbit-perms-button > i, .orbit-perms-banner > i { animation: none !important; } .orbit-perms-switch::after { transition: none; } }
+
+#vertical-tabs #tabbrowser-tabs[orient="vertical"]:not([expanded]) {
+  & #tabbrowser-arrowscrollbox .tabbrowser-tab:not([pinned]) .tab-content {
+    padding: 0 !important;
+    justify-content: center !important;
+    background: none !important;
+  }
+  & .tabbrowser-tab .tab-background { margin: 0 !important; width: auto !important; justify-self: stretch !important; }
+  & tab-group > .tab-group-label-container {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  & tab-group .tab-group-label-hover-highlight { width: 36px !important; padding: 0 !important; justify-content: center !important; }
+  & tab-group :is(.tab-group-label, .orbit-folder-meta, .orbit-folder-chevron, .orbit-folder-tag) { display: none !important; }
+  & tab-group > .tab-group-label-container::after { display: none !important; }
+  & tab-group .orbit-folder-tile { margin: 0 !important; }
+  & #tabs-newtab-button .toolbarbutton-text { display: none !important; }
+}
+
+.orbit-tab-ghost {
+  position: fixed;
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  padding-inline: 8px;
+  overflow: hidden;
+  border-radius: var(--orbit-radius);
+  background: var(--orbit-hover);
+  color: var(--orbit-fg-dim);
+  font-size: 13px;
+  white-space: nowrap;
+  pointer-events: none;
+  & img { width: 16px; height: 16px; flex-shrink: 0; }
+}
+:root:has(#tabbrowser-tabs:not([expanded])) .orbit-tab-ghost { justify-content: center; padding: 0; & span { display: none; } }

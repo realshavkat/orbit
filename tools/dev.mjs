@@ -68,6 +68,12 @@ try {
         const l = doc.createElementNS("http://www.w3.org/1999/xhtml", "link");
         l.rel = "stylesheet"; l.href = href; doc.head.append(l);
       }
+      const ce = doc.defaultView.customElements;
+      ce.whenDefined("tabbrowser-tabs").then(() => {
+        const proto = ce.get("tabbrowser-tabs").prototype;
+        const d = Object.getOwnPropertyDescriptor(proto, "allTabs");
+        Object.defineProperty(proto, "allTabs", { get() { return d.get.call(this).filter(t => t.tagName == "tab"); } });
+      });
       Services.scriptloader.loadSubScript("chrome://orbit/content/orbit.js", doc.defaultView);
     });
   }, "chrome-document-global-created");

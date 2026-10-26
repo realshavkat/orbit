@@ -25,7 +25,7 @@ var OrbitKept = {
         this.sleep(tab);
         return;
       }
-      return origRemove(tab, options);
+      return options.animate ? this.flip([tab], () => origRemove(tab, options)) : origRemove(tab, options);
     };
     const origClose = BrowserCommands.closeTabOrWindow.bind(BrowserCommands);
     BrowserCommands.closeTabOrWindow = event => {
@@ -151,9 +151,46 @@ var OrbitKept = {
   closeForReal(tabs) {
     this._closing = true;
     try {
-      gBrowser.removeTabs(tabs, { animate: true });
+      this.flip(tabs, () => gBrowser.removeTabs(tabs, { animate: true }));
     } finally {
       this._closing = false;
+    }
+  },
+
+  flip(tabs, remove) {
+    if (this._flipping || window.gReduceMotion || !gBrowser.tabContainer.verticalMode || !Orbit.pref("orbit.effects.animations", true)) {
+      return remove();
+    }
+    const gone = tabs.filter(t => t.visible && !t.pinned);
+    const els = [...gBrowser.tabContainer.querySelectorAll(
+      ".tabbrowser-tab:not([pinned]), .tab-group-label-container, #orbit-sidebar-header, #tabs-newtab-button")].filter(el => !gone.includes(el));
+    const tops = els.map(el => el.getBoundingClientRect().top);
+    const ghosts = [];
+    for (const t of gone) {
+      const r = t.getBoundingClientRect();
+      if (!r.height) continue;
+      const ghost = Orbit.h("div", { class: "orbit-tab-ghost" },
+        Orbit.h("img", { src: t.getAttribute("image") || "chrome://global/skin/icons/defaultFavicon.svg", alt: "" }),
+        Orbit.h("span", {}, t.label));
+      const icon = t.querySelector(".tab-icon-stack")?.getBoundingClientRect();
+      Object.assign(ghost.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px`,
+        paddingInlineStart: icon?.width ? `${icon.left - r.left}px` : "" });
+      ghosts.push(ghost);
+    }
+    document.body.append(...ghosts);
+    this._flipping = true;
+    try {
+      return remove();
+    } finally {
+      this._flipping = false;
+      for (const ghost of ghosts) {
+        ghost.animate([{ opacity: 1 }, { opacity: 0, transform: "translateX(-12px) scale(.96)" }], { duration: 150, easing: "ease-in", fill: "forwards" })
+          .finished.catch(() => {}).then(() => ghost.remove());
+      }
+      els.forEach((el, i) => {
+        const d = el.isConnected ? tops[i] - el.getBoundingClientRect().top : 0;
+        if (Math.abs(d) > 0.5) el.animate([{ transform: `translateY(${d}px)` }, { transform: "none" }], { duration: 220, easing: "cubic-bezier(.2,.9,.25,1)" });
+      });
     }
   },
 };

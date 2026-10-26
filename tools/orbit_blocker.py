@@ -42,7 +42,6 @@ BRAVE_LISTS = {
     "brave-specific": ("Brave – Specific", "ads", "brave-specific.txt"),
     "brave-firstparty": ("Brave – First party ads", "ads", "brave-firstparty.txt"),
     "brave-sugarcoat": ("Brave – SugarCoat", "privacy", "brave-sugarcoat.txt"),
-    "brave-social": ("Brave – Social", "privacy", "brave-social.txt"),
     "brave-cookie-specific": ("Brave – Cookie notices", "annoyances", "brave-cookie-specific.txt"),
 }
 EXTRA_LISTS = {

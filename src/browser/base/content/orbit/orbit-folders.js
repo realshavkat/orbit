@@ -73,6 +73,11 @@ var OrbitFolders = {
       e.preventDefault();
       this.toggle(group);
     });
+    window.addEventListener("SSWindowStateBusy", () => (this._restoring = true));
+    window.addEventListener("SSWindowStateReady", () => {
+      this._restoring = false;
+      this.placeHeader();
+    });
     Services.prefs.addObserver(this.PREF, schedule);
     window.addEventListener("unload", () => Services.prefs.removeObserver(this.PREF, schedule), { once: true });
     this.extendEditor();
@@ -158,7 +163,7 @@ var OrbitFolders = {
 
   isZoneRow(row) {
     if (row.localName == "tab-group") return !!this.meta[row.id]?.pinned && !row.hasAttribute("orbit-folder-hidden");
-    return row.getAttribute("orbit-kept") == OrbitSpaces.activeId;
+    return !!SessionStore.getCustomTabValue(row, OrbitKept.KEY);
   },
 
   rows() {
@@ -180,7 +185,7 @@ var OrbitFolders = {
     const newTab = document.getElementById("tabs-newtab-button");
     const list = document.getElementById("tabbrowser-arrowscrollbox");
     if (!header || !newTab || !list) return;
-    if (!this._normalizing) {
+    if (!this._normalizing && !this._restoring) {
       const rows = this.rows();
       let lastZone = -1;
       rows.forEach((r, i) => this.isZoneRow(r) && (lastZone = i));

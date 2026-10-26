@@ -128,3 +128,18 @@
 :root[orbit-pip] .playback-rate-preset { border-radius: 7px !important; }
 :root[orbit-pip] .playback-rate-preset[aria-pressed="true"] { background: var(--o-accent) !important; color: #06070f !important; }
 :root[orbit-pip] .switch input:checked + .slider { background-color: var(--o-accent) !important; }
+
+:root[orbit-pip]:has(.start-controls[orbit-live]) :is(.controls-bottom-upper, #timestamp, #seekBackward, #seekForward, #playbackRate) { display: none !important; }
+:root[orbit-pip]:has(.start-controls[orbit-live]) #controls-bottom { padding-top: 8px; }
+:root[orbit-pip] .start-controls[orbit-live]::before {
+  content: attr(orbit-live);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgb(235 64 82 / .9);
+  color: #fff;
+  font: 600 11px "Outfit", system-ui, sans-serif;
+  letter-spacing: .06em;
+}
