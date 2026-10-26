@@ -151,17 +151,28 @@ var OrbitDnD = {
   rect(el) {
     let n = this.nat.get(el);
     if (!n) {
-      const r = el.getBoundingClientRect();
-      n = { top: r.top, height: r.height, left: r.left, width: r.width, inList: el.id != "tabbrowser-arrowscrollbox" && !!el.closest?.("#tabbrowser-arrowscrollbox") };
+      const parts = this.parts(el);
+      const rs = parts.map(p => p.getBoundingClientRect());
+      const r = rs[0] ?? el.getBoundingClientRect();
+      const top = Math.min(r.top, ...rs.map(b => b.top));
+      const bottom = Math.max(r.bottom, ...rs.map(b => b.bottom));
+      n = { top, height: bottom - top, left: r.left, width: r.width, ref: parts[0] ?? el,
+        inList: el.id != "tabbrowser-arrowscrollbox" && !!el.closest?.("#tabbrowser-arrowscrollbox") };
       this.nat.set(el, n);
     }
     let top = n.top;
     if (n.inList) top -= this.listScroll() - this.scroll0;
     const m = this.margin;
-    if (m && m.el != el ? m.el.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING && !m.el.contains(el) : m?.side == "margin-top") {
+    const ref = n.ref;
+    if (m && m.el != ref ? m.el.compareDocumentPosition(ref) & Node.DOCUMENT_POSITION_FOLLOWING && !m.el.contains(ref) : m?.side == "margin-top") {
       top += m.px;
     }
     return { top, bottom: top + n.height, height: n.height, left: n.left, width: n.width, right: n.left + n.width };
+  },
+
+  parts(el) {
+    if (el.localName != "tab-group") return [el];
+    return [...el.querySelectorAll(".tab-group-label-container, .tabbrowser-tab")].filter(p => p.getBoundingClientRect().height);
   },
 
   listScroll() {
@@ -218,10 +229,11 @@ var OrbitDnD = {
     let slot = null;
     if (target) {
       const { rows, index, anchor, tail } = target;
-      const pitch = rows.length > 1 ? this.nat.get(rows[1])?.top - this.nat.get(rows[0])?.top || this.ROW + 2 : this.ROW + 2;
+      const i = rows.findIndex((r, k) => r.localName == "tab" && rows[k + 1]?.localName == "tab");
+      const pitch = i >= 0 && this.nat.get(rows[i + 1])?.top - this.nat.get(rows[i])?.top || this.ROW + 2;
       const after = tail ? rows[index - 1] : index < rows.length ? null : rows.at(-1);
-      if (after) margin = { el: after, side: "margin-bottom", px: pitch };
-      else if (index < rows.length) margin = { el: rows[index], side: "margin-top", px: pitch };
+      if (after) margin = { el: this.parts(after).at(-1) ?? after, side: "margin-bottom", px: pitch };
+      else if (index < rows.length) margin = { el: this.parts(rows[index])[0] ?? rows[index], side: "margin-top", px: pitch };
       const box = rows[0] ? this.rect(rows[0]) : anchor;
       if (box) slot = { left: box.left, width: box.width, height: pitch - 2 };
       this._slotAt = () => after ? this.rect(after).bottom + 1 : index < rows.length ? this.rect(rows[index]).top - pitch + 1 : box.top;
